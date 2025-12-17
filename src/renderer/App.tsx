@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import FileInput from './components/inputs/FileInput';
-import { ACCEPTED_EXTENSIONS } from '../shared/utils';
 import type { Game } from '../shared/types';
+import { useDragAndDrop } from './hooks/useDragAndDrop';
+import GameGrid from './components/GameGrid';
+import UpdateGameModal from './components/inputs/UpdateGameModal';
 
 export default function App() {
   const [games, setGames] = useState<Game[]>([]);
+  const [editingGame, setEditingGame] = useState<Game | null>(null);
 
   const fetchGames = async () => {
     try {
@@ -21,72 +23,55 @@ export default function App() {
     fetchGames();
   }, []);
 
-  const handleFileUpload = async (files: FileList | null) => {
-    if (!files) return;
-
+  const onFilesDropped = async (files: FileList) => {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const filePath = window.electron.getPathForFile(file);
-
-      const filePayload = {
-        name: file.name,
-        path: filePath 
-      };
-
+      
       try {
-        console.log(`Sending ${file.name} to backend...`);
-        const result = await window.electron.invoke('create-game', filePayload);
-
-        if (result.success) {
-          console.log("Game created successfully:", result.game);
-        } else {
-          console.error("Failed to add game:", result.message);
-        }
-      } catch (e) {
-        console.error("IPC Error:", e);
+        await window.electron.invoke('create-game', { name: file.name, path: filePath });
+      } catch (err) {
+        console.error("IPC Error:", err);
       }
     }
-
     fetchGames();
   };
 
+  const { isDragging, dragProps } = useDragAndDrop(onFilesDropped);
+
   return (
-    <div className="flex flex-col items-center min-h-screen bg-gray-900 text-white p-8">
-      <h1 className="text-3xl mb-8 font-bold">My Library</h1>
-      
-      {/* file input */}
-      <div className="mb-10">
-        <FileInput 
-          onChange={handleFileUpload} 
-          accept={ACCEPTED_EXTENSIONS}
-        />
-      </div>
+    <div 
+      {...dragProps} 
+      className={`
+        flex flex-col items-center min-h-screen p-8 transition-colors duration-200
+        bg-bg-primary text-fg-primary
+        ${isDragging ? 'bg-bg-muted border-4 border-border-highlight border-dashed' : ''}
+      `}
+    >
+      <h1 className="text-3xl mb-8 font-bold text-fg-primary">My Library</h1>
 
-      {/* games grid */}
-      <div className="w-full max-w-6xl grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-        {games.map((game) => (
-          <div 
-            key={game.id} 
-            className="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition duration-200 cursor-pointer shadow-lg"
-          >
-            <div className="h-32 bg-gray-900 rounded mb-3 flex items-center justify-center text-gray-500 font-mono text-sm border border-gray-700">
-              {game.consoleId.toUpperCase()}
-            </div>
-            
-            <h3 className="font-bold text-sm truncate" title={game.title}>
-              {game.title}
-            </h3>
-            <p className="text-xs text-gray-400 mt-1 capitalize">
-              {game.consoleId}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {games.length === 0 && (
-        <div className="mt-10 text-gray-500 text-sm">
-          Drag and drop NES ROMs to get started
+      {isDragging && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 pointer-events-none z-50">
+          <h2 className="text-4xl font-bold text-fg-muted animate-pulse">Drop File to Add Game</h2>
         </div>
+      )}
+
+      <GameGrid
+        games={games}
+        onRefresh={fetchGames}
+        onUpdate={(game: Game) => setEditingGame(game)}
+      />
+
+      {/* update modal */}
+      {editingGame && (
+        <UpdateGameModal
+          game={editingGame}
+          onClose={() => setEditingGame(null)}
+          onSave={() => {
+            fetchGames();
+            setEditingGame(null);
+          }}
+        />
       )}
     </div>
   );
