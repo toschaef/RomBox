@@ -28,6 +28,8 @@
     "@electron-forge/plugin-webpack": "^7.10.2",
     "@electron/fuses": "^1.8.0",
     "@tailwindcss/postcss": "^4.1.18",
+    "@types/adm-zip": "^0.5.7",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
@@ -47,6 +49,9 @@
     "typescript": "~4.5.4"
   },
   "dependencies": {
+    "adm-zip": "^0.5.16",
+    "axios": "^1.13.2",
+    "better-sqlite3": "^12.5.0",
     "electron-squirrel-startup": "^1.0.1",
     "react": "^19.2.3",
     "react-dom": "^19.2.3"
