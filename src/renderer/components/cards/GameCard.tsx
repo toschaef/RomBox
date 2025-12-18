@@ -1,16 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Game } from '../../../shared/types';
 import InstallModal from '../inputs/InstallModal';
+import BiosModal from '../inputs/BiosModal';
 
 interface Props {
   game: Game;
+  lastBiosUpdate: string;
   onDelete: () => void;
   onUpdate: (game: Game) => void;
 }
 
-export default function GameCard({ game, onDelete, onUpdate }: Props) {
+export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate }: Props) {
   const [showMenu, setShowMenu] = useState(false);
   const [installModalOpen, setInstallModalOpen] = useState(false);
+  const [biosModalOpen, setBiosModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // effect to close menu on outside click
@@ -23,6 +26,13 @@ export default function GameCard({ game, onDelete, onUpdate }: Props) {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // hook to close bios modal on upload
+  useEffect(() => {
+    if (biosModalOpen) {
+      setBiosModalOpen(false);
+    }
+  }, [lastBiosUpdate]);
   
   const handlePlay = async () => {
     try {
@@ -32,6 +42,8 @@ export default function GameCard({ game, onDelete, onUpdate }: Props) {
         console.log("Game launched without electron error");
       } else if (result.code === 'MISSING_ENGINE') {
           setInstallModalOpen(true);
+      } else if (result.code === 'MISSING_BIOS') {
+          setBiosModalOpen(true);
       } else {
         console.error("Launch error:", result.message);
       }
@@ -194,7 +206,6 @@ export default function GameCard({ game, onDelete, onUpdate }: Props) {
           </div>
         </div>
       </div>
-      {/* install modal */}
       {installModalOpen && (
         <div onClick={(e) => e.stopPropagation()}>
           <InstallModal 
@@ -204,6 +215,14 @@ export default function GameCard({ game, onDelete, onUpdate }: Props) {
               setInstallModalOpen(false);
               handlePlay();
             }}
+          />
+        </div>
+      )}
+      {biosModalOpen && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <BiosModal 
+            game={game} 
+            onClose={() => setBiosModalOpen(false)}
           />
         </div>
       )}

@@ -3,11 +3,17 @@ import GameCard from './cards/GameCard';
 
 interface Props {
   games: Game[];
+  lastBiosUpdate: string;
   onRefresh: () => void;
   onUpdate: (game: Game) => void;
 }
 
-export default function GameGrid({ games, onRefresh, onUpdate }: Props) {
+export default function GameGrid({ 
+  games, 
+  lastBiosUpdate, 
+  onRefresh, 
+  onUpdate 
+}: Props) {
   if (games.length === 0) {
     return null;
   }
@@ -16,9 +22,9 @@ export default function GameGrid({ games, onRefresh, onUpdate }: Props) {
     <div className="
       grid 
       grid-cols-2
-      sm:grid-cols-2
-      lg:grid-cols-5 
-      xl:grid-cols-6 
+      sm:grid-cols-3
+      lg:grid-cols-4 
+      xl:grid-cols-5 
       gap-6 
       w-full 
       animate-in fade-in duration-500
@@ -27,6 +33,7 @@ export default function GameGrid({ games, onRefresh, onUpdate }: Props) {
         <GameCard
           key={game.id}
           game={game}
+          lastBiosUpdate={lastBiosUpdate}
           onDelete={onRefresh}
           onUpdate={onUpdate}
         />

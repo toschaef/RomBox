@@ -2,12 +2,13 @@ import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
 import AdmZip from 'adm-zip';
+import { homedir } from 'os';
 import { app } from 'electron';
 import { execSync } from 'child_process';
 import { ENGINES } from '../engines';
 import { dependencyController } from './dependencyController';
 import { Platform, EngineDependency } from '../../shared/types';
-import { findFile } from '../../shared/utils';
+import { findFile } from '../../shared/utils/fsUtils';
 
 const BASE_PATH = path.join(app.getPath('userData'), 'engines');
 
@@ -68,11 +69,12 @@ const createJailbreakWrapper = (binaryPath: string) => {
 
     signFile(realBinaryPath);
 
-    const scriptContent = `#!/bin/bash
-DIR="$(cd "$(dirname "$0")" && pwd)"
-export DYLD_LIBRARY_PATH="$DIR:$DYLD_LIBRARY_PATH"
-exec "$DIR/${realBinaryName}" "$@"
-`.trim();
+    const scriptContent = 
+      `#!/bin/bash
+        DIR="$(cd "$(dirname "$0")" && pwd)"
+        export DYLD_LIBRARY_PATH="$DIR:$DYLD_LIBRARY_PATH"
+        exec "$DIR/${realBinaryName}" "$@"
+      `.trim();
 
     console.log(`[Wrapper] Writing launcher script...`);
     fs.writeFileSync(binaryPath, scriptContent);
@@ -91,9 +93,12 @@ exec "$DIR/${realBinaryName}" "$@"
 
 const getInstallPath = (consoleId: string) => {
   const config = ENGINES[consoleId];
-  // Respect the shared install directory if it exists
   const dirName = config?.installDir || consoleId; 
   return path.join(BASE_PATH, dirName);
+};
+
+const getFirmwarePath = (consoleId: string) => {
+  return path.join(homedir(), '.config', 'Mesen2', 'Firmware');
 };
 
 const getEnginePath = (consoleId: string) => {
@@ -227,13 +232,85 @@ export const engineController = {
     }
   },
 
+  isBiosInstalled: (consoleId: string): boolean => {
+    const config = ENGINES[consoleId];
+    if (!config?.bios) return true;
+
+    // check primary location
+    const primaryPath = path.join(homedir(), '.config', 'Mesen2', 'Firmware', config.bios.filename);
+    if (fs.existsSync(primaryPath)) return true;
+
+    // check fallback
+    const secondaryPath = path.join(homedir(), 'Library', 'Application Support', 'Mesen2', 'Firmware', config.bios.filename);
+    return fs.existsSync(secondaryPath);
+  },
+  installBios: (consoleId: string, sourcePath: string, zipEntryName?: string) => {
+    const config = ENGINES[consoleId];
+    if (!config?.bios) throw new Error("This console does not require a BIOS.");
+
+    // We install to TWO locations to guarantee Mesen finds it.
+    const targetDirs = [
+      path.join(homedir(), '.config', 'Mesen2', 'Firmware'),
+      path.join(homedir(), 'Library', 'Application Support', 'Mesen2', 'Firmware')
+    ];
+
+    let success = false;
+    let lastError = null;
+
+    for (const firmwareDir of targetDirs) {
+      try {
+        if (!fs.existsSync(firmwareDir)) {
+          fs.mkdirSync(firmwareDir, { recursive: true });
+        }
+
+        const destPath = path.join(firmwareDir, config.bios.filename);
+        console.log(`[BIOS] Installing to ${destPath}`);
+
+        if (zipEntryName && path.extname(sourcePath).toLowerCase() === '.zip') {
+          const zip = new AdmZip(sourcePath);
+          const entry = zip.getEntry(zipEntryName);
+          if (!entry) throw new Error(`Entry ${zipEntryName} not found in zip`);
+          fs.writeFileSync(destPath, entry.getData());
+        } else {
+          fs.copyFileSync(sourcePath, destPath);
+        }
+        success = true;
+      } catch (err: any) {
+        console.warn(`[BIOS] Failed to install to ${firmwareDir}:`, err.message);
+        lastError = err;
+      }
+    }
+
+    if (!success && lastError) throw lastError;
+    return { success: true };
+  },
   clearEngines: () => {
     try {
+      console.log("Clearing all engines and BIOS files...");
+
+      // clear engines folder
       if (fs.existsSync(BASE_PATH)) {
         fs.rmSync(BASE_PATH, { recursive: true, force: true });
         fs.mkdirSync(BASE_PATH);
       }
+
+      // clear bios and config files -- this only works for mac todo: fix that
+      const systemPaths = [
+        path.join(homedir(), '.config', 'Mesen2'),
+        path.join(homedir(), 'Library', 'Application Support', 'Mesen2')
+      ];
+
+      for (const sysPath of systemPaths) {
+        if (fs.existsSync(sysPath)) {
+          console.log(`[Clear] Removing system folder: ${sysPath}`);
+          fs.rmSync(sysPath, { recursive: true, force: true });
+        }
+      }
+
       return { success: true };
-    } catch (err) { throw err; }
+    } catch (err) { 
+      console.error("Failed to clear engines:", err);
+      throw err; 
+    }
   },
 };

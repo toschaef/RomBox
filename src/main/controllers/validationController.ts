@@ -4,86 +4,124 @@ import { app } from 'electron';
 import AdmZip from 'adm-zip';
 import crypto from "crypto";
 import type { Game } from "../../shared/types";
-import { EXTENSION_MAP } from "../../shared/utils";
+import { BIOS_FILENAMES, EXTENSION_MAP } from '../../shared/utils/constants';
 
 function getConsoleId(extension: string) {
   return EXTENSION_MAP[extension.toLowerCase()];
 }
 
-export function scrapeGameData(file: { name: string; path: string }): Game {
-  let extension = path.extname(file.path).toLowerCase();
-  let detectedConsoleId = getConsoleId(extension);
+type ScanResult = 
+  | { type: 'game'; consoleId: string; filePath: string; zipEntryName?: string }
+  | { type: 'bios'; consoleId: string; filePath: string; zipEntryName?: string }
+  | { type: 'unknown' };
 
-  if (extension === '.zip') {
-    try {
-      console.log(`Inspecting zip file: ${file.name}`);
-      const zip = new AdmZip(file.path);
-      const zipEntries = zip.getEntries();
+export const validationController = {
+  // identify file type
+  scanFile: (filePath: string): ScanResult => {
+    const ext = path.extname(filePath).toLowerCase();
+    const filename = path.basename(filePath);
 
-      // greedily pick first valid rom inside the zip
-      const validEntry = zipEntries.find((entry) => {
-        if (entry.isDirectory) return false;
-        const innerExt = path.extname(entry.name).toLowerCase();
-        return getConsoleId(innerExt) !== undefined;
-      });
+    // check raw bios
+    if (BIOS_FILENAMES[filename.toLowerCase()]) {
+      return { 
+        type: 'bios', 
+        consoleId: BIOS_FILENAMES[filename.toLowerCase()], 
+        filePath 
+      };
+    }
 
-      if (!validEntry) {
-        throw new Error("No valid ROM file found inside the zip archive.");
+    // check zip
+    if (ext === '.zip') {
+      try {
+        const zip = new AdmZip(filePath);
+        const entries = zip.getEntries();
+
+        // check for bios in zip
+        for (const entry of entries) {
+          const entryName = entry.name.toLowerCase();
+          if (BIOS_FILENAMES[entryName]) {
+            return {
+              type: 'bios',
+              consoleId: BIOS_FILENAMES[entryName],
+              filePath,
+              zipEntryName: entry.name
+            };
+          }
+        }
+
+        // check for game in zip
+        const validGameEntry = entries.find(entry => {
+          if (entry.isDirectory) return false;
+          return getConsoleId(path.extname(entry.name)) !== undefined;
+        });
+
+        if (validGameEntry) {
+          return {
+            type: 'game',
+            consoleId: getConsoleId(path.extname(validGameEntry.name)),
+            filePath,
+            zipEntryName: validGameEntry.name
+          };
+        }
+      } catch (e) {
+        console.warn("Failed to inspect zip:", e);
       }
+    }
 
-      console.log(`Found valid ROM inside zip: ${validEntry.name}`);
-      
-      const innerExt = path.extname(validEntry.name).toLowerCase();
-      detectedConsoleId = getConsoleId(innerExt);
+    // try raw file
+    const consoleId = getConsoleId(ext);
+    if (consoleId) {
+      return { type: 'game', consoleId, filePath };
+    }
 
-      file.name = validEntry.name; 
+    return { type: 'unknown' };
+  },
+  importGame: (scanResult: ScanResult & { type: 'game' }): Game => {
+    const sourceName = scanResult.zipEntryName || path.basename(scanResult.filePath);
+    
 
+    let title = sourceName
+      .replace(/\.[^/.]+$/, "") // remove extension
+      .replace(/\s*\(.*?\)/g, '') // remove (...)
+      .replace(/\s*\[.*?\]/g, '') // remove [...]
+      .replace(/_/g, ' ')         // replace underscores
+      .replace(/[#]/g, '')        // remove #
+      .trim();
+
+    const userDataPath = app.getPath('userData');
+    const romsDir = path.join(userDataPath, 'roms', scanResult.consoleId);
+    if (!fs.existsSync(romsDir)) fs.mkdirSync(romsDir, { recursive: true });
+
+    const destFilename = scanResult.zipEntryName || path.basename(scanResult.filePath);
+    const newFilePath = path.join(romsDir, destFilename);
+
+    try {
+      // extract and copy
+      if (scanResult.zipEntryName) {
+        console.log(`Extracting ${scanResult.zipEntryName} to library...`);
+        const zip = new AdmZip(scanResult.filePath);
+        const entry = zip.getEntry(scanResult.zipEntryName);
+        if (entry) {
+            fs.writeFileSync(newFilePath, entry.getData());
+        }
+      } else {
+        // copy
+        if (scanResult.filePath !== newFilePath) {
+          console.log(`Copying ROM to library: ${newFilePath}`);
+          fs.copyFileSync(scanResult.filePath, newFilePath);
+        }
+      }
     } catch (err) {
-      console.error("Failed to read zip:", err);
-      throw new Error("Invalid or corrupted zip file.");
+      console.error("Failed to import ROM:", err);
+      throw new Error("Could not import file into library.");
     }
+
+    // return game object
+    return {
+      id: crypto.randomUUID(),
+      title: title, 
+      filePath: newFilePath,
+      consoleId: scanResult.consoleId as any,
+    };
   }
-
-  if (!detectedConsoleId) {
-    throw new Error(`Invalid or unsupported file extension: ${extension}`);
-  }
-
-  // regex to remove extension
-  let title = file.name.replace(/\.[^/.]+$/, "");
-  
-  // regex to remove info in parentheses and brackets
-  title = title
-    .replace(/\s*\(.*?\)/g, '')
-    .replace(/\s*\[.*?\]/g, '')
-    .replace(/_/g, ' ')
-    .trim();
-
-  const userDataPath = app.getPath('userData');
-  const romsDir = path.join(userDataPath, 'roms', detectedConsoleId);
-
-  if (!fs.existsSync(romsDir)) {
-    fs.mkdirSync(romsDir, { recursive: true });
-  }
-
-  const fileName = path.basename(file.path);
-  const newFilePath = path.join(romsDir, fileName);
-
-  try {
-    if (file.path !== newFilePath) {
-      console.log(`Copying ROM to library: ${newFilePath}`);
-      fs.copyFileSync(file.path, newFilePath);
-    }
-  } catch (err) {
-    console.error("Failed to copy ROM to library folder:", err);
-    throw new Error("Could not import file into library.");
-  }
-
-  const gameData: Game = {
-    id: crypto.randomUUID(),
-    title: title, 
-    filePath: newFilePath,
-    consoleId: detectedConsoleId,
-  };
-
-  return gameData;
-}
+};

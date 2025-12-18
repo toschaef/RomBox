@@ -16,11 +16,18 @@ export interface EngineDependency {
   platform: Platform;
 }
 
+export interface BiosConfig {
+  filename: string;
+  validHashes?: string[];
+  description: string;
+}
+
 export interface EngineConfig {
   id: ConsoleID;
   name: string;
   acceptedExtensions: string[];
-  installDir?: string; 
+  installDir?: string;
+  bios?: BiosConfig;
 
   // installation config
   downloads: {

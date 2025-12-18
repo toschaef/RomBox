@@ -13,6 +13,16 @@ export default function engineHandlers() {
     return engineController.isInstalled(consoleId);
   });
 
+  ipcMain.handle('install-bios', async (_, { consoleId, filePath }) => {
+    try {
+      console.log(`[IPC] Installing BIOS for ${consoleId} from ${filePath}`);
+      return engineController.installBios(consoleId, filePath);
+    } catch (err: any) {
+      console.error("Failed to install BIOS:", err);
+      return { success: false, message: err.message };
+    }
+  });
+
   ipcMain.handle('clear-engines', async () => {
     return engineController.clearEngines();
   });

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Game } from '../../../shared/types';
+import { getConsoleNameFromId } from '../../../shared/utils/constants';
 
 interface Props {
   game: Game;
@@ -47,7 +48,7 @@ export default function InstallModal({ game, onClose, onSuccess }: Props) {
         <div className="mb-4">
           <h2 className="text-xl font-bold text-fg-primary">Emulator Required</h2>
           <p className="text-sm text-fg-muted mt-1">
-            To play <strong>{game.consoleId.toUpperCase()}</strong> games, you need to install the core engine.
+            To play <strong>{getConsoleNameFromId(game.consoleId)}</strong> games, you need to install the core engine.
           </p>
         </div>
 

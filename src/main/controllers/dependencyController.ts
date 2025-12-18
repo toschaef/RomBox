@@ -3,7 +3,7 @@ import path from 'path';
 import axios from 'axios';
 import { execSync } from 'child_process';
 import { EngineDependency } from '../../shared/types';
-import { findFile } from '../../shared/utils';
+import { findFile } from '../../shared/utils/fsUtils';
 
 
 export const dependencyController = {

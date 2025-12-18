@@ -1,30 +1,5 @@
-import path from 'path';
 import fs from 'fs';
-import type { ConsoleID } from '../types';
-
-export const EXTENSION_MAP: Record<string, ConsoleID> = {
-
-  '.nes': 'nes',
-  '.unf': 'nes',
-  
-  '.sfc': 'snes',
-  '.smc': 'snes',
-  '.snes': 'snes',
-
-  '.gb': 'gb',
-  '.gbc': 'gb',
-
-  '.gba': 'gba',
-};
-
-export const ACCEPTED_EXTENSIONS = [
-  ...Object.keys(EXTENSION_MAP),
-  '.zip'
-].join(',');
-
-export const ENGINE_MAP: Record<string, string> = {
-  'nes': 'Mesen',
-};
+import path from 'path';
 
 // DFS to find file
 export const findFile = (dir: string, filename: string): string | null => {

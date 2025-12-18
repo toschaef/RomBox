@@ -1,17 +1,16 @@
 import fs from "fs";
-import path from "path"; // FIXED: Removed /win32
+import path from "path";
 import { getDB } from "../db";
 import type { Game } from "../../shared/types";
-import { scrapeGameData } from "./validationController";
+import { validationController } from "./validationController";
 import { engineController } from "./engineController";
 import { spawn } from "child_process";
 import { app } from "electron";
 
 export const gameController = {
-  createGame: (file: { name: string; path: string }) => {
+  createGameFromData: (gameData: Game) => {
     try {
       const db = getDB();
-      const gameData: Game = scrapeGameData(file);
       
       console.log("Inserting game into database:", gameData);
 
@@ -26,6 +25,23 @@ export const gameController = {
     } catch (err) {
       console.error("Database Insert Failed:", err);
       throw err;
+    }
+  },
+  createGame: (file: { name: string; path: string }) => {
+    try {
+      const scanResult = validationController.scanFile(file.path);
+
+      if (scanResult.type !== 'game') {
+        throw new Error(`File is not a recognized game ROM: ${scanResult.type}`);
+      }
+
+      const gameData = validationController.importGame(scanResult);
+
+      return gameController.createGameFromData(gameData);
+
+    } catch (err: any) {
+      console.error("Create Game Failed:", err);
+      return { success: false, message: err.message };
     }
   },
   getGames: () => {
@@ -100,15 +116,21 @@ export const gameController = {
   playGame: (game: Game) => {
     try {
       console.log(`Requesting launch for: ${game.title}`);
-
       const enginePath = engineController.getEnginePath(game.consoleId);
 
       if (!enginePath) {
-        console.warn(`Engine not found for ${game.consoleId}`);
         return { 
           success: false, 
           code: 'MISSING_ENGINE',
           message: `The emulator for ${game.consoleId.toUpperCase()} is not installed.`,
+        };
+      }
+
+      if (!engineController.isBiosInstalled(game.consoleId)) {
+        return {
+          success: false,
+          code: 'MISSING_BIOS',
+          message: `BIOS missing for ${game.consoleId}`
         };
       }
 

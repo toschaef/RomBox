@@ -7,10 +7,9 @@ const getMesenMacUrl = () => {
     : `https://github.com/SourMesen/Mesen2/releases/download/${version}/Mesen_${version}_macOS_x64_Intel.zip`;
 };
 
-// Shared config block
 const MESEN_SHARED = {
   name: 'Mesen 2',
-  installDir: 'mesen', // <--- Now valid in TypeScript!
+  installDir: 'mesen',
   downloads: {
     win32: 'https://github.com/SourMesen/Mesen2/releases/download/2.1.1/Mesen_2.1.1_Windows.zip',
     darwin: getMesenMacUrl(),
@@ -56,6 +55,10 @@ export const ENGINES: Record<string, EngineConfig> = {
     ...MESEN_SHARED,
     id: 'gba',
     acceptedExtensions: ['.gba', '.zip'],
-    detect: () => false
+    detect: () => false,
+    bios: {
+      filename: 'gba_bios.bin', 
+      description: 'Game Boy Advance BIOS'
+    },
   }
 };

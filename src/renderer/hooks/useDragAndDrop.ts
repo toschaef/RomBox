@@ -1,4 +1,4 @@
-import { useState, DragEvent, useCallback } from 'react';
+import { useState, DragEvent, useCallback, useEffect } from 'react';
 
 type OnFilesDropped = (files: FileList) => void;
 
@@ -15,7 +15,7 @@ export const useDragAndDrop = (onFilesDropped: OnFilesDropped) => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+    if (e.currentTarget && !e.currentTarget.contains(e.relatedTarget as Node)) {
       setIsDragging(false);
     }
   }, []);
@@ -29,6 +29,22 @@ export const useDragAndDrop = (onFilesDropped: OnFilesDropped) => {
       onFilesDropped(e.dataTransfer.files);
     }
   }, [onFilesDropped]);
+
+  useEffect(() => {
+    const handleGlobalDragEnd = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener('dragend', handleGlobalDragEnd, true);
+    window.addEventListener('drop', handleGlobalDragEnd, true);
+    window.addEventListener('mouseleave', handleGlobalDragEnd, true);
+
+    return () => {
+      window.removeEventListener('dragend', handleGlobalDragEnd, true);
+      window.removeEventListener('drop', handleGlobalDragEnd, true);
+      window.removeEventListener('mouseleave', handleGlobalDragEnd, true);
+    };
+  }, []);
 
   return {
     isDragging,

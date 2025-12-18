@@ -29,7 +29,7 @@ export default function Settings() {
             <div className="flex justify-between items-center">
               <div>
                 <h3 className="font-bold text-fg-primary">Clear Library</h3>
-                <p className="text-sm text-fg-muted">Deletes all games, metadata, and saves.</p>
+                <p className="text-sm text-fg-muted">Deletes all games</p>
               </div>
               <button
                 onClick={() => handleAction('Clear Library', 'clear-library', 'Delete ALL games? Cannot be undone.')}
@@ -45,7 +45,7 @@ export default function Settings() {
             <div className="flex justify-between items-center">
               <div>
                 <h3 className="font-bold text-fg-primary">Uninstall Engines</h3>
-                <p className="text-sm text-fg-muted">Deletes all downloaded emulators.</p>
+                <p className="text-sm text-fg-muted">Deletes all downloaded emulators <span className='text-fg-secondary font-bold'>along with game save data.</span></p>
               </div>
               <button
                 onClick={() => handleAction('Clear Engines', 'clear-engines', 'Uninstall all emulators?')}
