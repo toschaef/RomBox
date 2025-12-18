@@ -163,9 +163,19 @@ export const engineController = {
       fs.writeFileSync(tempZipPath, response.data);
 
       console.log('Extracting engine...');
-      const zip = new AdmZip(tempZipPath);
-      zip.extractAllTo(installDir, true);
-      fs.unlinkSync(tempZipPath);
+
+      if (downloadUrl.endsWith('.zip')) {
+          // handle zip
+          const zip = new AdmZip(tempZipPath);
+          zip.extractAllTo(installDir, true);
+          fs.unlinkSync(tempZipPath);
+      } else if (downloadUrl.endsWith('.tar.gz')) {
+          // handle tar
+          execSync(`tar -xzf "${tempZipPath}" -C "${installDir}"`);
+          fs.unlinkSync(tempZipPath);
+      } else {
+          throw new Error(`Unsupported engine archive format: ${path.extname(downloadUrl)}`);
+      }
 
       // handle evil nested zips
       const files = fs.readdirSync(installDir);
@@ -236,53 +246,82 @@ export const engineController = {
     const config = ENGINES[consoleId];
     if (!config?.bios) return true;
 
-    // check primary location
-    const primaryPath = path.join(homedir(), '.config', 'Mesen2', 'Firmware', config.bios.filename);
-    if (fs.existsSync(primaryPath)) return true;
+    const firmwareDir = config.bios.installDir || 
+      path.join(homedir(), '.config', 'Mesen2', 'Firmware');
 
-    // check fallback
-    const secondaryPath = path.join(homedir(), 'Library', 'Application Support', 'Mesen2', 'Firmware', config.bios.filename);
-    return fs.existsSync(secondaryPath);
+    return config.bios.files.every(file => 
+      fs.existsSync(path.join(firmwareDir, file.filename))
+    );
   },
-  installBios: (consoleId: string, sourcePath: string, zipEntryName?: string) => {
+  installBios: (consoleId: string, sourcePath: string) => {
     const config = ENGINES[consoleId];
     if (!config?.bios) throw new Error("This console does not require a BIOS.");
 
-    // We install to TWO locations to guarantee Mesen finds it.
-    const targetDirs = [
-      path.join(homedir(), '.config', 'Mesen2', 'Firmware'),
-      path.join(homedir(), 'Library', 'Application Support', 'Mesen2', 'Firmware')
-    ];
+    const targetDirs = config.bios.installDir 
+      ? [config.bios.installDir] 
+      : [
+          path.join(homedir(), '.config', 'Mesen2', 'Firmware'),
+          path.join(homedir(), 'Library', 'Application Support', 'Mesen2', 'Firmware')
+        ];
 
-    let success = false;
-    let lastError = null;
+    let installedFiles: string[] = [];
 
-    for (const firmwareDir of targetDirs) {
-      try {
-        if (!fs.existsSync(firmwareDir)) {
-          fs.mkdirSync(firmwareDir, { recursive: true });
-        }
-
-        const destPath = path.join(firmwareDir, config.bios.filename);
-        console.log(`[BIOS] Installing to ${destPath}`);
-
-        if (zipEntryName && path.extname(sourcePath).toLowerCase() === '.zip') {
-          const zip = new AdmZip(sourcePath);
-          const entry = zip.getEntry(zipEntryName);
-          if (!entry) throw new Error(`Entry ${zipEntryName} not found in zip`);
-          fs.writeFileSync(destPath, entry.getData());
-        } else {
-          fs.copyFileSync(sourcePath, destPath);
-        }
-        success = true;
-      } catch (err: any) {
-        console.warn(`[BIOS] Failed to install to ${firmwareDir}:`, err.message);
-        lastError = err;
-      }
+    for (const dir of targetDirs) {
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     }
 
-    if (!success && lastError) throw lastError;
-    return { success: true };
+    try {
+      const isZip = path.extname(sourcePath).toLowerCase() === '.zip';
+
+      if (isZip) {
+        // zip handling
+        const zip = new AdmZip(sourcePath);
+        const zipEntries = zip.getEntries();
+
+        for (const biosFile of config.bios.files) {
+          const entry = zipEntries.find(e => 
+            e.name.toLowerCase() === biosFile.filename.toLowerCase()
+          );
+
+          if (entry) {
+            console.log(`[BIOS] Found ${biosFile.filename} in zip. Extracting...`);
+            
+            for (const dir of targetDirs) {
+              fs.writeFileSync(path.join(dir, biosFile.filename), entry.getData());
+            }
+            installedFiles.push(biosFile.filename);
+          }
+        }
+      } else {
+        // raw file
+        const sourceFilename = path.basename(sourcePath).toLowerCase();
+
+        const matchedConfig = config.bios.files.find(f => 
+          f.filename.toLowerCase() === sourceFilename
+        );
+
+        if (matchedConfig) {
+          console.log(`[BIOS] Installing ${matchedConfig.filename}...`);
+          for (const dir of targetDirs) {
+            fs.copyFileSync(sourcePath, path.join(dir, matchedConfig.filename));
+          }
+          installedFiles.push(matchedConfig.filename);
+        } else {
+          throw new Error(`File '${path.basename(sourcePath)}' is not a valid BIOS for ${consoleId}`);
+        }
+      }
+
+      if (installedFiles.length === 0) {
+        throw new Error("No valid BIOS files found in selection.");
+      }
+
+      console.log(`[BIOS] Successfully installed: ${installedFiles.join(', ')}`);
+      return { success: true, installed: installedFiles };
+
+    } catch (err: any) {
+      console.error(`[BIOS] Installation failed:`, err.message);
+      throw err;
+    }
   },
   clearEngines: () => {
     try {

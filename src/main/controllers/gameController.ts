@@ -134,6 +134,13 @@ export const gameController = {
         };
       }
 
+      // grant executable
+      try {
+        fs.chmodSync(enginePath, '755'); 
+      } catch (e) {
+        console.warn(`Failed to set executable permissions on ${enginePath}`, e);
+      }
+
       console.log(`Launching ${enginePath} with ${game.filePath}`);
 
       const child = spawn(enginePath, [game.filePath], {

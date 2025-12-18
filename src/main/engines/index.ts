@@ -1,17 +1,22 @@
 import { EngineConfig } from '../../shared/types';
+import path from 'path';
+import { homedir } from 'os';
 
-const getMesenMacUrl = () => {
-  const version = '2.1.1';
-  return process.arch === 'arm64'
-    ? `https://github.com/SourMesen/Mesen2/releases/download/${version}/Mesen_${version}_macOS_ARM64_AppleSilicon.zip`
-    : `https://github.com/SourMesen/Mesen2/releases/download/${version}/Mesen_${version}_macOS_x64_Intel.zip`;
-};
+// emulator versions
+const MESEN_VERSION = '2.1.1';
+const MELON_VERSION = '1.1';
+const AZAHAR_VERSION = '2123.3';
+
+const getMesenMacUrl = () =>
+  process.arch === 'arm64'
+    ? `https://github.com/SourMesen/Mesen2/releases/download/${MESEN_VERSION}/Mesen_${MESEN_VERSION}_macOS_ARM64_AppleSilicon.zip`
+    : `https://github.com/SourMesen/Mesen2/releases/download/${MESEN_VERSION}/Mesen_${MESEN_VERSION}_macOS_x64_Intel.zip`;
 
 const MESEN_SHARED = {
   name: 'Mesen 2',
   installDir: 'mesen',
   downloads: {
-    win32: 'https://github.com/SourMesen/Mesen2/releases/download/2.1.1/Mesen_2.1.1_Windows.zip',
+    win32: `https://github.com/SourMesen/Mesen2/releases/download/${MESEN_VERSION}/Mesen_${MESEN_VERSION}_Windows.zip`,
     darwin: getMesenMacUrl(),
   },
   binaries: {
@@ -56,9 +61,52 @@ export const ENGINES: Record<string, EngineConfig> = {
     id: 'gba',
     acceptedExtensions: ['.gba', '.zip'],
     detect: () => false,
+        bios: {
+      files: [
+        { filename: 'gba_bios.bin', description: 'Game Boy Advance BIOS' }
+      ]
+    }
+  },
+
+  ds: {
+    id: 'ds',
+    name: 'MelonDS',
+    installDir: 'melonds',
     bios: {
-      filename: 'gba_bios.bin', 
-      description: 'Game Boy Advance BIOS'
+        installDir: path.join(homedir(), 'Library', 'Preferences', 'melonDS'), 
+        files: [
+          { filename: 'bios7.bin', description: 'ARM7 BIOS' },
+          { filename: 'bios9.bin', description: 'ARM9 BIOS' },
+          { filename: 'firmware.bin', description: 'Firmware' }
+        ]
     },
-  }
+    downloads: {
+      win32: `https://github.com/melonDS-emu/melonDS/releases/download/${MELON_VERSION}/melonDS-${MELON_VERSION}-windows-x86_64.zip`,
+      darwin: `https://github.com/melonDS-emu/melonDS/releases/download/${MELON_VERSION}/melonDS-${MELON_VERSION}-macOS-universal.zip`,
+    },
+    binaries: {
+      win32: 'melonDS.exe',
+      darwin: 'melonDS.app/Contents/MacOS/melonDS', 
+    },
+    acceptedExtensions: ['.nds', '.zip'],
+    detect: () => false,
+    getLaunchCommand: (game, path) => [path, game.filePath] 
+  },
+
+  '3ds': {
+    id: '3ds',
+    name: 'Azahar',
+    installDir: 'azahar',
+    downloads: {
+      win32: `https://github.com/azahar-emu/azahar/releases/download/${AZAHAR_VERSION}/azahar-${AZAHAR_VERSION}-windows-msvc.zip`,
+      darwin: `https://github.com/azahar-emu/azahar/releases/download/${AZAHAR_VERSION}/azahar-${AZAHAR_VERSION}-macos-universal.zip`,
+    },
+    binaries: {
+      win32: 'azahar-gui.exe',
+      darwin: 'Azahar.app/Contents/MacOS/Azahar', 
+    },
+    acceptedExtensions: ['.3ds', '.cia', '.cxi'],
+    detect: () => false,
+    getLaunchCommand: (game, path) => [path, game.filePath]
+  },
 };

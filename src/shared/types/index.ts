@@ -1,4 +1,4 @@
-export type ConsoleID = 'nes' | 'snes' | 'gb' | 'gba';
+export type ConsoleID = 'nes' | 'snes' | 'gb' | 'gba' | 'ds' | '3ds';
 export type Platform = 'win32' | 'darwin' | 'linux';
 
 export interface Game {
@@ -16,10 +16,15 @@ export interface EngineDependency {
   platform: Platform;
 }
 
-export interface BiosConfig {
+export interface BiosFile {
   filename: string;
   validHashes?: string[];
   description: string;
+}
+
+export interface BiosConfig {
+  files: BiosFile[];
+  installDir?: string;
 }
 
 export interface EngineConfig {

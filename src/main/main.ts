@@ -77,7 +77,7 @@ ipcMain.handle('process-file-drop', async (_, filePath) => {
       engineController.installBios(
         result.consoleId, 
         result.filePath,
-        result.zipEntryName,
+        // result.zipEntryName,
       );
       
       return { 
