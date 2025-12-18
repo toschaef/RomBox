@@ -5,6 +5,7 @@ declare global {
     electron: {
       invoke: (channel: string, ...args: any[]) => Promise<any>;
       getPathForFile: (file: File) => string;
+      on: (channel: string, func: (...args: any[]) => void) => (() => void);
     };
   }
 }

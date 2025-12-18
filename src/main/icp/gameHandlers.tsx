@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron';
 import { gameController } from '../controllers/gameController';
 
-export function registerGameHandlers() {
+export default function registerGameHandlers() {
   
   ipcMain.handle('create-game', async (event, fileInfo) => {
     try {
@@ -47,6 +47,14 @@ export function registerGameHandlers() {
       console.error('Failed to delete game:', err);
       return { success: false, message: err.message };
     }
+  });
+
+  ipcMain.handle('play-game', async (event, game) => {
+    return gameController.playGame(game);
+  });
+
+  ipcMain.handle('clear-library', async () => {
+    return gameController.clearLibrary();
   });
 
 }

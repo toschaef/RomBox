@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Game } from '../../../shared/types';
+import InstallModal from '../inputs/InstallModal';
 
 interface Props {
   game: Game;
@@ -9,9 +10,10 @@ interface Props {
 
 export default function GameCard({ game, onDelete, onUpdate }: Props) {
   const [showMenu, setShowMenu] = useState(false);
+  const [installModalOpen, setInstallModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // effect to handle clicks outside the menu to close it
+  // effect to close menu on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -24,22 +26,28 @@ export default function GameCard({ game, onDelete, onUpdate }: Props) {
   
   const handlePlay = async () => {
     try {
-      await window.electron.invoke('play-game', game);
-    } catch (e) {
-      console.error("Failed to launch game", e);
+      const result = await window.electron.invoke('play-game', game);
+      
+      if (result.success) {
+        console.log("Game launched without electron error");
+      } else if (result.code === 'MISSING_ENGINE') {
+          setInstallModalOpen(true);
+      } else {
+        console.error("Launch error:", result.message);
+      }
+    } catch (err) {
+      console.error("IPC Error", err);
     }
   };
 
   const handleUpdate = (e: React.MouseEvent) => {
     e.stopPropagation();
-    console.log("Open Update Modal for:", game.title);
     setShowMenu(false);
     onUpdate(game);
   };
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
     if (confirm(`Delete game ${game.title}?`)) {
         try {
             await window.electron.invoke('delete-game', game.id);
@@ -74,6 +82,7 @@ export default function GameCard({ game, onDelete, onUpdate }: Props) {
         hover:shadow-[0_0_20px_rgba(139,92,246,0.2)]
       "
     >
+      {/* Aspect Ratio Box */}
       <div className="
         aspect-4/3
         bg-bg-muted
@@ -97,20 +106,20 @@ export default function GameCard({ game, onDelete, onUpdate }: Props) {
         </span>
       </div>
 
+      {/* Text & Metadata */}
       <div className="flex flex-col gap-1">
         <h3 className="
           text-fg-primary 
           font-bold 
           text-sm 
           truncate 
-          group-hover:text-accent-primary 
+          group-hover:text-accent-secondary 
           transition-colors
         ">
           {game.title}
         </h3>
         
         <div className="flex justify-between items-center relative">
-          {/* console badge */}
           <span className="
             text-[10px] 
             uppercase 
@@ -124,7 +133,7 @@ export default function GameCard({ game, onDelete, onUpdate }: Props) {
             {game.consoleId}
           </span>
 
-          {/* options menu wrapper */}
+          {/* Menu Button */}
           <div className="relative" ref={menuRef}>
             <button
               onClick={toggleMenu}
@@ -143,7 +152,7 @@ export default function GameCard({ game, onDelete, onUpdate }: Props) {
               ⋮
             </button>
 
-            {/* options menu */}
+            {/* Popup Menu */}
             {showMenu && (
               <div className="
                 absolute 
@@ -185,6 +194,17 @@ export default function GameCard({ game, onDelete, onUpdate }: Props) {
           </div>
         </div>
       </div>
+      {/* install modal */}
+      {installModalOpen && (
+        <InstallModal 
+          game={game} 
+          onClose={() => setInstallModalOpen(false)}
+          onSuccess={() => {
+            setInstallModalOpen(false);
+            handlePlay();
+          }}
+        />
+      )}
     </div>
   );
 }

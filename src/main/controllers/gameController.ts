@@ -1,7 +1,11 @@
 import fs from "fs";
+import path from "path"; // FIXED: Removed /win32
 import { getDB } from "../db";
 import type { Game } from "../../shared/types";
 import { scrapeGameData } from "./validationController";
+import { engineController } from "./engineController";
+import { spawn } from "child_process";
+import { app } from "electron";
 
 export const gameController = {
   createGame: (file: { name: string; path: string }) => {
@@ -90,6 +94,68 @@ export const gameController = {
 
     } catch (err) {
       console.error("Delete Failed:", err);
+      throw err;
+    }
+  },
+  playGame: (game: Game) => {
+    try {
+      console.log(`Requesting launch for: ${game.title}`);
+
+      const enginePath = engineController.getEnginePath(game.consoleId);
+
+      if (!enginePath) {
+        console.warn(`Engine not found for ${game.consoleId}`);
+        return { 
+          success: false, 
+          code: 'MISSING_ENGINE',
+          message: `The emulator for ${game.consoleId.toUpperCase()} is not installed.`,
+        };
+      }
+
+      console.log(`Launching ${enginePath} with ${game.filePath}`);
+
+      const child = spawn(enginePath, [game.filePath], {
+        detached: true,
+        stdio: ['ignore', 'pipe', 'pipe']
+      });
+
+      child.stdout?.on('data', (data) => console.log(`[Emulator Log]: ${data}`));
+      child.stderr?.on('data', (data) => console.error(`[Emulator Error]: ${data}`));
+
+      child.on('error', (err) => {
+        console.error("Failed to spawn process:", err);
+      });
+
+      child.on('close', (code) => {
+        console.log(`Emulator process exited with code ${code}`);
+      });
+
+      child.unref();
+
+      return { success: true };
+
+    } catch (err) {
+      console.error("Launch Failed:", err);
+      return { success: false, message: "Failed to launch process." };
+    }
+  },
+
+  clearLibrary: () => {
+    const db = getDB();
+    try {
+      console.log("Clearing entire library...");
+
+      db.prepare('DELETE FROM games').run();
+
+      const romsDir = path.join(app.getPath('userData'), 'roms');
+      if (fs.existsSync(romsDir)) {
+        fs.rmSync(romsDir, { recursive: true, force: true });
+        fs.mkdirSync(romsDir);
+      }
+
+      return { success: true };
+    } catch (err) {
+      console.error("Failed to clear library:", err);
       throw err;
     }
   },
