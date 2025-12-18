@@ -7,31 +7,9 @@ import { execSync } from 'child_process';
 import { ENGINES } from '../engines';
 import { dependencyController } from './dependencyController';
 import { Platform, EngineDependency } from '../../shared/types';
+import { findFile } from '../../shared/utils';
 
 const BASE_PATH = path.join(app.getPath('userData'), 'engines');
-
-const findApp = (dir: string): string | null => {
-  try {
-    const files = fs.readdirSync(dir);
-
-    for (const file of files) {
-      const fullPath = path.join(dir, file);
-      if (file.endsWith('.app')) return fullPath;
-
-      try {
-        const stat = fs.statSync(fullPath);
-        if (stat.isDirectory()) {
-          const found = findApp(fullPath);
-          if (found) return found;
-        }
-      } catch (e: any) {
-        // ignore permission errors
-        if (e.code !== 'EACCES') console.warn(`[FindApp] Skip ${fullPath}: ${e.message}`);
-      }
-    }
-  } catch (e) {}
-  return null;
-};
 
 const signFile = (filePath: string) => {
   console.log(`[Sign] Processing: ${path.basename(filePath)}`);
@@ -90,19 +68,15 @@ const createJailbreakWrapper = (binaryPath: string) => {
 
     signFile(realBinaryPath);
 
-    const scriptContent = 
-    `#!/bin/bash
-     DIR="$(cd "$(dirname "$0")" && pwd)"
-     export DYLD_LIBRARY_PATH="$DIR:$DYLD_LIBRARY_PATH"
-     exec "$DIR/${realBinaryName}" "$@"
-    `.trim();
+    const scriptContent = `#!/bin/bash
+DIR="$(cd "$(dirname "$0")" && pwd)"
+export DYLD_LIBRARY_PATH="$DIR:$DYLD_LIBRARY_PATH"
+exec "$DIR/${realBinaryName}" "$@"
+`.trim();
 
     console.log(`[Wrapper] Writing launcher script...`);
     fs.writeFileSync(binaryPath, scriptContent);
-
-    // make wrapper executable
     execSync(`chmod +x "${binaryPath}"`);
-
     console.log("[Wrapper] Wrapper created successfully.");
 
   } catch (e: any) {
@@ -115,16 +89,38 @@ const createJailbreakWrapper = (binaryPath: string) => {
   }
 };
 
-const getInstallPath = (consoleId: string) => path.join(BASE_PATH, consoleId);
+const getInstallPath = (consoleId: string) => {
+  const config = ENGINES[consoleId];
+  // Respect the shared install directory if it exists
+  const dirName = config?.installDir || consoleId; 
+  return path.join(BASE_PATH, dirName);
+};
 
 const getEnginePath = (consoleId: string) => {
   const config = ENGINES[consoleId];
   if (!config) return null;
+  
   const platform = process.platform as Platform;
   const binaryRelPath = config.binaries[platform];
   if (!binaryRelPath) return null;
-  const fullPath = path.join(BASE_PATH, consoleId, binaryRelPath);
-  return fs.existsSync(fullPath) ? fullPath : null;
+
+  const dirName = config.installDir || consoleId;
+  const installBase = path.join(BASE_PATH, dirName);
+  const strictPath = path.join(installBase, binaryRelPath);
+
+  if (fs.existsSync(strictPath)) return strictPath;
+
+  const binaryName = path.basename(binaryRelPath);
+  console.log(`[EnginePath] Strict path failed. Searching for "${binaryName}" in ${installBase}...`);
+
+  const foundPath = findFile(installBase, binaryName);
+  
+  if (foundPath) {
+    console.log(`[EnginePath] Found binary at: ${foundPath}`);
+    return foundPath;
+  }
+
+  return null;
 };
 
 export const engineController = {
@@ -180,15 +176,19 @@ export const engineController = {
       let binaryFullPath = '';
 
       if (currentPlatform === 'darwin') {
-        const foundAppPath = findApp(installDir);
-        if (!foundAppPath) throw new Error("Could not find .app bundle.");
+        const appBundleName = binaryRelPath.split('/')[0];
+        const foundAppPath = findFile(installDir, appBundleName);
+        
+        if (!foundAppPath) throw new Error(`Could not find ${appBundleName}`);
 
-        const expectedPath = path.join(installDir, 'Mesen.app');
+        const expectedPath = path.join(installDir, appBundleName);
         if (foundAppPath !== expectedPath) {
+          console.log(`Moving ${appBundleName} to root...`);
           fs.renameSync(foundAppPath, expectedPath);
         }
 
         binaryFullPath = path.join(installDir, binaryRelPath);
+        
         if (fs.existsSync(binaryFullPath)) {
           dependencyDir = path.dirname(binaryFullPath);
           // restore permissions just in case
@@ -212,7 +212,7 @@ export const engineController = {
             signFile(libPath);
           }
         }
-        
+
         if (currentPlatform === 'darwin' && binaryFullPath) {
           createJailbreakWrapper(binaryFullPath);
         }

@@ -1,4 +1,4 @@
-export type ConsoleID = 'nes' | 'snes' | 'gb' | 'gba' ;
+export type ConsoleID = 'nes' | 'snes' | 'gb' | 'gba';
 export type Platform = 'win32' | 'darwin' | 'linux';
 
 export interface Game {
@@ -11,8 +11,8 @@ export interface Game {
 
 export interface EngineDependency {
   url: string;
-  filename: string; // name to save file as
-  sourceName?: string; // name inside download if different
+  filename: string;
+  sourceName?: string;
   platform: Platform;
 }
 
@@ -20,6 +20,7 @@ export interface EngineConfig {
   id: ConsoleID;
   name: string;
   acceptedExtensions: string[];
+  installDir?: string; 
 
   // installation config
   downloads: {

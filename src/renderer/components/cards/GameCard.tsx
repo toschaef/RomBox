@@ -82,7 +82,7 @@ export default function GameCard({ game, onDelete, onUpdate }: Props) {
         hover:shadow-[0_0_20px_rgba(139,92,246,0.2)]
       "
     >
-      {/* Aspect Ratio Box */}
+      {/* box */}
       <div className="
         aspect-4/3
         bg-bg-muted
@@ -106,7 +106,7 @@ export default function GameCard({ game, onDelete, onUpdate }: Props) {
         </span>
       </div>
 
-      {/* Text & Metadata */}
+      {/* metadata */}
       <div className="flex flex-col gap-1">
         <h3 className="
           text-fg-primary 
@@ -133,7 +133,7 @@ export default function GameCard({ game, onDelete, onUpdate }: Props) {
             {game.consoleId}
           </span>
 
-          {/* Menu Button */}
+          {/* menu button */}
           <div className="relative" ref={menuRef}>
             <button
               onClick={toggleMenu}
@@ -196,14 +196,16 @@ export default function GameCard({ game, onDelete, onUpdate }: Props) {
       </div>
       {/* install modal */}
       {installModalOpen && (
-        <InstallModal 
-          game={game} 
-          onClose={() => setInstallModalOpen(false)}
-          onSuccess={() => {
-            setInstallModalOpen(false);
-            handlePlay();
-          }}
-        />
+        <div onClick={(e) => e.stopPropagation()}>
+          <InstallModal 
+            game={game} 
+            onClose={() => setInstallModalOpen(false)}
+            onSuccess={() => {
+              setInstallModalOpen(false);
+              handlePlay();
+            }}
+          />
+        </div>
       )}
     </div>
   );
