@@ -60,11 +60,13 @@ app.on('activate', () => {
 });
 
 ipcMain.handle('process-file-drop', async (_, filePath) => {
+  console.log(`[IPC] 'process-file-drop' received for: ${filePath}`);
   try {
-    const result = validationController.scanFile(filePath);
+    const result = await validationController.scanFile(filePath);
+    console.log(`[IPC] Scan Result: ${result.type}`);
 
     if (result.type === 'game') {
-      const gameData = validationController.importGame(result);
+      const gameData = await validationController.importGame(result);
       const game = await gameController.createGameFromData(gameData);
 
       return {
@@ -74,10 +76,9 @@ ipcMain.handle('process-file-drop', async (_, filePath) => {
       }
     } 
     else if (result.type === 'bios') {
-      engineController.installBios(
+      await engineController.installBios(
         result.consoleId, 
         result.filePath,
-        // result.zipEntryName,
       );
       
       return { 
@@ -87,10 +88,11 @@ ipcMain.handle('process-file-drop', async (_, filePath) => {
       };
     } 
     
+    console.warn("[IPC] File drop resulted in Unknown Type");
     return { success: false, message: "Unknown file type" };
 
   } catch (err: any) {
-    console.error("Drop processing failed:", err);
+    console.error("[IPC] Drop processing failed:", err);
     return { success: false, message: err.message };
   }
 });

@@ -27,18 +27,19 @@ export const gameController = {
       throw err;
     }
   },
-  createGame: (file: { name: string; path: string }) => {
+  createGame: async (file: { name: string; path: string }) => {
     try {
-      const scanResult = validationController.scanFile(file.path);
+      const scanResult = await validationController.scanFile(file.path);
 
       if (scanResult.type !== 'game') {
         throw new Error(`File is not a recognized game ROM: ${scanResult.type}`);
       }
 
-      const gameData = validationController.importGame(scanResult);
+      const gameData = await validationController.importGame(scanResult);
 
-      return gameController.createGameFromData(gameData);
+      const game = await gameController.createGameFromData(gameData);
 
+      return { success: true, game: game.game };
     } catch (err: any) {
       console.error("Create Game Failed:", err);
       return { success: false, message: err.message };
