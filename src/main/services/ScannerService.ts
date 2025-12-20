@@ -1,105 +1,20 @@
-import fs from 'fs';
 import path from 'path';
-import { app } from 'electron';
 import AdmZip from 'adm-zip';
 import crypto from "crypto";
-import sevenBin from '7zip-bin';
-import { execFile, spawn } from 'child_process';
-import type { Game } from "../../shared/types";
-import { BIOS_FILENAMES, EXTENSION_MAP } from '../../shared/utils/constants';
-
-const pathTo7zip = sevenBin.path7za;
-
-if (process.platform !== 'win32') {
-  try {
-    if (fs.existsSync(pathTo7zip)) {
-      fs.chmodSync(pathTo7zip, '755');
-    }
-  } catch (e) {
-    console.warn('[Init] Failed to set 7-Zip permissions:', e);
-  }
-}
-
-function getConsoleId(extension: string) {
-  return EXTENSION_MAP[extension.toLowerCase()];
-}
-
-const list7z = (filePath: string): Promise<any[]> => {
-  return new Promise((resolve, reject) => {
-    console.log(`[7z Raw] Listing: ${filePath}`);
-    
-    execFile(pathTo7zip, ['l', filePath, '-slt'], (error, stdout, stderr) => {
-      if (error) {
-        console.error('[7z Raw Error]', error);
-        console.error('[7z Stderr]', stderr);
-        return reject(error);
-      }
-
-      const entries: any[] = [];
-      const blocks = stdout.split(/(\r\n|\r|\n){2}/);
-
-      for (const block of blocks) {
-        const lines = block.split(/(\r\n|\r|\n)/);
-        const entry: any = {};
-        
-        for (const line of lines) {
-          if (!line.includes('=')) continue;
-          const [key, ...values] = line.split('=');
-          if (key && values) {
-            entry[key.trim()] = values.join('=').trim();
-          }
-        }
-
-        if (entry.Path) {
-          entries.push({
-            file: entry.Path,
-            attr: entry.Attributes,
-            size: entry.Size
-          });
-        }
-      }
-      
-      console.log(`[7z Raw] Found ${entries.length} entries.`);
-      resolve(entries);
-    });
-  });
-};
-
-const extract7zFile = (archivePath: string, fileToExtract: string, outputDir: string): Promise<void> => {
-  return new Promise((resolve, reject) => {
-
-    const child = spawn(pathTo7zip, ['x', archivePath, `-o${outputDir}`, fileToExtract, '-y']);
-
-    child.stdout.on('data', (data) => {
-      const output = data.toString();
-    });
-
-    child.stderr.on('data', (data) => {
-      console.error(`[7z stderr]: ${data.toString().trim()}`);
-    });
-
-    child.on('close', (code) => {
-      if (code === 0) {
-        resolve();
-      } else {
-        console.error(`[7z Raw] Process exited with code ${code}`);
-        reject(new Error(`7-Zip exited with code ${code}`));
-      }
-    });
-
-    child.on('error', (err) => {
-      console.error('[7z Raw] Spawn Error:', err);
-      reject(err);
-    });
-  });
-};
+import fs from 'fs';
+import { app } from 'electron';
+import { Extractor } from '../utils/extractor';
+import { BIOS_FILENAMES } from '../../shared/constants';
+import { getConsoleIdFromExtension } from '../../shared/constants';
+import type { Game } from '../../shared/types';
 
 type ScanResult = 
   | { type: 'game'; consoleId: string; filePath: string; zipEntryName?: string }
   | { type: 'bios'; consoleId: string; filePath: string; zipEntryName?: string }
   | { type: 'unknown' };
 
-export const validationController = {
+export const ScannerService = {
+     // ... (Your existing scan logic, but calling Extractor.list7z instead of list7z) ...
   scanFile: async (filePath: string): Promise<ScanResult> => {
     console.log(`[Scanner] Scanning file: ${filePath}`);
     const ext = path.extname(filePath).toLowerCase();
@@ -117,7 +32,7 @@ export const validationController = {
     // handle .7z
     if (ext === '.7z') {
       try {
-        const entries = await list7z(filePath);
+        const entries = await Extractor.list7z(filePath);
         
         // check for bios in 7z
         for (const entry of entries) {
@@ -137,10 +52,10 @@ export const validationController = {
         const validGameEntry = entries.find(entry => {
           if (entry.attr && entry.attr.includes('D')) return false; 
           
-          const id = getConsoleId(path.extname(entry.file));
+          const id = getConsoleIdFromExtension(path.extname(entry.file));
           if (id) {
-             console.log(`[Scanner] Found Game Candidate: ${entry.file} (${id})`);
-             return true;
+            console.log(`[Scanner] Found Game Candidate: ${entry.file} (${id})`);
+            return true;
           }
           return false;
         });
@@ -148,7 +63,7 @@ export const validationController = {
         if (validGameEntry) {
           return {
             type: 'game',
-            consoleId: getConsoleId(path.extname(validGameEntry.file)),
+            consoleId: getConsoleIdFromExtension(path.extname(validGameEntry.file)),
             filePath,
             zipEntryName: validGameEntry.file
           };
@@ -178,13 +93,13 @@ export const validationController = {
 
         const validGameEntry = entries.find(entry => {
           if (entry.isDirectory) return false;
-          return getConsoleId(path.extname(entry.name)) !== undefined;
+          return getConsoleIdFromExtension(path.extname(entry.name)) !== undefined;
         });
 
         if (validGameEntry) {
           return {
             type: 'game',
-            consoleId: getConsoleId(path.extname(validGameEntry.name)),
+            consoleId: getConsoleIdFromExtension(path.extname(validGameEntry.name)),
             filePath,
             zipEntryName: validGameEntry.entryName
           };
@@ -195,7 +110,7 @@ export const validationController = {
     }
 
     // try raw file
-    const consoleId = getConsoleId(ext);
+    const consoleId = getConsoleIdFromExtension(ext);
     if (consoleId) {
       return { type: 'game', consoleId, filePath };
     }
@@ -219,8 +134,14 @@ export const validationController = {
     const romsDir = path.join(userDataPath, 'roms', scanResult.consoleId);
     if (!fs.existsSync(romsDir)) fs.mkdirSync(romsDir, { recursive: true });
 
-    const destFilename = sourceName;
-    const newFilePath = path.join(romsDir, destFilename);
+    let destFilename = sourceName;
+    let newFilePath = path.join(romsDir, destFilename);
+
+    if (fs.existsSync(newFilePath)) {
+      const nameParts = path.parse(sourceName);
+      destFilename = `${nameParts.name}_${Date.now()}${nameParts.ext}`;
+      newFilePath = path.join(romsDir, destFilename);
+    }
 
     try {
       const ext = path.extname(scanResult.filePath).toLowerCase();
@@ -230,7 +151,7 @@ export const validationController = {
         const tempDir = path.join(app.getPath('temp'), 'rombox_extract_' + crypto.randomUUID());
         if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
 
-        await extract7zFile(scanResult.filePath, scanResult.zipEntryName, tempDir);
+        await Extractor.extract7z(scanResult.filePath, scanResult.zipEntryName, tempDir);
 
         const extractedFullPath = path.join(tempDir, scanResult.zipEntryName);
         if (!fs.existsSync(path.dirname(newFilePath))) fs.mkdirSync(path.dirname(newFilePath), { recursive: true });
@@ -268,5 +189,5 @@ export const validationController = {
       filePath: newFilePath,
       consoleId: scanResult.consoleId as any,
     };
-  }
+  },
 };

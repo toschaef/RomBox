@@ -1,4 +1,4 @@
-import type { ConsoleID } from '../types';
+import type { ConsoleID } from "./types"
 
 export const CONSOLEID_ENGLISH_MAP: Record<ConsoleID, string> = {
   'nes': 'NES',
@@ -35,6 +35,10 @@ export const ACCEPTED_EXTENSIONS = [
   ...Object.keys(EXTENSION_MAP),
   '.zip'
 ].join(',');
+
+export function getConsoleIdFromExtension(extension: string) {
+  return EXTENSION_MAP[extension.toLowerCase()];
+}
 
 export const BIOS_FILENAMES: Record<string, ConsoleID> = {
   'gba_bios.bin': 'gba',

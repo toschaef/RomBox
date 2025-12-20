@@ -31,7 +31,7 @@ const MESEN_SHARED = {
       sourceName: 'SDL2'
     }
   ],
-  getLaunchCommand: (game: any, emulatorPath: string) => [emulatorPath, game.filePath]
+  getLaunchCommand: (game: any, binPath: string) => [binPath, game.filePath]
 };
 
 export const ENGINES: Record<string, EngineConfig> = {
@@ -61,7 +61,7 @@ export const ENGINES: Record<string, EngineConfig> = {
     id: 'gba',
     acceptedExtensions: ['.gba', '.zip'],
     detect: () => false,
-        bios: {
+    bios: {
       files: [
         { filename: 'gba_bios.bin', description: 'Game Boy Advance BIOS' }
       ]
@@ -90,10 +90,10 @@ export const ENGINES: Record<string, EngineConfig> = {
     },
     acceptedExtensions: ['.nds', '.zip'],
     detect: () => false,
-    getLaunchCommand: (game, path) => [path, game.filePath] 
+    getLaunchCommand: (game, binPath) => [binPath, game.filePath] 
   },
 
-  '3ds': {
+'3ds': {
     id: '3ds',
     name: 'Azahar',
     installDir: 'azahar',
@@ -103,10 +103,10 @@ export const ENGINES: Record<string, EngineConfig> = {
     },
     binaries: {
       win32: 'azahar-gui.exe',
-      darwin: 'Azahar.app/Contents/MacOS/Azahar', 
+      darwin: `azahar-${AZAHAR_VERSION}-macos-universal/Azahar.app/Contents/MacOS/azahar`, 
     },
     acceptedExtensions: ['.3ds', '.cia', '.cxi'],
     detect: () => false,
-    getLaunchCommand: (game, path) => [path, game.filePath]
+    getLaunchCommand: (game, binPath) => [binPath, game.filePath]
   },
 };

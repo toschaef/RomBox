@@ -1,12 +1,12 @@
 import { ipcMain } from 'electron';
-import { gameController } from '../controllers/gameController';
+import { LibraryService } from '../services/LibraryService';
 
 export default function registerGameHandlers() {
   
   ipcMain.handle('create-game', async (event, fileInfo) => {
     try {
       console.log('Received file for creation:', fileInfo);
-      return await gameController.createGame(fileInfo);
+      return await LibraryService.createGameFromFile(fileInfo);
     } catch (err) {
       console.error('Failed to create game:', err);
       return { success: false, message: err.message };
@@ -15,7 +15,7 @@ export default function registerGameHandlers() {
 
   ipcMain.handle('get-games', async () => {
     try {
-      return await gameController.getGames();
+      return await LibraryService.getGames();
     } catch (err) {
       console.error('Failed to fetch games:', err);
       return { success: false, message: err.message };
@@ -24,7 +24,7 @@ export default function registerGameHandlers() {
 
   ipcMain.handle('get-game', async (event, id) => {
     try {
-      return await gameController.getGame(id);
+      return await LibraryService.getGame(id);
     } catch (err) {
       console.error('Failed to fetch games:', err);
       return { success: false, message: err.message };
@@ -33,7 +33,7 @@ export default function registerGameHandlers() {
 
   ipcMain.handle('update-game', async (event, game) => {
     try {
-      return await gameController.updateGame(game);
+      return await LibraryService.updateGame(game);
     } catch (err) {
       console.error('Failed to update game:', err);
       return { success: false, message: err.message };
@@ -42,7 +42,7 @@ export default function registerGameHandlers() {
 
   ipcMain.handle('delete-game', async (event, gameId) => {
     try {
-      return await gameController.deleteGame(gameId);
+      return await LibraryService.deleteGame(gameId);
     } catch (err) {
       console.error('Failed to delete game:', err);
       return { success: false, message: err.message };
@@ -50,11 +50,11 @@ export default function registerGameHandlers() {
   });
 
   ipcMain.handle('play-game', async (event, game) => {
-    return gameController.playGame(game);
+    return LibraryService.playGame(game);
   });
 
   ipcMain.handle('clear-library', async () => {
-    return gameController.clearLibrary();
+    return LibraryService.clearLibrary();
   });
 
 }
