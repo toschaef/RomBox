@@ -1,20 +1,66 @@
 import path from 'path';
-import AdmZip from 'adm-zip';
 import crypto from "crypto";
 import fs from 'fs';
 import { app } from 'electron';
 import { Extractor } from '../utils/extractor';
 import { BIOS_FILENAMES } from '../../shared/constants';
-import { getConsoleIdFromExtension } from '../../shared/constants';
+import { getConsoleIdFromExtension, isAmbiguousExtension } from '../../shared/constants';
 import type { Game } from '../../shared/types';
+import { detectConsoleFromHeader } from '../utils/identifier';
+import { scanZipEntries, extractZipEntry } from '../utils/fsUtils';
 
 type ScanResult = 
   | { type: 'game'; consoleId: string; filePath: string; zipEntryName?: string }
   | { type: 'bios'; consoleId: string; filePath: string; zipEntryName?: string }
   | { type: 'unknown' };
 
+interface NormalizedEntry {
+  name: string;
+  size: number;
+}
+
+const identifyConsole = async (
+    filename: string, 
+    fileSize: number, 
+    filePathForHeader?: string
+  ): Promise<string | undefined> => {
+  const ext = path.extname(filename).toLowerCase();
+
+  let id = getConsoleIdFromExtension(ext);
+
+
+  if (filePathForHeader && (ext === '.iso' || !id)) {
+    const detected = await detectConsoleFromHeader(filePathForHeader);
+    if (detected) return detected;
+  }
+
+  // handle .rvz wii vs gamecube
+  if (ext === '.rvz') {
+    const WII_THRESHOLD = 1.5 * 1024 * 1024 * 1024; // 1.5 GB
+    if (fileSize > WII_THRESHOLD) return 'wii';
+    return 'gc';
+  }
+
+  return id;
+};
+
+const getArchiveEntries = async (filePath: string): Promise<NormalizedEntry[]> => {
+  const ext = path.extname(filePath).toLowerCase();
+  
+  if (ext === '.7z') {
+    const entries = await Extractor.list7z(filePath);
+    return entries.map(e => ({ name: e.file, size: Number(e.size) || 0 })); 
+  }
+  
+  if (ext === '.zip') {
+    const entries = await scanZipEntries(filePath);
+    return entries.map(e => ({ name: e.fileName, size: e.uncompressedSize }));
+  }
+
+  return [];
+};
+
 export const ScannerService = {
-     // ... (Your existing scan logic, but calling Extractor.list7z instead of list7z) ...
   scanFile: async (filePath: string): Promise<ScanResult> => {
     console.log(`[Scanner] Scanning file: ${filePath}`);
     const ext = path.extname(filePath).toLowerCase();
@@ -29,92 +75,54 @@ export const ScannerService = {
       };
     }
 
-    // handle .7z
-    if (ext === '.7z') {
+    // handle archive
+    if (['.zip', '.7z'].includes(ext)) {
       try {
-        const entries = await Extractor.list7z(filePath);
-        
-        // check for bios in 7z
+        const entries = await getArchiveEntries(filePath);
+        console.log(`[Scanner] Found ${entries.length} entries in archive`);
+
         for (const entry of entries) {
-          const entryName = path.basename(entry.file).toLowerCase(); 
+          // handle bios
+          const entryName = path.basename(entry.name).toLowerCase();
           if (BIOS_FILENAMES[entryName]) {
-            console.log(`[Scanner] Found BIOS in 7z: ${entryName}`);
             return {
               type: 'bios',
               consoleId: BIOS_FILENAMES[entryName],
               filePath,
-              zipEntryName: entry.file
+              zipEntryName: entry.name
             };
           }
-        }
 
-        // check for game in 7z
-        const validGameEntry = entries.find(entry => {
-          if (entry.attr && entry.attr.includes('D')) return false; 
-          
-          const id = getConsoleIdFromExtension(path.extname(entry.file));
+          // handle game
+          const id = await identifyConsole(entry.name, entry.size);
           if (id) {
-            console.log(`[Scanner] Found Game Candidate: ${entry.file} (${id})`);
-            return true;
-          }
-          return false;
-        });
-
-        if (validGameEntry) {
-          return {
-            type: 'game',
-            consoleId: getConsoleIdFromExtension(path.extname(validGameEntry.file)),
-            filePath,
-            zipEntryName: validGameEntry.file
-          };
-        }
-      } catch (e) {
-        console.warn("Failed to inspect 7z:", e);
-      }
-    }
-
-    // handle zip
-    if (ext === '.zip') {
-      try {
-        const zip = new AdmZip(filePath);
-        const entries = zip.getEntries();
-
-        for (const entry of entries) {
-          const entryName = entry.name.toLowerCase();
-          if (BIOS_FILENAMES[entryName]) {
+            console.log(`[Scanner] Match in archive: ${entry.name} -> ${id}`);
             return {
-              type: 'bios',
-              consoleId: BIOS_FILENAMES[entryName],
+              type: 'game',
+              consoleId: id,
               filePath,
-              zipEntryName: entry.entryName
+              zipEntryName: entry.name
             };
           }
         }
-
-        const validGameEntry = entries.find(entry => {
-          if (entry.isDirectory) return false;
-          return getConsoleIdFromExtension(path.extname(entry.name)) !== undefined;
-        });
-
-        if (validGameEntry) {
-          return {
-            type: 'game',
-            consoleId: getConsoleIdFromExtension(path.extname(validGameEntry.name)),
-            filePath,
-            zipEntryName: validGameEntry.entryName
-          };
-        }
-      } catch (e) {
-        console.warn("Failed to inspect zip:", e);
+      } catch (err) {
+        console.warn(`[Scanner] Failed to inspect archive ${ext}:`, err.message);
       }
     }
 
     // try raw file
-    const consoleId = getConsoleIdFromExtension(ext);
-    if (consoleId) {
-      return { type: 'game', consoleId, filePath };
+    try {
+      const stats = fs.statSync(filePath);
+      const id = await identifyConsole(filename, stats.size, filePath);
+      
+      if (id) {
+        return { type: 'game', consoleId: id, filePath };
+      }
+    } catch (err) {
+      console.warn("[Scanner] Error checking raw file:", err.message);
     }
-
+    
+    console.log('[Scanner] Warning: file unidentified');
     return { type: 'unknown' };
   },
 
@@ -137,6 +145,7 @@ export const ScannerService = {
     let destFilename = sourceName;
     let newFilePath = path.join(romsDir, destFilename);
 
+    // handle duplicates
     if (fs.existsSync(newFilePath)) {
       const nameParts = path.parse(sourceName);
       destFilename = `${nameParts.name}_${Date.now()}${nameParts.ext}`;
@@ -160,16 +169,13 @@ export const ScannerService = {
         
         try {
           fs.rmSync(tempDir, { recursive: true, force: true });
-        } catch(e) { console.warn("Failed to clean temp dir", e); }
+        } catch(err) { console.warn("Failed to clean temp dir", err.message); }
       } 
       // handle zip
       else if (scanResult.zipEntryName) {
         console.log(`[Import] Extracting Zip entry: ${scanResult.zipEntryName}`);
-        const zip = new AdmZip(scanResult.filePath);
-        const entry = zip.getEntry(scanResult.zipEntryName);
-        if (entry) {
-            fs.writeFileSync(newFilePath, entry.getData());
-        }
+
+        await extractZipEntry(scanResult.filePath, scanResult.zipEntryName, newFilePath);
       } 
       // handle raw file
       else {
@@ -179,7 +185,7 @@ export const ScannerService = {
         }
       }
     } catch (err) {
-      console.error("[Import] Failed to import ROM:", err);
+      console.error("[Import] Failed to import ROM:", err.message);
       throw new Error("Could not import file into library.");
     }
 

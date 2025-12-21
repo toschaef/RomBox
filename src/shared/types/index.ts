@@ -1,4 +1,8 @@
-export type ConsoleID = 'nes' | 'snes' | 'gb' | 'gba' | 'ds' | '3ds';
+export type ConsoleID = 
+  'nes' | 'snes' | 
+  'gb'  | 'gba'  | 
+  'ds'  | '3ds'  |
+  'gc'  | 'wii';
 export type Platform = 'win32' | 'darwin' | 'linux';
 
 export interface Game {

@@ -1,4 +1,7 @@
 export interface PlatformHandler {
+
+  /** extracts downloaded archive */
+  extractArchive(filePath: string, destDir: string): Promise<void>;
   
   /**  post install cleanup  */
   finalizeInstall(binaryPath: string): Promise<void>;

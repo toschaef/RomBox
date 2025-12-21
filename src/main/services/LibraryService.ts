@@ -92,7 +92,7 @@ export const LibraryService = {
         };
       }
 
-      // Ensure execution permissions
+      // ensure execution permissions
       try { if (fs.existsSync(enginePath)) fs.chmodSync(enginePath, '755'); } catch (e) {}
 
       console.log(`[Library] Spawning: ${enginePath}`);

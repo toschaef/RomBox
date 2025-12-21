@@ -6,8 +6,6 @@ let db: Database.Database | null = null;
 
 export function initDB() {
   const dbPath = path.join(app.getPath('userData'), 'rombox.db');
-  
-  console.log(`Initializing Database at: ${dbPath}`);
 
   db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
@@ -23,7 +21,7 @@ export function initDB() {
   `;
   
   db.exec(schema);
-  console.log("Database initialized successfully");
+  console.log("Database initialized");
 }
 
 export function getDB() {

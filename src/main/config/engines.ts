@@ -1,38 +1,10 @@
 import { EngineConfig } from '../../shared/types';
 import path from 'path';
 import { homedir } from 'os';
+import { MESEN_SHARED } from './shared'
+import { DOLPHIN_SHARED } from './shared';
+import { MELON_VERSION, AZAHAR_VERSION } from './shared';
 
-// emulator versions
-const MESEN_VERSION = '2.1.1';
-const MELON_VERSION = '1.1';
-const AZAHAR_VERSION = '2123.3';
-
-const getMesenMacUrl = () =>
-  process.arch === 'arm64'
-    ? `https://github.com/SourMesen/Mesen2/releases/download/${MESEN_VERSION}/Mesen_${MESEN_VERSION}_macOS_ARM64_AppleSilicon.zip`
-    : `https://github.com/SourMesen/Mesen2/releases/download/${MESEN_VERSION}/Mesen_${MESEN_VERSION}_macOS_x64_Intel.zip`;
-
-const MESEN_SHARED = {
-  name: 'Mesen 2',
-  installDir: 'mesen',
-  downloads: {
-    win32: `https://github.com/SourMesen/Mesen2/releases/download/${MESEN_VERSION}/Mesen_${MESEN_VERSION}_Windows.zip`,
-    darwin: getMesenMacUrl(),
-  },
-  binaries: {
-    win32: 'Mesen.exe',
-    darwin: 'Mesen.app/Contents/MacOS/Mesen',
-  },
-  dependencies: [
-    {
-      platform: 'darwin' as const,
-      url: 'https://github.com/libsdl-org/SDL/releases/download/release-2.30.3/SDL2-2.30.3.dmg',
-      filename: 'libSDL2-2.0.0.dylib',
-      sourceName: 'SDL2'
-    }
-  ],
-  getLaunchCommand: (game: any, binPath: string) => [binPath, game.filePath]
-};
 
 export const ENGINES: Record<string, EngineConfig> = {
   nes: {
@@ -108,5 +80,25 @@ export const ENGINES: Record<string, EngineConfig> = {
     acceptedExtensions: ['.3ds', '.cia', '.cxi'],
     detect: () => false,
     getLaunchCommand: (game, binPath) => [binPath, game.filePath]
+  },
+
+  gc: {
+    ...DOLPHIN_SHARED,
+    id: 'gc',
+    acceptedExtensions: ['.iso', '.gcm', '.rvz', '.ciso'],
+    detect: (buffer) => {
+        if (buffer.length < 0x20) return false;
+        return buffer.readUInt32BE(0x1C) === 0xC2339F3D;
+    }
+  },
+
+  wii: {
+    ...DOLPHIN_SHARED,
+    id: 'wii',
+    acceptedExtensions: ['.iso', '.wbfs', '.rvz'],
+    detect: (buffer) => {
+        if (buffer.length < 0x20) return false;
+        return buffer.readUInt32BE(0x18) === 0x5D1C9EA3;
+    }
   },
 };

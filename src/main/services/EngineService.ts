@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import axios from 'axios';
 import AdmZip from 'adm-zip';
 import { app } from 'electron';
 import { homedir } from 'os';
@@ -8,6 +7,7 @@ import { ENGINES } from '../config/engines';
 import { osHandler } from '../platform';
 import { Platform } from '../../shared/types';
 import { Extractor } from '../utils/extractor';
+import { Downloader } from '../utils/downloader';
 
 const BASE_PATH = path.join(app.getPath('userData'), 'engines');
 
@@ -23,7 +23,7 @@ export const EngineService = {
     
     try {
       return await osHandler.resolveBinaryPath(installBase, binaryConfigPath);
-    } catch (e) {
+    } catch (err) {
       return null;
     }
   },
@@ -34,34 +34,43 @@ export const EngineService = {
 
     const platform = process.platform as Platform;
     const url = config.downloads[platform];
+    
     const installDir = path.join(BASE_PATH, config.installDir || consoleId);
-    const tempZip = path.join(installDir, 'temp.zip');
-
-    // install
+    
     if (fs.existsSync(installDir)) fs.rmSync(installDir, { recursive: true, force: true });
     fs.mkdirSync(installDir, { recursive: true });
 
     try {
-      onProgress(`Downloading ${config.name}...`);
-      const res = await axios.get(url, { responseType: 'arraybuffer', headers: { 'User-Agent': 'RomBox/1.0' } });
-      fs.writeFileSync(tempZip, res.data);
+      onProgress('Downloading...');
+      const customHeaders = (config as any).headers || {};
+
+      const downloadedFilePath = await Downloader.download(url, installDir, {
+        onProgress,
+        headers: customHeaders
+      });
 
       onProgress('Extracting...');
-      if (url.endsWith('.zip')) {
-        const zip = new AdmZip(tempZip);
-        zip.extractAllTo(installDir, true);
-      } else if (url.endsWith('.tar.gz')) {
-        await Extractor.extract7z(tempZip, installDir); 
-      }
-      fs.unlinkSync(tempZip);
+      const stats = fs.statSync(downloadedFilePath);
+      if (stats.size < 1024 * 1024) throw new Error("Downloaded file is too small (invalid).");
 
-      // handle nested zips
+      await osHandler.extractArchive(downloadedFilePath, installDir);
+      fs.unlinkSync(downloadedFilePath);
+
+      // handle nested archives
       const files = fs.readdirSync(installDir);
-      const nestedZip = files.find(f => f.toLowerCase().endsWith('.zip'));
-      if (nestedZip) {
-         const nestedPath = path.join(installDir, nestedZip);
-         const zip = new AdmZip(nestedPath);
-         zip.extractAllTo(installDir, true);
+      // filter system files
+      const validFiles = files.filter(f => !f.startsWith('.')); 
+      
+      const nestedArchive = validFiles.find(f => 
+        ['.zip', '.7z', '.rar', '.tar', '.gz'].includes(path.extname(f).toLowerCase())
+      );
+
+      if (nestedArchive) {
+         console.log(`[EngineService] Found nested archive: ${nestedArchive}`);
+         const nestedPath = path.join(installDir, nestedArchive);
+         
+         await osHandler.extractArchive(nestedPath, installDir);
+         
          fs.unlinkSync(nestedPath);
       }
 
@@ -69,11 +78,10 @@ export const EngineService = {
       if (config.dependencies) {
         for (const dep of config.dependencies) {
            if (dep.platform !== platform) continue;
-           onProgress(`Installing dependency: ${dep.filename}...`);
            
-           const depPath = path.join(installDir, dep.filename);
-           const dRes = await axios.get(dep.url, { responseType: 'arraybuffer' });
-           fs.writeFileSync(depPath, dRes.data);
+           onProgress(`Installing dependency: ${dep.sourceName || dep.filename}...`);
+           
+           const depPath = await Downloader.download(dep.url, installDir);
 
            await osHandler.installDependency(
              depPath, 
@@ -88,18 +96,14 @@ export const EngineService = {
 
       // finalize
       const binaryConfigPath = config.binaries[platform];
-      try {
-        const resolvedBinary = await osHandler.resolveBinaryPath(installDir, binaryConfigPath);
-        await osHandler.finalizeInstall(resolvedBinary);
-      } catch (e) {
-        console.warn("Could not finalize install:", e);
-      }
+      const resolvedBinary = await osHandler.resolveBinaryPath(installDir, binaryConfigPath);
+      await osHandler.finalizeInstall(resolvedBinary);
 
       return { success: true };
 
-    } catch (e: any) {
-      console.error("Install Failed:", e);
-      return { success: false, message: e.message };
+    } catch (err: any) {
+      console.error("Install Failed:", err.message);
+      return { success: false, message: err.message };
     }
   },
 

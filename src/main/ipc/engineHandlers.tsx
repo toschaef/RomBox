@@ -18,7 +18,7 @@ export default function engineHandlers() {
       console.log(`[IPC] Installing BIOS for ${consoleId} from ${filePath}`);
       return EngineService.installBios(consoleId, filePath);
     } catch (err: any) {
-      console.error("Failed to install BIOS:", err);
+      console.error("Failed to install BIOS:", err.message);
       return { success: false, message: err.message };
     }
   });

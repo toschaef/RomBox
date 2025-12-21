@@ -1,11 +1,88 @@
 import { execSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import AdmZip from 'adm-zip';
 import { homedir } from 'os';
 import { PlatformHandler } from './types';
 import { findFile } from '../utils/fsUtils';
+import { Extractor } from '../utils/extractor';
 
 export class MacHandler implements PlatformHandler {
+
+  private findAllAppBundles(dir: string): string[] {
+    let results: string[] = [];
+    try {
+      const files = fs.readdirSync(dir);
+      
+      for (const file of files) {
+        const fullPath = path.join(dir, file);
+        const stat = fs.lstatSync(fullPath);
+
+        if (file.endsWith('.app')) {
+          results.push(fullPath);
+        } 
+        else if (stat.isDirectory() && !stat.isSymbolicLink()) {
+             results = results.concat(this.findAllAppBundles(fullPath));
+        }
+      }
+    } catch (err) {}
+    return results;
+  }
+
+async extractArchive(filePath: string, destDir: string): Promise<void> {
+    const lowerExt = path.extname(filePath).toLowerCase();
+
+    // handle dmg
+    if (lowerExt === '.dmg') {
+      console.log(`[Mac] Detected DMG. Mounting: ${filePath}`);
+      const mountPoint = path.join(path.dirname(filePath), `mount_${Date.now()}`);
+
+      try {
+        // mount dmgs
+        execSync(`hdiutil attach -nobrowse -noautoopen -mountpoint "${mountPoint}" "${filePath}"`);
+
+        const appBundles = this.findAllAppBundles(mountPoint);
+        
+        if (appBundles.length === 0) {
+          throw new Error('No .app bundle found inside DMG.');
+        }
+
+        // copy every app
+        for (const appPath of appBundles) {
+            const appName = path.basename(appPath);
+            console.log(`[Mac] Copying ${appName} to ${destDir}`);
+
+            execSync(`cp -R "${appPath}" "${destDir}/"`);
+        }
+
+      } catch (e: any) {
+        throw new Error(`Failed to extract DMG: ${e.message}`);
+      } finally {
+        // detach
+        if (fs.existsSync(mountPoint)) {
+          try { execSync(`hdiutil detach "${mountPoint}" -force`); } catch(e) {}
+        }
+      }
+      return;
+    }
+
+    // handle zip
+    if (lowerExt === '.zip') {
+      console.log(`[Mac] Extracting Zip: ${filePath}`);
+      const zip = new AdmZip(filePath);
+      zip.extractAllTo(destDir, true);
+      return;
+    }
+
+    // handle other archive
+    if (['.7z', '.tar', '.gz', '.rar'].includes(lowerExt)) {
+      console.log(`[Mac] Extracting with 7z: ${filePath}`);
+      await Extractor.extract7z(filePath, destDir);
+      return;
+    }
+
+    throw new Error(`Unsupported archive format for macOS: ${lowerExt}`);
+  }
   
   async installDependency(dmgPath: string, installDir: string, searchName: string, targetFilename: string): Promise<void> {
     console.log(`[Mac] Mounting DMG to find ${searchName}`);

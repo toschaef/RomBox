@@ -7,6 +7,8 @@ export const CONSOLEID_ENGLISH_MAP: Record<ConsoleID, string> = {
   'gba': 'Game Boy Advance',
   'ds': 'DS',
   '3ds': '3DS',
+  'gc': 'GameCube',
+  'wii': 'Wii',
 }
 
 export const getConsoleNameFromId = (id: ConsoleID) => CONSOLEID_ENGLISH_MAP[id];
@@ -33,10 +35,18 @@ export const EXTENSION_MAP: Record<string, ConsoleID> = {
 
 export const ACCEPTED_EXTENSIONS = [
   ...Object.keys(EXTENSION_MAP),
-  '.zip'
+  '.zip',
+  '.7z',
+  '.iso',
+  '.rvz'
 ].join(',');
 
+export const isAmbiguousExtension = (ext: string) => {
+  return ['.iso', '.rvz'].includes(ext.toLowerCase());
+}
+
 export function getConsoleIdFromExtension(extension: string) {
+  if (isAmbiguousExtension(extension)) return null;
   return EXTENSION_MAP[extension.toLowerCase()];
 }
 
@@ -54,4 +64,31 @@ export const getBiosConsole = (filename: string): ConsoleID | undefined => {
 
 export const ENGINE_MAP: Record<string, string> = {
   'nes': 'Mesen',
+  'snes': 'Mesen',
+  'gb': 'Mesen',
+  'gba': 'Mesen',
+  'ds': 'MelonDS',
+  '3ds': 'Azahar',
+  'gc': 'Dolphin',
+  'wii': 'Dolphin',
 };
+
+interface Signature {
+  id: ConsoleID;
+  offset: number;
+  bytes: number[];
+}
+
+// signatures for scanning ISO's
+export const SIGNATURES: Signature[] = [
+  {
+    id: 'gc',
+    offset: 0x1C,
+    bytes: [0xC2, 0x33, 0x9F, 0x3D] 
+  },
+  {
+    id: 'wii',
+    offset: 0x18,
+    bytes: [0x5D, 0x1C, 0x9E, 0xA3]
+  }
+];
