@@ -70,56 +70,6 @@ export const LibraryService = {
     } catch (err) { return { success: false, message: err.message }; }
   },
 
-  playGame: async (game: Game) => {
-    try {
-      console.log(`[Library] Requesting launch for: ${game.title}`);
-      
-      const enginePath = await EngineService.getEnginePath(game.consoleId);
-
-      if (!enginePath) {
-        return { 
-          success: false, 
-          code: 'MISSING_ENGINE',
-          message: `Emulator for ${game.consoleId} not installed.` 
-        };
-      }
-
-      if (!EngineService.isBiosInstalled(game.consoleId)) {
-        return { 
-          success: false, 
-          code: 'MISSING_BIOS',
-          message: `BIOS missing for ${game.consoleId}` 
-        };
-      }
-
-      // ensure execution permissions
-      try { if (fs.existsSync(enginePath)) fs.chmodSync(enginePath, '755'); } catch (e) {}
-
-      console.log(`[Library] Spawning: ${enginePath}`);
-      
-      const child = spawn(enginePath, [game.filePath], {
-        detached: true,
-        stdio: ['ignore', 'pipe', 'pipe']
-      });
-
-      child.stdout?.on('data', (d) => console.log(`[Emulator]: ${d}`));
-      child.stderr?.on('data', (d) => console.error(`[Emulator Err]: ${d}`));
-      
-      child.on('error', (err) => console.error("[Library] Failed to spawn process:", err));
-      child.on('close', (code) => {
-        if (code !== 0) console.log(`[Library] Emulator exited with code ${code}`);
-      });
-
-      child.unref();
-
-      return { success: true };
-
-    } catch (err) {
-      console.error("Launch Failed:", err);
-      return { success: false, message: "Failed to launch process." };
-    }
-  },
-
   clearLibrary: () => {
     try {
       getDB().prepare('DELETE FROM games').run();

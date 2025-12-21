@@ -97,11 +97,13 @@ export const EngineService = {
       // finalize
       const binaryConfigPath = config.binaries[platform];
       const resolvedBinary = await osHandler.resolveBinaryPath(installDir, binaryConfigPath);
-      await osHandler.finalizeInstall(resolvedBinary);
+      
+      const needsWrapper = config.dependencies && config.dependencies.length > 0;
+      
+      await osHandler.finalizeInstall(resolvedBinary, !!needsWrapper);
 
       return { success: true };
-
-    } catch (err: any) {
+    } catch (err) {
       console.error("Install Failed:", err.message);
       return { success: false, message: err.message };
     }
@@ -175,7 +177,7 @@ export const EngineService = {
       }
       return { success: true, installed: installedFiles };
 
-    } catch (err: any) {
+    } catch (err) {
       console.error(`[BIOS] Installation failed:`, err.message);
       throw err;
     }

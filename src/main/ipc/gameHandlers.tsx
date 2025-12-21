@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron';
 import { LibraryService } from '../services/LibraryService';
+import { LaunchService } from '../services/LaunchService';
 
 export default function registerGameHandlers() {
   
@@ -50,7 +51,7 @@ export default function registerGameHandlers() {
   });
 
   ipcMain.handle('play-game', async (event, game) => {
-    return LibraryService.playGame(game);
+    return LaunchService.launch(game);
   });
 
   ipcMain.handle('clear-library', async () => {

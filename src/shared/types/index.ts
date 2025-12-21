@@ -54,4 +54,5 @@ export interface EngineConfig {
   // runtime
   detect: (buffer: Buffer) => boolean; 
   getLaunchCommand: (game: Game, emulatorPath: string) => string[];
+  postLaunch?: () => void;
 }

@@ -1,3 +1,5 @@
+import { osHandler } from "../platform";
+
 // emulator versions
 export const MESEN_VERSION = '2.1.1';
 export const MELON_VERSION = '1.1';
@@ -40,5 +42,12 @@ export const DOLPHIN_SHARED = {
     win32: 'Dolphin.exe',
     darwin: 'Dolphin.app/Contents/MacOS/Dolphin', 
   },
-  getLaunchCommand: (game: any, binPath: string) => [binPath, '-b', '-e', game.filePath]
+  getLaunchCommand: (game: any, binPath: string) => [
+    binPath, 
+    '-b',
+    '-C', 'Display.RenderToMain=False',
+    '-C', 'Interface.ShowMainWindow=False',
+    '-C', 'Interface.ConfirmStop=False',
+    '-e', game.filePath 
+  ],
 };

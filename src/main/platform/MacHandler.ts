@@ -6,6 +6,7 @@ import { homedir } from 'os';
 import { PlatformHandler } from './types';
 import { findFile } from '../utils/fsUtils';
 import { Extractor } from '../utils/extractor';
+import { spawn, ChildProcess } from 'child_process';
 
 export class MacHandler implements PlatformHandler {
 
@@ -55,12 +56,12 @@ async extractArchive(filePath: string, destDir: string): Promise<void> {
             execSync(`cp -R "${appPath}" "${destDir}/"`);
         }
 
-      } catch (e: any) {
-        throw new Error(`Failed to extract DMG: ${e.message}`);
+      } catch (err) {
+        throw new Error(`Failed to extract DMG: ${err.message}`);
       } finally {
         // detach
         if (fs.existsSync(mountPoint)) {
-          try { execSync(`hdiutil detach "${mountPoint}" -force`); } catch(e) {}
+          try { execSync(`hdiutil detach "${mountPoint}" -force`); } catch(err) {}
         }
       }
       return;
@@ -92,8 +93,8 @@ async extractArchive(filePath: string, destDir: string): Promise<void> {
       const mountOutput = execSync(`hdiutil attach "${dmgPath}" -nobrowse -readonly`).toString();
       mountPoint = mountOutput.match(/\/Volumes\/[^\n\r]*/)?.[0].trim() || '';
       if (!mountPoint) throw new Error("Could not mount DMG");
-    } catch (e: any) { 
-      throw new Error(`Failed to mount DMG: ${e.message}`); 
+    } catch (err) { 
+      throw new Error(`Failed to mount DMG: ${err.message}`); 
     }
     
     try {
@@ -120,14 +121,21 @@ async extractArchive(filePath: string, destDir: string): Promise<void> {
       await this.removeQuarantine(destPath);
       await this.adHocSign(destPath)
     } finally {
-      try { execSync(`hdiutil detach "${mountPoint}" -force`); } catch(e){}
+      try { execSync(`hdiutil detach "${mountPoint}" -force`); } catch(err){}
     }
   }
 
-  async finalizeInstall(binaryPath: string): Promise<void> {
+  async finalizeInstall(binaryPath: string, needsWrapper: boolean): Promise<void> {
     if (!fs.existsSync(binaryPath)) return;
-
     if (fs.statSync(binaryPath).isDirectory()) return;
+
+    if (!needsWrapper) {
+      console.log(`[Mac] Skipping wrapper for self-contained binary: ${binaryPath}`);
+      fs.chmodSync(binaryPath, '755');
+      await this.removeQuarantine(binaryPath);
+      await this.adHocSign(binaryPath);
+      return;
+    }
 
     console.log(`[Mac] Finalizing wrapper for: ${binaryPath}`);
 
@@ -164,8 +172,8 @@ async extractArchive(filePath: string, destDir: string): Promise<void> {
       await this.adHocSign(realBinaryPath);
       
       console.log("[Mac] Wrapper created successfully");
-    } catch (e) {
-      console.warn("[Mac] Wrapper creation failed", e);
+    } catch (err) {
+      console.warn("[Mac] Wrapper creation failed", err.message);
       // revert
       if (fs.existsSync(realBinaryPath) && !fs.existsSync(binaryPath)) {
         fs.renameSync(realBinaryPath, binaryPath);
@@ -200,13 +208,66 @@ async extractArchive(filePath: string, destDir: string): Promise<void> {
     }
   }
 
+  launchProcess(binaryPath: string, args: string[]): ChildProcess {
+    console.log(`[Mac] Launching: ${binaryPath}`);
+
+    if (binaryPath.includes('.app/Contents/MacOS/')) {
+      const appPath = binaryPath.split('.app/')[0] + '.app';
+
+      const openArgs = [
+        '-a', appPath,
+        '--args',
+        ...args
+      ];
+
+      console.log(`[Mac] Using open -g for app bundle: ${appPath}`);
+
+      const child = spawn('open', openArgs, {
+        detached: true,
+        stdio: ['ignore', 'pipe', 'pipe']
+      });
+
+      return child;
+    }
+
+    // fallback: raw binary launch
+    try {
+      if (fs.existsSync(binaryPath)) {
+        fs.chmodSync(binaryPath, '755');
+      }
+    } catch {}
+
+    return spawn(binaryPath, args, {
+      detached: true,
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+  }
+
+
+  getEmulatorConfigPath(emulatorId: string): string {
+    const home = homedir();
+    
+    switch (emulatorId) {
+      case 'dolphin':
+        return path.join(home, 'Library', 'Application Support', 'Dolphin', 'Config');
+      
+      case 'mesen':
+        return path.join(home, '.config', 'Mesen2');
+
+      default:
+        return path.join(home, 'Library', 'Application Support', emulatorId);
+    }
+  }
+
+  // helpers
+
   private async removeQuarantine(filePath: string) {
-    try { execSync(`xattr -d com.apple.quarantine "${filePath}"`, { stdio: 'ignore' }); } catch (e) {}
+    try { execSync(`xattr -d com.apple.quarantine "${filePath}"`, { stdio: 'ignore' }); } catch (err) {}
   }
   private async adHocSign(filePath: string) {
     try {
-      try { execSync(`codesign --remove-signature "${filePath}"`, { stdio: 'ignore' }); } catch(e) {}
+      try { execSync(`codesign --remove-signature "${filePath}"`, { stdio: 'ignore' }); } catch(err) {}
       execSync(`codesign --force --sign - --preserve-metadata=entitlements "${filePath}"`);
-    } catch (e) {}
+    } catch (err) {}
   }
 }
