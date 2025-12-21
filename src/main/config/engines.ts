@@ -1,42 +1,84 @@
 import { EngineConfig } from '../../shared/types';
 import path from 'path';
 import { homedir } from 'os';
-import { MESEN_SHARED } from './shared'
-import { DOLPHIN_SHARED } from './shared';
-import { MELON_VERSION, AZAHAR_VERSION } from './shared';
+import { IS_MAC } from '../../shared/constants'
+import { MESEN_SHARED, DOLPHIN_SHARED,
+         MELON_VERSION, RMG_VERSION, ARES_VERSION, AZAHAR_VERSION
+        } from './shared';
+
 
 
 export const ENGINES: Record<string, EngineConfig> = {
   nes: {
     ...MESEN_SHARED,
     id: 'nes',
-    acceptedExtensions: ['.nes', '.unf', '.zip'],
+    acceptedExtensions: ['.nes', '.unf'],
     detect: (buffer) => buffer.length > 4 && buffer[0] === 0x4E && buffer[1] === 0x45 && buffer[2] === 0x53 && buffer[3] === 0x1A
   },
   
   snes: {
     ...MESEN_SHARED,
     id: 'snes',
-    acceptedExtensions: ['.sfc', '.smc', '.snes', '.zip'],
+    acceptedExtensions: ['.sfc', '.smc', '.snes'],
     detect: () => false
   },
   
   gb: {
     ...MESEN_SHARED,
     id: 'gb',
-    acceptedExtensions: ['.gb', '.gbc', '.zip'],
+    acceptedExtensions: ['.gb', '.gbc'],
     detect: () => false
   },
   
   gba: {
     ...MESEN_SHARED,
     id: 'gba',
-    acceptedExtensions: ['.gba', '.zip'],
+    acceptedExtensions: ['.gba'],
     detect: () => false,
     bios: {
       files: [
         { filename: 'gba_bios.bin', description: 'Game Boy Advance BIOS' }
       ]
+    }
+  },
+
+  n64: {
+    id: 'n64',
+    name: IS_MAC ? 'Ares' : 'RMG',
+    installDir: IS_MAC ? 'ares' : 'rmg',
+    
+    acceptedExtensions: ['.n64', '.z64', '.v64', '.zip', '.7z'],
+    detect: (buffer) => {
+      if (buffer.length < 4) return false;
+      const magic = buffer.readUInt32BE(0);
+      return [0x80371240, 0x37804012, 0x40123780].includes(magic);
+    },
+    
+    downloads: {
+      win32: `https://github.com/Rosalie241/RMG/releases/download/v${RMG_VERSION}/RMG-Portable-Windows64-v${RMG_VERSION}.zip`,
+      linux: `https://github.com/Rosalie241/RMG/releases/download/v${RMG_VERSION}/RMG-Portable-Linux64-v${RMG_VERSION}.AppImage`,
+      darwin: `https://github.com/ares-emulator/ares/releases/download/v${ARES_VERSION}/ares-macos-universal.zip`
+    },
+    
+    binaries: {
+      win32: 'RMG.exe',
+      linux: `RMG-Portable-Linux64-v${RMG_VERSION}.AppImage`,
+      darwin: `ares-v${ARES_VERSION}/ares.app/Contents/MacOS/ares`
+    },
+    
+    getLaunchCommand: (game: any, binPath: string) => {
+      if (IS_MAC) {
+        return [
+          binPath,
+          game.filePath
+        ];
+      }
+
+      return [
+        binPath,
+        '--nogui',
+        game.filePath
+      ];
     }
   },
 

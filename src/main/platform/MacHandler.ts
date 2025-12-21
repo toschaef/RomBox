@@ -127,13 +127,26 @@ async extractArchive(filePath: string, destDir: string): Promise<void> {
 
   async finalizeInstall(binaryPath: string, needsWrapper: boolean): Promise<void> {
     if (!fs.existsSync(binaryPath)) return;
-    if (fs.statSync(binaryPath).isDirectory()) return;
+
+    try { fs.chmodSync(binaryPath, '755'); } catch (e) {}
+
+    const appBundleMatch = binaryPath.match(/(.*\.app)/);
+    
+    if (appBundleMatch) {
+      const appPath = appBundleMatch[1];
+      console.log(`[Mac] Detected App Bundle: ${appPath}`);
+
+      await this.removeQuarantine(appPath);
+      await this.deepSign(appPath);
+      
+      return;
+    }
+
+    console.log(`[Mac] Finalizing standalone binary: ${binaryPath}`);
+    await this.removeQuarantine(binaryPath);
+    await this.adHocSign(binaryPath);
 
     if (!needsWrapper) {
-      console.log(`[Mac] Skipping wrapper for self-contained binary: ${binaryPath}`);
-      fs.chmodSync(binaryPath, '755');
-      await this.removeQuarantine(binaryPath);
-      await this.adHocSign(binaryPath);
       return;
     }
 
@@ -150,10 +163,7 @@ async extractArchive(filePath: string, destDir: string): Promise<void> {
     }
 
     try {
-      // rename
       fs.renameSync(binaryPath, realBinaryPath);
-
-      // create wrapper
       const scriptContent = [
         `#!/bin/bash`,
         `DIR="$(cd "$(dirname "$0")" && pwd)"`,
@@ -162,22 +172,12 @@ async extractArchive(filePath: string, destDir: string): Promise<void> {
       ].join('\n');
 
       fs.writeFileSync(binaryPath, scriptContent);
-
-      // make executabe
       fs.chmodSync(binaryPath, '755');
       fs.chmodSync(realBinaryPath, '755');
-
-      // sign
       await this.removeQuarantine(realBinaryPath);
       await this.adHocSign(realBinaryPath);
-      
-      console.log("[Mac] Wrapper created successfully");
     } catch (err) {
-      console.warn("[Mac] Wrapper creation failed", err.message);
-      // revert
-      if (fs.existsSync(realBinaryPath) && !fs.existsSync(binaryPath)) {
-        fs.renameSync(realBinaryPath, binaryPath);
-      }
+      console.warn("[Mac] Wrapper failed", err);
     }
   }
 
@@ -208,7 +208,7 @@ async extractArchive(filePath: string, destDir: string): Promise<void> {
     }
   }
 
-  launchProcess(binaryPath: string, args: string[]): ChildProcess {
+launchProcess(binaryPath: string, args: string[]): ChildProcess {
     console.log(`[Mac] Launching: ${binaryPath}`);
 
     if (binaryPath.includes('.app/Contents/MacOS/')) {
@@ -219,28 +219,12 @@ async extractArchive(filePath: string, destDir: string): Promise<void> {
         '--args',
         ...args
       ];
-
-      console.log(`[Mac] Using open -g for app bundle: ${appPath}`);
-
-      const child = spawn('open', openArgs, {
-        detached: true,
-        stdio: ['ignore', 'pipe', 'pipe']
-      });
-
-      return child;
+      
+      console.log(`[Mac] Opening App Bundle: ${appPath}`);
+      return spawn('open', openArgs, { detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
     }
 
-    // fallback: raw binary launch
-    try {
-      if (fs.existsSync(binaryPath)) {
-        fs.chmodSync(binaryPath, '755');
-      }
-    } catch {}
-
-    return spawn(binaryPath, args, {
-      detached: true,
-      stdio: ['ignore', 'pipe', 'pipe']
-    });
+    return spawn(binaryPath, args, { detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
   }
 
 
@@ -253,6 +237,9 @@ async extractArchive(filePath: string, destDir: string): Promise<void> {
       
       case 'mesen':
         return path.join(home, '.config', 'Mesen2');
+      
+      case 'ares':
+        return path.join(home, 'Library', 'Application Support', 'ares');
 
       default:
         return path.join(home, 'Library', 'Application Support', emulatorId);
@@ -262,12 +249,25 @@ async extractArchive(filePath: string, destDir: string): Promise<void> {
   // helpers
 
   private async removeQuarantine(filePath: string) {
-    try { execSync(`xattr -d com.apple.quarantine "${filePath}"`, { stdio: 'ignore' }); } catch (err) {}
+    try { 
+      execSync(`xattr -r -d com.apple.quarantine "${filePath}"`, { stdio: 'ignore' }); 
+      console.log(`[Mac] Quarantine removed for: ${path.basename(filePath)}`);
+    } catch {}
   }
   private async adHocSign(filePath: string) {
     try {
       try { execSync(`codesign --remove-signature "${filePath}"`, { stdio: 'ignore' }); } catch(err) {}
       execSync(`codesign --force --sign - --preserve-metadata=entitlements "${filePath}"`);
     } catch (err) {}
+  }
+
+  private async deepSign(appPath: string) {
+    console.log(`[Mac] Deep signing app bundle: ${appPath}`);
+    try {
+      execSync(`codesign --force --deep --sign - "${appPath}"`);
+      console.log(`[Mac] Deep sign successful.`);
+    } catch (err) {
+      console.error(`[Mac] Deep sign failed: ${err.message}`);
+    }
   }
 }

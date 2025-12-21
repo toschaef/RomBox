@@ -1,10 +1,17 @@
 import type { ConsoleID } from "./types"
 
+export const IS_MAC = typeof process !== 'undefined' && process.platform 
+  ? process.platform === 'darwin' 
+  : typeof navigator !== 'undefined' 
+    ? navigator.platform.toUpperCase().indexOf('MAC') >= 0 
+    : false;
+
 export const CONSOLEID_ENGLISH_MAP: Record<ConsoleID, string> = {
   'nes': 'NES',
   'snes': 'SNES',
   'gb': 'Game Boy',
   'gba': 'Game Boy Advance',
+  'n64': 'N64',
   'ds': 'DS',
   '3ds': '3DS',
   'gc': 'GameCube',
@@ -23,6 +30,10 @@ export const EXTENSION_MAP: Record<string, ConsoleID> = {
 
   '.gb': 'gb',
   '.gbc': 'gb',
+
+  '.n64': 'n64',
+  '.z64': 'n64',
+  '.v64': 'n64',
 
   '.gba': 'gba',
 
@@ -62,11 +73,12 @@ export const getBiosConsole = (filename: string): ConsoleID | undefined => {
   return BIOS_FILENAMES[filename.toLowerCase()];
 };
 
-export const ENGINE_MAP: Record<string, string> = {
+export const ENGINE_MAP: Record<ConsoleID, string> = {
   'nes': 'Mesen',
   'snes': 'Mesen',
   'gb': 'Mesen',
   'gba': 'Mesen',
+  'n64': IS_MAC? 'ARES' : 'RMG',
   'ds': 'MelonDS',
   '3ds': 'Azahar',
   'gc': 'Dolphin',

@@ -1,6 +1,7 @@
 export type ConsoleID = 
   'nes' | 'snes' | 
-  'gb'  | 'gba'  | 
+  'gb'  | 'gba'  |
+  'n64' |
   'ds'  | '3ds'  |
   'gc'  | 'wii';
 export type Platform = 'win32' | 'darwin' | 'linux';

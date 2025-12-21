@@ -1,7 +1,7 @@
-import { osHandler } from "../platform";
-
 // emulator versions
 export const MESEN_VERSION = '2.1.1';
+export const RMG_VERSION = '0.6.5'; 
+export const ARES_VERSION = '146';
 export const MELON_VERSION = '1.1';
 export const AZAHAR_VERSION = '2123.3';
 export const DOLPHIN_VERSION = '2407';
