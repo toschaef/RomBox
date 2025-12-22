@@ -1,9 +1,13 @@
 export type ConsoleID = 
   'nes' | 'snes' | 
   'gb'  | 'gba'  |
+  'gg'  | // game gear
+  'sms' | // sega master system
+  'pce' | // pc engine
   'n64' |
   'ds'  | '3ds'  |
   'gc'  | 'wii';
+
 export type Platform = 'win32' | 'darwin' | 'linux';
 
 export interface Game {

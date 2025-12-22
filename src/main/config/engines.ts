@@ -42,12 +42,33 @@ export const ENGINES: Record<string, EngineConfig> = {
     }
   },
 
+  gg: {
+    ...MESEN_SHARED,
+    id: 'gg',
+    acceptedExtensions: ['.gg'],
+    detect: () => false
+  },
+
+  sms: {
+    ...MESEN_SHARED,
+    id: 'sms',
+    acceptedExtensions: ['.sms'],
+    detect: () => false
+  },
+
+  pce: {
+    ...MESEN_SHARED,
+    id: 'pce',
+    acceptedExtensions: ['.pce', 'xq.sgx'],
+    detect: () => false
+  },
+
   n64: {
     id: 'n64',
     name: IS_MAC ? 'Ares' : 'RMG',
     installDir: IS_MAC ? 'ares' : 'rmg',
     
-    acceptedExtensions: ['.n64', '.z64', '.v64', '.zip', '.7z'],
+    acceptedExtensions: ['.n64', '.z64', '.v64'],
     detect: (buffer) => {
       if (buffer.length < 4) return false;
       const magic = buffer.readUInt32BE(0);

@@ -160,7 +160,7 @@ export const ScannerService = {
         const tempDir = path.join(app.getPath('temp'), 'rombox_extract_' + crypto.randomUUID());
         if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
 
-        await Extractor.extract7z(scanResult.filePath, scanResult.zipEntryName, tempDir);
+        await Extractor.extract7z(scanResult.filePath, tempDir, scanResult.zipEntryName);
 
         const extractedFullPath = path.join(tempDir, scanResult.zipEntryName);
         if (!fs.existsSync(path.dirname(newFilePath))) fs.mkdirSync(path.dirname(newFilePath), { recursive: true });

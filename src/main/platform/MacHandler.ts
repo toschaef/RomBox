@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execSync, spawn, ChildProcess } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import AdmZip from 'adm-zip';
@@ -6,7 +6,6 @@ import { homedir } from 'os';
 import { PlatformHandler } from './types';
 import { findFile } from '../utils/fsUtils';
 import { Extractor } from '../utils/extractor';
-import { spawn, ChildProcess } from 'child_process';
 
 export class MacHandler implements PlatformHandler {
 
@@ -14,15 +13,12 @@ export class MacHandler implements PlatformHandler {
     let results: string[] = [];
     try {
       const files = fs.readdirSync(dir);
-      
       for (const file of files) {
         const fullPath = path.join(dir, file);
         const stat = fs.lstatSync(fullPath);
-
         if (file.endsWith('.app')) {
           results.push(fullPath);
-        } 
-        else if (stat.isDirectory() && !stat.isSymbolicLink()) {
+        } else if (stat.isDirectory() && !stat.isSymbolicLink()) {
              results = results.concat(this.findAllAppBundles(fullPath));
         }
       }
@@ -30,44 +26,32 @@ export class MacHandler implements PlatformHandler {
     return results;
   }
 
-async extractArchive(filePath: string, destDir: string): Promise<void> {
+  async extractArchive(filePath: string, destDir: string): Promise<void> {
     const lowerExt = path.extname(filePath).toLowerCase();
 
-    // handle dmg
     if (lowerExt === '.dmg') {
       console.log(`[Mac] Detected DMG. Mounting: ${filePath}`);
       const mountPoint = path.join(path.dirname(filePath), `mount_${Date.now()}`);
 
       try {
-        // mount dmgs
         execSync(`hdiutil attach -nobrowse -noautoopen -mountpoint "${mountPoint}" "${filePath}"`);
-
         const appBundles = this.findAllAppBundles(mountPoint);
         
-        if (appBundles.length === 0) {
-          throw new Error('No .app bundle found inside DMG.');
-        }
+        if (appBundles.length === 0) throw new Error('No .app bundle found inside DMG.');
 
-        // copy every app
         for (const appPath of appBundles) {
             const appName = path.basename(appPath);
             console.log(`[Mac] Copying ${appName} to ${destDir}`);
-
             execSync(`cp -R "${appPath}" "${destDir}/"`);
         }
-
       } catch (err) {
         throw new Error(`Failed to extract DMG: ${err.message}`);
       } finally {
-        // detach
-        if (fs.existsSync(mountPoint)) {
-          try { execSync(`hdiutil detach "${mountPoint}" -force`); } catch(err) {}
-        }
+        if (fs.existsSync(mountPoint)) try { execSync(`hdiutil detach "${mountPoint}" -force`); } catch(err) {}
       }
       return;
     }
 
-    // handle zip
     if (lowerExt === '.zip') {
       console.log(`[Mac] Extracting Zip: ${filePath}`);
       const zip = new AdmZip(filePath);
@@ -75,13 +59,11 @@ async extractArchive(filePath: string, destDir: string): Promise<void> {
       return;
     }
 
-    // handle other archive
     if (['.7z', '.tar', '.gz', '.rar'].includes(lowerExt)) {
       console.log(`[Mac] Extracting with 7z: ${filePath}`);
       await Extractor.extract7z(filePath, destDir);
       return;
     }
-
     throw new Error(`Unsupported archive format for macOS: ${lowerExt}`);
   }
   
@@ -105,21 +87,21 @@ async extractArchive(filePath: string, destDir: string): Promise<void> {
       const destDir = macOsDir || installDir;
       const destPath = path.join(destDir, targetFilename);
 
-      console.log(`[Mac] Copying ${foundPath} to ${destPath}`);
+      console.log(`[Mac] Installing dependency to: ${destPath}`);
 
       if (fs.statSync(foundPath).isDirectory()) {
          const binaryInside = findFile(foundPath, searchName);
-         if (binaryInside) {
-             fs.copyFileSync(binaryInside, destPath);
-         } else {
-             throw new Error("Found directory but could not find binary inside it");
-         }
+         if (binaryInside) fs.copyFileSync(binaryInside, destPath);
+         else throw new Error("Found binary inside framework");
       } else {
          fs.copyFileSync(foundPath, destPath);
       }
 
+      try {
+        execSync(`install_name_tool -id "@executable_path/${targetFilename}" "${destPath}"`);
+      } catch (err) {}
+
       await this.removeQuarantine(destPath);
-      await this.adHocSign(destPath)
     } finally {
       try { execSync(`hdiutil detach "${mountPoint}" -force`); } catch(err){}
     }
@@ -127,57 +109,74 @@ async extractArchive(filePath: string, destDir: string): Promise<void> {
 
   async finalizeInstall(binaryPath: string, needsWrapper: boolean): Promise<void> {
     if (!fs.existsSync(binaryPath)) return;
-
     try { fs.chmodSync(binaryPath, '755'); } catch (e) {}
 
     const appBundleMatch = binaryPath.match(/(.*\.app)/);
     
+    let targetBinary = binaryPath;
+    let appPath = '';
+
     if (appBundleMatch) {
-      const appPath = appBundleMatch[1];
+      appPath = appBundleMatch[1];
       console.log(`[Mac] Detected App Bundle: ${appPath}`);
-
-      await this.removeQuarantine(appPath);
-      await this.deepSign(appPath);
       
-      return;
+      const mesenSupportDir = path.join(homedir(), 'Library', 'Application Support', 'Mesen2');
+      if (fs.existsSync(mesenSupportDir)) {
+          console.log("[Mac] Clearing old Mesen2 support files...");
+          fs.rmSync(mesenSupportDir, { recursive: true, force: true });
+      }
+
+      if (fs.statSync(binaryPath).isDirectory()) {
+         const macOsDir = path.join(binaryPath, 'Contents', 'MacOS');
+         const bundleName = path.basename(binaryPath, '.app');
+         targetBinary = path.join(macOsDir, bundleName);
+      }
     }
 
-    console.log(`[Mac] Finalizing standalone binary: ${binaryPath}`);
-    await this.removeQuarantine(binaryPath);
-    await this.adHocSign(binaryPath);
+    console.log(`[Mac] Finalizing binary: ${targetBinary}`);
 
-    if (!needsWrapper) {
-      return;
+    await this.removeQuarantine(targetBinary);
+    await this.adHocSign(targetBinary);
+
+    if (appBundleMatch || needsWrapper) {
+        console.log(`[Mac] Applying Jailbreak Wrapper to: ${targetBinary}`);
+        
+        const binaryDir = path.dirname(targetBinary);
+        const binaryName = path.basename(targetBinary);
+        const realBinaryName = `${binaryName}.real`;
+        const realBinaryPath = path.join(binaryDir, realBinaryName);
+
+        if (fs.existsSync(realBinaryPath)) {
+            console.log("[Mac] Wrapper already exists. Skipping.");
+            return;
+        }
+
+        try {
+            fs.renameSync(targetBinary, realBinaryPath);
+
+            const scriptContent = [
+                `#!/bin/bash`,
+                `DIR="$(cd "$(dirname "$0")" && pwd)"`,
+                `export DYLD_LIBRARY_PATH="$DIR:$DYLD_LIBRARY_PATH"`,
+                `exec "$DIR/${realBinaryName}" "$@"`
+            ].join('\n');
+
+            fs.writeFileSync(targetBinary, scriptContent);
+            
+            fs.chmodSync(targetBinary, '755');
+            fs.chmodSync(realBinaryPath, '755');
+
+            await this.removeQuarantine(realBinaryPath);
+            await this.adHocSign(realBinaryPath);
+            
+            console.log("[Mac] Wrapper created successfully.");
+        } catch (err) {
+            console.error(`[Mac] Failed to create wrapper: ${err.message}`);
+        }
     }
 
-    console.log(`[Mac] Finalizing wrapper for: ${binaryPath}`);
-
-    const binaryDir = path.dirname(binaryPath);
-    const binaryName = path.basename(binaryPath);
-    const realBinaryName = `${binaryName}.real`;
-    const realBinaryPath = path.join(binaryDir, realBinaryName);
-
-    if (fs.existsSync(realBinaryPath)) {
-      await this.adHocSign(realBinaryPath);
-      return;
-    }
-
-    try {
-      fs.renameSync(binaryPath, realBinaryPath);
-      const scriptContent = [
-        `#!/bin/bash`,
-        `DIR="$(cd "$(dirname "$0")" && pwd)"`,
-        `export DYLD_LIBRARY_PATH="$DIR:$DYLD_LIBRARY_PATH"`,
-        `exec "$DIR/${realBinaryName}" "$@"`
-      ].join('\n');
-
-      fs.writeFileSync(binaryPath, scriptContent);
-      fs.chmodSync(binaryPath, '755');
-      fs.chmodSync(realBinaryPath, '755');
-      await this.removeQuarantine(realBinaryPath);
-      await this.adHocSign(realBinaryPath);
-    } catch (err) {
-      console.warn("[Mac] Wrapper failed", err);
+    if (appPath) {
+        await this.deepSign(appPath);
     }
   }
 
@@ -211,16 +210,24 @@ async extractArchive(filePath: string, destDir: string): Promise<void> {
 launchProcess(binaryPath: string, args: string[]): ChildProcess {
     console.log(`[Mac] Launching: ${binaryPath}`);
 
-    if (binaryPath.includes('.app/Contents/MacOS/')) {
-      const appPath = binaryPath.split('.app/')[0] + '.app';
+    if (binaryPath.includes('.app')) {
+      const appPath = binaryPath.match(/(.*\.app)/)![1];
+      const bundleName = path.basename(appPath, '.app');
+      const wrapperPath = path.join(appPath, 'Contents', 'MacOS', bundleName);
 
-      const openArgs = [
-        '-a', appPath,
-        '--args',
-        ...args
-      ];
-      
+      let isWrapper = false;
+      try {
+          const content = fs.readFileSync(wrapperPath, 'utf8');
+          if (content.startsWith('#!/bin/bash')) isWrapper = true;
+      } catch(e) {}
+
+      if (isWrapper) {
+          console.log(`[Mac] Launching Wrapper Script directy: ${wrapperPath}`);
+          return spawn(wrapperPath, args, { detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
+      }
+
       console.log(`[Mac] Opening App Bundle: ${appPath}`);
+      const openArgs = ['-a', appPath, '--args', ...args];
       return spawn('open', openArgs, { detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
     }
 

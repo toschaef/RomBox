@@ -8,6 +8,9 @@ export const IS_MAC = typeof process !== 'undefined' && process.platform
 
 export const CONSOLEID_ENGLISH_MAP: Record<ConsoleID, string> = {
   'nes': 'NES',
+  'gg': 'GameGear',
+  'sms': 'Sega Master System',
+  'pce': 'PC Engine',
   'snes': 'SNES',
   'gb': 'Game Boy',
   'gba': 'Game Boy Advance',
@@ -23,6 +26,12 @@ export const getConsoleNameFromId = (id: ConsoleID) => CONSOLEID_ENGLISH_MAP[id]
 export const EXTENSION_MAP: Record<string, ConsoleID> = {
   '.nes': 'nes',
   '.unf': 'nes',
+
+  '.gg': 'gg',
+  '.sms': 'sms',
+
+  '.pce': 'pce',
+  '.sgx': 'pce',
 
   '.sfc': 'snes',
   '.smc': 'snes',
@@ -78,9 +87,14 @@ export const ENGINE_MAP: Record<ConsoleID, string> = {
   'snes': 'Mesen',
   'gb': 'Mesen',
   'gba': 'Mesen',
+  'pce': 'Mesen',
+  'sms': 'Mesen',
+  'gg': 'Mesen',
+
   'n64': IS_MAC? 'ARES' : 'RMG',
   'ds': 'MelonDS',
   '3ds': 'Azahar',
+
   'gc': 'Dolphin',
   'wii': 'Dolphin',
 };
