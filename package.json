@@ -1,11 +1,11 @@
 {
   "name": "rombox",
   "productName": "rombox",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "My Electron application description",
   "main": ".webpack/main",
   "config": {
-    "forge": "./config/forge.config.ts" 
+    "forge": "./config/forge.config.ts"
   },
   "scripts": {
     "start": "electron-forge start",
