@@ -4,6 +4,7 @@ import type { Game } from '../../shared/types';
 import GameGrid from '../components/GameGrid';
 import UpdateGameModal from '../components/inputs/UpdateGameModal';
 import type { LayoutContextType } from '../components/layout';
+import { LibraryResponse } from '../../shared/types';
 
 export default function Library() {
   const [games, setGames] = useState<Game[]>([]);
@@ -13,7 +14,7 @@ export default function Library() {
 
   const fetchGames = async () => {
     try {
-      const result = await window.electron.invoke('get-games');
+      const result: LibraryResponse = await window.electron.invoke('get-games');
       if (result.success) {
         setGames(result.games);
       }

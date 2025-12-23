@@ -3,9 +3,8 @@ import crypto from "crypto";
 import fs from 'fs';
 import { app } from 'electron';
 import { Extractor } from '../utils/extractor';
-import { BIOS_FILENAMES } from '../../shared/constants';
-import { getConsoleIdFromExtension, isAmbiguousExtension } from '../../shared/constants';
-import type { Game } from '../../shared/types';
+import { BIOS_FILENAMES, getConsoleIdFromExtension } from '../../shared/constants';
+import type { Game, ConsoleID } from '../../shared/types';
 import { detectConsoleFromHeader } from '../utils/identifier';
 import { scanZipEntries, extractZipEntry } from '../utils/fsUtils';
 
@@ -26,7 +25,7 @@ const identifyConsole = async (
   ): Promise<string | undefined> => {
   const ext = path.extname(filename).toLowerCase();
 
-  let id = getConsoleIdFromExtension(ext);
+  const id = getConsoleIdFromExtension(ext);
 
 
   if (filePathForHeader && (ext === '.iso' || !id)) {
@@ -82,7 +81,6 @@ export const ScannerService = {
         console.log(`[Scanner] Found ${entries.length} entries in archive`);
 
         for (const entry of entries) {
-          // handle bios
           const entryName = path.basename(entry.name).toLowerCase();
           if (BIOS_FILENAMES[entryName]) {
             return {
@@ -92,11 +90,11 @@ export const ScannerService = {
               zipEntryName: entry.name
             };
           }
+        }
 
-          // handle game
+        for (const entry of entries) {
           const id = await identifyConsole(entry.name, entry.size);
           if (id) {
-            console.log(`[Scanner] Match in archive: ${entry.name} -> ${id}`);
             return {
               type: 'game',
               consoleId: id,
@@ -130,7 +128,7 @@ export const ScannerService = {
     console.log('[Import] Starting import process...');
     const sourceName = scanResult.zipEntryName ? path.basename(scanResult.zipEntryName) : path.basename(scanResult.filePath);
     
-    let title = sourceName
+    const title = sourceName
       .replace(/\.[^/.]+$/, "") 
       .replace(/\s*\(.*?\)/g, '') 
       .replace(/\s*\[.*?\]/g, '') 
@@ -193,7 +191,7 @@ export const ScannerService = {
       id: crypto.randomUUID(),
       title: title, 
       filePath: newFilePath,
-      consoleId: scanResult.consoleId as any,
+      consoleId: scanResult.consoleId as ConsoleID,
     };
   },
 };

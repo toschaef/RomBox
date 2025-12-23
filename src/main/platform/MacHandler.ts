@@ -22,7 +22,9 @@ export class MacHandler implements PlatformHandler {
              results = results.concat(this.findAllAppBundles(fullPath));
         }
       }
-    } catch (err) {}
+    } catch (err) {
+      void err;
+    }
     return results;
   }
 
@@ -47,7 +49,12 @@ export class MacHandler implements PlatformHandler {
       } catch (err) {
         throw new Error(`Failed to extract DMG: ${err.message}`);
       } finally {
-        if (fs.existsSync(mountPoint)) try { execSync(`hdiutil detach "${mountPoint}" -force`); } catch(err) {}
+        if (fs.existsSync(mountPoint))
+          try {
+            execSync(`hdiutil detach "${mountPoint}" -force`);
+          } catch (err) {
+            void err;
+          }
       }
       return;
     }
@@ -99,17 +106,28 @@ export class MacHandler implements PlatformHandler {
 
       try {
         execSync(`install_name_tool -id "@executable_path/${targetFilename}" "${destPath}"`);
-      } catch (err) {}
+      } catch (err) {
+        void err;
+      }
 
       await this.removeQuarantine(destPath);
     } finally {
-      try { execSync(`hdiutil detach "${mountPoint}" -force`); } catch(err){}
+      try {
+        execSync(`hdiutil detach "${mountPoint}" -force`);
+      } catch (err) {
+        void err;
+      }
     }
   }
 
   async finalizeInstall(binaryPath: string, needsWrapper: boolean): Promise<void> {
     if (!fs.existsSync(binaryPath)) return;
-    try { fs.chmodSync(binaryPath, '755'); } catch (e) {}
+
+    try {
+      fs.chmodSync(binaryPath, '755');
+    } catch (err) {
+      void err;
+    }
 
     const appBundleMatch = binaryPath.match(/(.*\.app)/);
     
@@ -207,11 +225,14 @@ export class MacHandler implements PlatformHandler {
     }
   }
 
-launchProcess(binaryPath: string, args: string[]): ChildProcess {
+  launchProcess(binaryPath: string, args: string[]): ChildProcess {
     console.log(`[Mac] Launching: ${binaryPath}`);
 
     if (binaryPath.includes('.app')) {
-      const appPath = binaryPath.match(/(.*\.app)/)![1];
+      const match = binaryPath.match(/(.*\.app)/);
+      if (!match) throw new Error(`Could not find app bundle in path: ${binaryPath}`);
+
+      const appPath = match[1];
       const bundleName = path.basename(appPath, '.app');
       const wrapperPath = path.join(appPath, 'Contents', 'MacOS', bundleName);
 
@@ -219,7 +240,9 @@ launchProcess(binaryPath: string, args: string[]): ChildProcess {
       try {
           const content = fs.readFileSync(wrapperPath, 'utf8');
           if (content.startsWith('#!/bin/bash')) isWrapper = true;
-      } catch(e) {}
+      } catch (err) {
+        void err;
+      }
 
       if (isWrapper) {
           console.log(`[Mac] Launching Wrapper Script directy: ${wrapperPath}`);
@@ -259,13 +282,21 @@ launchProcess(binaryPath: string, args: string[]): ChildProcess {
     try { 
       execSync(`xattr -r -d com.apple.quarantine "${filePath}"`, { stdio: 'ignore' }); 
       console.log(`[Mac] Quarantine removed for: ${path.basename(filePath)}`);
-    } catch {}
+    } catch (err) {
+      void err;
+    }
   }
   private async adHocSign(filePath: string) {
     try {
-      try { execSync(`codesign --remove-signature "${filePath}"`, { stdio: 'ignore' }); } catch(err) {}
+      try {
+        execSync(`codesign --remove-signature "${filePath}"`, { stdio: 'ignore' });
+      } catch (err) {
+        void err;
+      }
       execSync(`codesign --force --sign - --preserve-metadata=entitlements "${filePath}"`);
-    } catch (err) {}
+    } catch (err) {
+      void err;
+    }
   }
 
   private async deepSign(appPath: string) {

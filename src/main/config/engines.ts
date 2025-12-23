@@ -1,4 +1,4 @@
-import { EngineConfig } from '../../shared/types';
+import { EngineConfig, Game } from '../../shared/types';
 import path from 'path';
 import { homedir } from 'os';
 import { IS_MAC } from '../../shared/constants'
@@ -87,7 +87,7 @@ export const ENGINES: Record<string, EngineConfig> = {
       darwin: `ares-v${ARES_VERSION}/ares.app/Contents/MacOS/ares`
     },
     
-    getLaunchCommand: (game: any, binPath: string) => {
+    getLaunchCommand: (game: Game, binPath: string) => {
       if (IS_MAC) {
         return [
           binPath,

@@ -13,10 +13,9 @@ export abstract class BaseConfigurator implements EmulatorConfigurator {
   protected setIniValue(filePath: string, section: string, key: string, value: string) {
     if (!fs.existsSync(filePath)) return;
 
-    let content = fs.readFileSync(filePath, 'utf-8');
+    const content = fs.readFileSync(filePath, 'utf-8');
     const lines = content.split('\n');
     let inSection = false;
-    let keyFound = false;
 
     const newLines = lines.map(line => {
       const trimmed = line.trim();
@@ -27,7 +26,6 @@ export abstract class BaseConfigurator implements EmulatorConfigurator {
       }
 
       if (inSection && trimmed.startsWith(key + ' =') || trimmed.startsWith(key + '=')) {
-        keyFound = true;
         return `${key} = ${value}`;
       }
 

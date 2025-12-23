@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron';
 import { EngineService } from '../services/EngineService';
 
-export default function engineHandlers() {
+export default function registerEngineHandlers() {
   ipcMain.handle('install-engine', async (event, consoleId) => {
     const progressCallback = (status: string) => {
       event.sender.send('install-status-update', status);
@@ -9,15 +9,15 @@ export default function engineHandlers() {
     return await EngineService.installEngine(consoleId, progressCallback);
   });
 
-  ipcMain.handle('is-engine-installed', (event, consoleId) => {
-    return EngineService.getEnginePath(consoleId) !== null;
+  ipcMain.handle('is-engine-installed', async (event, consoleId) => {
+    const path = await EngineService.getEnginePath(consoleId);
+    return path !== null;
   });
 
   ipcMain.handle('install-bios', async (_, { consoleId, filePath }) => {
     try {
-      console.log(`[IPC] Installing BIOS for ${consoleId} from ${filePath}`);
-      return EngineService.installBios(consoleId, filePath);
-    } catch (err: any) {
+      return await EngineService.installBios(consoleId, filePath);
+    } catch (err) {
       console.error("Failed to install BIOS:", err.message);
       return { success: false, message: err.message };
     }

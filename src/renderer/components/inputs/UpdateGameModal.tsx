@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Game } from '../../../shared/types';
+import type { Game, LibraryResponse } from '../../../shared/types';
 
 interface Props {
   game: Game;
@@ -9,21 +9,18 @@ interface Props {
 
 export default function UpdateGameModal({ game, onClose, onSave }: Props) {
   const [title, setTitle] = useState(game.title);
-  const [consoleId, setConsoleId] = useState(game.consoleId);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
 
-    // Create updated object
-    const updatedGame = { ...game, title, consoleId };
+    const updatedGame = { ...game, title };
     
     try {
-      // Send to backend
-      const result = await window.electron.invoke('update-game', updatedGame);
+      const result: LibraryResponse = await window.electron.invoke('update-game', updatedGame);
       if (result.success) {
-        onSave(updatedGame); // Tell parent to refresh
+        onSave(updatedGame);
         onClose();
       }
     } catch (err) {

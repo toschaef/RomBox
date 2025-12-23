@@ -1,4 +1,6 @@
-known issues:
+![RomBox CI](https://github.com/toschaef/RomBox/actions/workflows/ci.yaml/badge.svg)
+
+### known issues:
 
 mesen doesnt work the first time
 
@@ -9,7 +11,7 @@ azahar has annoying popup on close
 
 the install modal persists on install error
 
-todo:
+### todo:
 
 controls
 display game cover (aws lambda)

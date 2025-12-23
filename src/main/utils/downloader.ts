@@ -45,7 +45,7 @@ export const Downloader = {
         });
       });
 
-    } catch (err: any) {
+    } catch (err) {
       if (fs.existsSync(destPath)) fs.unlinkSync(destPath);
       throw new Error(`Download failed for ${url}: ${err.message} (Status: ${err.response?.status})`);
     }

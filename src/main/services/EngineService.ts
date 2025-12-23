@@ -5,8 +5,7 @@ import { app } from 'electron';
 import { homedir } from 'os';
 import { ENGINES } from '../config/engines';
 import { osHandler } from '../platform';
-import { Platform } from '../../shared/types';
-import { Extractor } from '../utils/extractor';
+import { Platform, EngineConfig } from '../../shared/types';
 import { Downloader } from '../utils/downloader';
 
 const BASE_PATH = path.join(app.getPath('userData'), 'engines');
@@ -42,7 +41,8 @@ export const EngineService = {
 
     try {
       onProgress('Downloading...');
-      const customHeaders = (config as any).headers || {};
+      const configWithHeaders = config as EngineConfig & { headers?: Record<string, string> };
+      const customHeaders = configWithHeaders.headers || {};
 
       const downloadedFilePath = await Downloader.download(url, installDir, {
         onProgress,
@@ -131,7 +131,7 @@ export const EngineService = {
           path.join(homedir(), 'Library', 'Application Support', 'Mesen2', 'Firmware')
         ];
 
-    let installedFiles: string[] = [];
+    const installedFiles: string[] = [];
 
     for (const dir of targetDirs) {
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });

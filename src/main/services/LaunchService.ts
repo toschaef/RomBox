@@ -3,8 +3,6 @@ import { ENGINES } from '../config/engines';
 import { osHandler } from '../platform';
 import { getConfigurator } from '../utils/configurators';
 import type { Game } from '../../shared/types';
-import path from 'path';
-import fs from 'fs';
 
 export const LaunchService = {
   launch: async (game: Game) => {

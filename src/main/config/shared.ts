@@ -1,3 +1,5 @@
+import { Game } from "../../shared/types";
+
 // emulator versions
 export const MESEN_VERSION = '2.1.1';
 export const RMG_VERSION = '0.6.5'; 
@@ -28,7 +30,7 @@ export const MESEN_SHARED = {
       sourceName: 'SDL2'
     }
   ],
-  getLaunchCommand: (game: any, binPath: string) => [binPath, game.filePath]
+  getLaunchCommand: (game: Game, binPath: string) => [binPath, game.filePath]
 };
 
 export const DOLPHIN_SHARED = {
@@ -42,7 +44,7 @@ export const DOLPHIN_SHARED = {
     win32: 'Dolphin.exe',
     darwin: 'Dolphin.app/Contents/MacOS/Dolphin', 
   },
-  getLaunchCommand: (game: any, binPath: string) => [
+  getLaunchCommand: (game: Game, binPath: string) => [
     binPath, 
     '-b',
     '-C', 'Display.RenderToMain=False',

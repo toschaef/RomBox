@@ -8,7 +8,15 @@ const pathTo7zip = sevenBin.path7za;
 if (process.platform !== 'win32') {
   try {
     if (fs.existsSync(pathTo7zip)) fs.chmodSync(pathTo7zip, '755');
-  } catch (e) {}
+  } catch (err) {
+    void err;
+  }
+}
+
+interface SevenZipEntry {
+  file: string;
+  size: string;
+  attr?: string;
 }
 
 export const Extractor = {
@@ -29,7 +37,7 @@ export const Extractor = {
     });
   },
 
-  list7z: (filePath: string): Promise<any[]> => {
+  list7z: (filePath: string): Promise<SevenZipEntry[]> => {
     return new Promise((resolve, reject) => {
       const child = spawn(pathTo7zip, ['l', filePath, '-slt']);
       let stdout = '';
@@ -38,18 +46,26 @@ export const Extractor = {
       child.on('close', (code) => {
         if (code !== 0) return reject(new Error("Failed to list archive"));
 
-        const entries: any[] = [];
+        const entries: SevenZipEntry[] = [];
         const blocks = stdout.split(/(\r\n|\r|\n){2}/);
         
         for (const block of blocks) {
-            const entry: any = {};
+            const rawEntry: Record<string, string> = {};
+
             block.split(/(\r\n|\r|\n)/).forEach(line => {
                 if (line.includes('=')) {
                     const [k, ...v] = line.split('=');
-                    entry[k.trim()] = v.join('=').trim();
+                    rawEntry[k.trim()] = v.join('=').trim();
                 }
             });
-            if (entry.Path) entries.push({ file: entry.Path, attr: entry.Attributes });
+
+            if (rawEntry.Path) {
+                entries.push({ 
+                  file: rawEntry.Path, 
+                  attr: rawEntry.Attributes,
+                  size: rawEntry.Size,
+                });
+            }
         }
         resolve(entries);
       });

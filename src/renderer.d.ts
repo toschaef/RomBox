@@ -1,5 +1,5 @@
 export interface IElectronAPI {
-  invoke: (channel: string, ...args: any[]) => Promise<any>;
+  invoke: <T = unknown>(channel: string, ...args: unknown[]) => Promise<T>;
 }
 
 declare global {

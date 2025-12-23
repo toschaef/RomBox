@@ -2,9 +2,7 @@ import fs from "fs";
 import path from "path";
 import { getDB } from "../data/db";
 import type { Game } from "../../shared/types";
-import { EngineService } from "./EngineService";
 import { ScannerService } from "./ScannerService";
-import { spawn } from "child_process";
 import { app } from "electron";
 
 export const LibraryService = {
@@ -30,7 +28,7 @@ export const LibraryService = {
       const gameData = await ScannerService.importGame(scanResult);
       const game = await LibraryService.createGame(gameData);
       return { success: true, game: game.game };
-    } catch (err: any) {
+    } catch (err) {
       console.error("Create Game Failed:", err);
       return { success: false, message: err.message };
     }
@@ -71,14 +69,12 @@ export const LibraryService = {
   },
 
   clearLibrary: () => {
-    try {
-      getDB().prepare('DELETE FROM games').run();
-      const romsDir = path.join(app.getPath('userData'), 'roms');
-      if (fs.existsSync(romsDir)) {
-        fs.rmSync(romsDir, { recursive: true, force: true });
-        fs.mkdirSync(romsDir);
-      }
-      return { success: true };
-    } catch (err) { throw err; }
+    getDB().prepare('DELETE FROM games').run();
+    const romsDir = path.join(app.getPath('userData'), 'roms');
+    if (fs.existsSync(romsDir)) {
+      fs.rmSync(romsDir, { recursive: true, force: true });
+      fs.mkdirSync(romsDir);
+    }
+    return { success: true };
   },
 };

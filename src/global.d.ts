@@ -3,9 +3,11 @@ export {};
 declare global {
   interface Window {
     electron: {
-      invoke: (channel: string, ...args: any[]) => Promise<any>;
+      invoke: <T = unknown>(channel: string, ...args: unknown[]) => Promise<T>;
+
       getPathForFile: (file: File) => string;
-      on: (channel: string, func: (...args: any[]) => void) => (() => void);
+
+      on: (channel: string, func: (...args: unknown[]) => void) => (() => void);
     };
   }
 }

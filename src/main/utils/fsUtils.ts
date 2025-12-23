@@ -21,7 +21,9 @@ export const findFile = (dir: string, filename: string): string | null => {
         if (found) return found;
       }
     }
-  } catch (e) {}
+  } catch (err) {
+    void err;
+  }
   return null;
 };
 

@@ -1,4 +1,3 @@
-// utils/identifier.ts
 import fs from 'fs/promises';
 import type { ConsoleID } from '../../shared/types';
 import { SIGNATURES } from '../../shared/constants';

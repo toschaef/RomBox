@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useDragAndDrop } from '../../hooks/useDragAndDrop';
+import { ScanResponse } from '../../../shared/types';
 
 export interface LayoutContextType {
   lastBiosUpdate: string | null;
@@ -24,7 +25,7 @@ export default function Layout() {
       if (files.length > 1) setLoadingMessage(`Processing ${i + 1} of ${files.length}...`);
       
       try {
-        const result = await window.electron.invoke('process-file-drop', filePath);
+        const result: ScanResponse = await window.electron.invoke('process-file-drop', filePath);
         console.log('Drop Result:', result);
         
         if (result.success) {

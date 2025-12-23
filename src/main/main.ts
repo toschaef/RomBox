@@ -52,7 +52,7 @@ ipcMain.handle('process-file-drop', async (_, filePath) => {
       return { success: true, type: 'bios' };
     }
     return { success: false, message: "Unknown file" };
-  } catch (err: any) {
+  } catch (err) {
     console.error("Drop failed:", err);
     return { success: false, message: err.message };
   }

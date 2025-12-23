@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Game } from '../../../shared/types';
 import InstallModal from '../inputs/InstallModal';
 import BiosModal from '../inputs/BiosModal';
+import { IpcResponse } from '../../../shared/types';
 
 interface Props {
   game: Game;
@@ -36,7 +37,7 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate }: P
   
   const handlePlay = async () => {
     try {
-      const result = await window.electron.invoke('play-game', game);
+      const result: IpcResponse = await window.electron.invoke('play-game', game);
       
       if (result.success) {
         console.log("Game launched without electron error");

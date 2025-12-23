@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Game } from '../../../shared/types';
 import { getConsoleNameFromId } from '../../../shared/constants';
+import { IpcResponse } from '../../../shared/types';
 
 interface Props {
   game: Game;
@@ -25,7 +26,7 @@ export default function InstallModal({ game, onClose, onSuccess }: Props) {
     setErrorMessage('');
 
     try {
-      const result = await window.electron.invoke('install-engine', game.consoleId);
+      const result: IpcResponse = await window.electron.invoke('install-engine', game.consoleId);
       
       if (result.success) {
         onSuccess();
@@ -33,7 +34,7 @@ export default function InstallModal({ game, onClose, onSuccess }: Props) {
         setStatus('error');
         setErrorMessage(result.error || 'Unknown error occurred');
       }
-    } catch (err: any) {
+    } catch (err) {
       setStatus('error');
       setErrorMessage(err.message || 'IPC failure');
     }

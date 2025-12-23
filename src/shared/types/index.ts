@@ -61,3 +61,18 @@ export interface EngineConfig {
   getLaunchCommand: (game: Game, emulatorPath: string) => string[];
   postLaunch?: () => void;
 }
+
+export interface IpcResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+  code?: string;
+}
+
+export interface ScanResponse extends IpcResponse {
+  type?: 'game' | 'bios';
+}
+
+export interface LibraryResponse extends IpcResponse {
+  games: Game[];
+}
