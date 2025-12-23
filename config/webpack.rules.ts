@@ -1,4 +1,5 @@
 import type { ModuleOptions } from 'webpack';
+import path from 'path';
 
 export const rules: Required<ModuleOptions>['rules'] = [
   {
@@ -30,7 +31,14 @@ export const rules: Required<ModuleOptions>['rules'] = [
     use: [
       { loader: 'style-loader' },
       { loader: 'css-loader' },
-      { loader: 'postcss-loader' }
+      {
+        loader: 'postcss-loader',
+        options: {
+          postcssOptions: {
+            config: path.resolve(__dirname, 'postcss.config.js'),
+          },
+        },
+      },
     ],
   },
 ];
