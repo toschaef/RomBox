@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { Game } from '../../shared/types';
-import GameGrid from '../components/GameGrid';
+import GameGrid from '../components/library/GameGrid';
 import UpdateGameModal from '../components/inputs/UpdateGameModal';
 import type { LayoutContextType } from '../components/layout';
-import { LibraryResponse } from '../../shared/types';
+import { gameClient } from '../clients/gameClient';
 
 export default function Library() {
   const [games, setGames] = useState<Game[]>([]);
@@ -14,7 +14,7 @@ export default function Library() {
 
   const fetchGames = async () => {
     try {
-      const result: LibraryResponse = await window.electron.invoke('get-games');
+      const result = await gameClient.getAll();
       if (result.success) {
         setGames(result.games);
       }
@@ -41,7 +41,7 @@ export default function Library() {
         bg-bg-primary text-fg-primary
       "
     >
-      <h1 className="text-3xl mb-8 font-bold text-fg-secondary">Games</h1>
+      <h1 className="w-full text-3xl mb-8 font-bold py-4 text-fg-primary">Games</h1>
 
       <GameGrid
         games={games}

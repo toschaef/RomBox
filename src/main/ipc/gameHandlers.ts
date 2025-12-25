@@ -4,7 +4,7 @@ import { LaunchService } from '../services/LaunchService';
 
 export default function registerGameHandlers() {
   
-  ipcMain.handle('create-game', async (event, fileInfo) => {
+  ipcMain.handle('game:create', async (event, fileInfo) => {
     try {
       console.log('Received file for creation:', fileInfo);
       return await LibraryService.createGameFromFile(fileInfo);
@@ -14,7 +14,7 @@ export default function registerGameHandlers() {
     }
   });
 
-  ipcMain.handle('get-games', async () => {
+  ipcMain.handle('game:getAll', async () => {
     try {
       return await LibraryService.getGames();
     } catch (err) {
@@ -23,7 +23,7 @@ export default function registerGameHandlers() {
     }
   });
 
-  ipcMain.handle('get-game', async (event, id) => {
+  ipcMain.handle('game:get', async (event, id) => {
     try {
       return await LibraryService.getGame(id);
     } catch (err) {
@@ -32,7 +32,7 @@ export default function registerGameHandlers() {
     }
   });
 
-  ipcMain.handle('update-game', async (event, game) => {
+  ipcMain.handle('game:update', async (event, game) => {
     try {
       return await LibraryService.updateGame(game);
     } catch (err) {
@@ -41,7 +41,7 @@ export default function registerGameHandlers() {
     }
   });
 
-  ipcMain.handle('delete-game', async (event, gameId) => {
+  ipcMain.handle('game:delete', async (event, gameId) => {
     try {
       return await LibraryService.deleteGame(gameId);
     } catch (err) {
@@ -50,11 +50,11 @@ export default function registerGameHandlers() {
     }
   });
 
-  ipcMain.handle('play-game', async (event, game) => {
+  ipcMain.handle('game:launch', async (event, game) => {
     return LaunchService.launch(game);
   });
 
-  ipcMain.handle('clear-library', async () => {
+  ipcMain.handle('game:deleteAll', async () => {
     return LibraryService.clearLibrary();
   });
 

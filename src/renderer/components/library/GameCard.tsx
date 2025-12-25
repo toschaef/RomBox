@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Game } from '../../../shared/types';
 import InstallModal from '../inputs/InstallModal';
 import BiosModal from '../inputs/BiosModal';
+import { gameClient } from '../../clients/gameClient';
 import { IpcResponse } from '../../../shared/types';
 
 interface Props {
@@ -37,7 +38,7 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate }: P
   
   const handlePlay = async () => {
     try {
-      const result: IpcResponse = await window.electron.invoke('play-game', game);
+      const result: IpcResponse = await gameClient.launch(game);
       
       if (result.success) {
         console.log("Game launched without electron error");
@@ -63,7 +64,7 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate }: P
     e.stopPropagation();
     if (confirm(`Delete game ${game.title}?`)) {
         try {
-            await window.electron.invoke('delete-game', game.id);
+            await window.electron.invoke('game:delete', game.id);
             onDelete();
         } catch(err) {
             console.error(err);

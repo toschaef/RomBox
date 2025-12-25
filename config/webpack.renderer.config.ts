@@ -1,15 +1,22 @@
-import type { Configuration } from 'webpack';
-
-import { rules } from './webpack.rules';
-import { plugins } from './webpack.plugins';
-
+import type { Configuration } from "webpack";
+import { rules } from "./webpack.rules";
+import { plugins } from "./webpack.plugins";
 
 export const rendererConfig: Configuration = {
   module: {
-    rules,
+    rules: [
+      ...rules,
+      {
+        test: /\.(png|jpe?g|gif|svg)$/i,
+        type: "asset/resource",
+        generator: {
+          filename: "assets/[name][ext][query]",
+        },
+      },
+    ],
   },
   plugins,
   resolve: {
-    extensions: ['.js', '.ts', '.jsx', '.tsx', '.css'],
+    extensions: [".js", ".ts", ".jsx", ".tsx", ".css"],
   },
 };

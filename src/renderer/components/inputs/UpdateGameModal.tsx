@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import type { Game, LibraryResponse } from '../../../shared/types';
+import type { Game } from '../../../shared/types';
+import { gameClient } from '../../clients/gameClient';
 
 interface Props {
   game: Game;
@@ -18,7 +19,7 @@ export default function UpdateGameModal({ game, onClose, onSave }: Props) {
     const updatedGame = { ...game, title };
     
     try {
-      const result: LibraryResponse = await window.electron.invoke('update-game', updatedGame);
+      const result = await gameClient.update(updatedGame);
       if (result.success) {
         onSave(updatedGame);
         onClose();

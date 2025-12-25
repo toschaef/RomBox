@@ -11,12 +11,33 @@ export function initDB() {
   db.pragma('journal_mode = WAL');
 
   const schema = `
-    create table if not exists games (
-      id text primary key not null,
-      title text not null,
-      filePath text not null,
-      consoleId text not null,
-      coverImage text
+    CREATE TABLE IF NOT EXISTS games (
+      id TEXT PRIMARY KEY NOT NULL,
+      title TEXT NOT NULL,
+      filePath TEXT NOT NULL,
+      consoleId TEXT NOT NULL,
+      coverImage TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS controller_profiles (
+      id TEXT PRIMARY KEY NOT NULL,
+      name TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      bindings TEXT NOT NULL,
+      device_hint TEXT,
+      layout TEXT,
+      sort_order INTEGER,
+      is_default INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_controller_profiles_default
+      ON controller_profiles(is_default)
+      WHERE is_default = 1;
+
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY NOT NULL,
+      value TEXT NOT NULL
     );
   `;
   

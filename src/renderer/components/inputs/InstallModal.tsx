@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Game } from '../../../shared/types';
 import { getConsoleNameFromId } from '../../../shared/constants';
-import { IpcResponse } from '../../../shared/types';
+import { engineClient } from '../../clients/engineClient';
 
 interface Props {
   game: Game;
@@ -12,10 +12,10 @@ interface Props {
 export default function InstallModal({ game, onClose, onSuccess }: Props) {
   const [status, setStatus] = useState<'idle' | 'installing' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
-  const [progressText, setProgressText] = useState('Initializing...');
+  const [progressText, setProgressText] = useState('Initializing');
 
   useEffect(() => {
-    const removeListener = window.electron.on('install-status-update', (msg: string) => {
+    const removeListener = engineClient.onInstallStatusUpdate((msg: string) => {
       setProgressText(msg);
     });
     return () => { if (removeListener) removeListener(); };
@@ -26,7 +26,7 @@ export default function InstallModal({ game, onClose, onSuccess }: Props) {
     setErrorMessage('');
 
     try {
-      const result: IpcResponse = await window.electron.invoke('install-engine', game.consoleId);
+      const result = await engineClient.install(game.consoleId);
       
       if (result.success) {
         onSuccess();

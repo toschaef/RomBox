@@ -2,19 +2,19 @@ import { ipcMain } from 'electron';
 import { EngineService } from '../services/EngineService';
 
 export default function registerEngineHandlers() {
-  ipcMain.handle('install-engine', async (event, consoleId) => {
+  ipcMain.handle('engine:install', async (event, consoleId) => {
     const progressCallback = (status: string) => {
       event.sender.send('install-status-update', status);
     };
     return await EngineService.installEngine(consoleId, progressCallback);
   });
 
-  ipcMain.handle('is-engine-installed', async (event, consoleId) => {
+  ipcMain.handle('engine:is-installed', async (event, consoleId) => {
     const path = await EngineService.getEnginePath(consoleId);
     return path !== null;
   });
 
-  ipcMain.handle('install-bios', async (_, { consoleId, filePath }) => {
+  ipcMain.handle('engine:install-bios', async (_, { consoleId, filePath }) => {
     try {
       return await EngineService.installBios(consoleId, filePath);
     } catch (err) {
@@ -23,7 +23,7 @@ export default function registerEngineHandlers() {
     }
   });
 
-  ipcMain.handle('clear-engines', async () => {
+  ipcMain.handle('engine:deleteAll', async () => {
     return EngineService.clearEngines();
   });
 }

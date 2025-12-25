@@ -1,0 +1,134 @@
+import { useState } from "react";
+import ProfileModals from "./ProfileModals";
+
+type ProfileMeta = { id: string; name: string; is_default: number };
+
+export default function ControlsHeader(props: {
+  profiles: ProfileMeta[];
+  activeProfileId: string | null;
+  
+  onChangeProfile: (id: string) => void;
+  onCreateProfile: (name: string) => void;
+  onRenameProfile: (id: string, name: string) => void;
+  onDeleteProfile: (id: string) => void;
+  onSetDefault: (id: string) => void;
+
+  guided: boolean;
+  onToggleGuided: () => void;
+  onResetDefaults: () => void;
+}) {
+  const { 
+    profiles, activeProfileId, onChangeProfile, 
+    onCreateProfile, onRenameProfile, onDeleteProfile, onSetDefault,
+    guided, onToggleGuided, onResetDefaults 
+  } = props;
+
+  const [modalType, setModalType] = useState<"create" | "rename" | "delete" | null>(null);
+
+  const activeProfile = profiles.find((p) => p.id === activeProfileId);
+  const isDefault = activeProfile?.is_default === 1;
+
+  const handleModalSubmit = (val: string) => {
+    if (modalType === "create") {
+      onCreateProfile(val);
+    } else if (modalType === "rename" && activeProfileId) {
+      onRenameProfile(activeProfileId, val);
+    } else if (modalType === "delete" && activeProfileId) {
+      onDeleteProfile(activeProfileId);
+    }
+  };
+
+  return (
+    <>
+      <ProfileModals
+        type={modalType}
+        initialValue={modalType === "create" ? "" : activeProfile?.name}
+        onClose={() => setModalType(null)}
+        onSubmit={handleModalSubmit}
+      />
+
+      <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-6 gap-6 pb-6">
+        <div>
+          <h1 className="text-3xl font-black mb-2 pl-4 text-fg-primary">Controls</h1>
+        </div>
+
+        <div className="flex flex-col items-end gap-3 w-full lg:w-auto">
+          <div className="flex flex-wrap justify-end items-center gap-2 w-full">
+            
+            <div className="relative group">
+              <select
+                value={activeProfileId ?? ""}
+                onChange={(e) => onChangeProfile(e.target.value)}
+                className="appearance-none pl-4 pr-10 py-2 text-sm rounded-lg bg-bg-secondary text-fg-primary border border-border-subtle hover:border-border-muted transition-colors min-w-40"
+              >
+                {profiles.map((p) => (
+                  <option key={p.id} value={p.id} className="bg-bg-secondary text-fg-primary">
+                    {p.name} {p.is_default ? "(Default)" : ""}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[8px] text-fg-secondary">
+                V
+              </div>
+            </div>
+
+            <div className="flex bg-bg-secondary rounded-lg p-1 border border-border-subtle">
+              <button 
+                onClick={() => setModalType("create")}
+                title="New Profile"
+                className="p-2 hover:bg-bg-muted rounded-md text-fg-secondary hover:text-accent-secondary transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+              </button>
+              
+              <button 
+                onClick={() => setModalType("rename")}
+                title="Rename Current"
+                disabled={!activeProfile}
+                className="p-2 hover:bg-bg-muted rounded-md text-fg-secondary hover:text-accent-secondary transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-fg-secondary"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+              </button>
+
+              <button 
+                onClick={() => activeProfileId && onSetDefault(activeProfileId)}
+                title={isDefault ? "Current is Default" : "Make Default"}
+                disabled={isDefault || !activeProfileId}
+                className={`p-2 hover:bg-bg-muted rounded-md transition-colors disabled:opacity-50 disabled:hover:bg-transparent ${isDefault ? "text-accent-primary" : "text-accent-secondary hover:text-accent-primary"}`}
+              >
+                 <svg className="w-4 h-4" fill={isDefault ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
+              </button>
+
+              <div className="w-px bg-border-subtle mx-1"></div>
+
+              <button 
+                onClick={() => setModalType("delete")}
+                title="Delete Profile"
+                disabled={!activeProfile || profiles.length <= 1}
+                className="p-2 hover:bg-bg-muted rounded-md text-fg-secondary hover:text-red-400 transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-fg-secondary"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+             <button
+              onClick={onResetDefaults}
+              className="px-3 py-1.5 text-xs font-medium bg-bg-secondary hover:text-red-400 border border-border-muted hover:border-red-400/20 rounded transition-colors"
+            >
+              Reset Bindings
+            </button>
+            
+            <button
+              onClick={onToggleGuided}
+              className="px-3 py-1.5 text-xs font-bold rounded transition-colors border bg-accent-secondary text-white border-accent-muted"
+            >
+              {guided ? "Stop Setup" : "Guided Setup"}
+            </button>
+          </div>
+        </div>
+      </header>
+    </>
+  );
+}

@@ -2,6 +2,8 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import { initDB } from './data/db';
 import registerGameHandlers from './ipc/gameHandlers';
 import registerEngineHandlers from './ipc/engineHandlers';
+import registerControlsHandlers from './ipc/controlsHandler';
+import registerSettingsHandlers from './ipc/settingsHandler';
 import { ScannerService } from './services/ScannerService';
 import { LibraryService } from './services/LibraryService';
 import { EngineService } from './services/EngineService';
@@ -30,6 +32,8 @@ app.on('ready', () => {
 
   registerGameHandlers();
   registerEngineHandlers();
+  registerControlsHandlers();
+  registerSettingsHandlers();
   
   createWindow();
 });

@@ -94,6 +94,16 @@ export default function Layout() {
           >
             Library
           </NavLink>
+
+          <NavLink 
+            to="/controls" 
+            className={({ isActive }) => `
+              flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all
+              ${isActive ? 'bg-bg-muted text-fg-primary border border-border-highlight' : 'text-fg-muted hover:bg-bg-muted hover:text-fg-primary'}
+            `}
+          >
+            Controls
+          </NavLink>
           
           <NavLink 
             to="/settings" 

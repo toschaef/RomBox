@@ -1,5 +1,5 @@
-import type { Game } from '../../shared/types';
-import GameCard from './cards/GameCard';
+import type { Game } from '../../../shared/types';
+import GameCard from './GameCard';
 
 interface Props {
   games: Game[];
