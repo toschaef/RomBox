@@ -7,12 +7,13 @@ melonDS has no default controls
 
 azahar is in finnish
 
-
 azahar has annoying popup on close
 
 the install modal persists on install error
 
 version tag doesnt work because repo is private
+
+the ci tag doesnt work because the tests are untracked
 
 
 ### todo:
