@@ -21,13 +21,29 @@ export const LibraryService = {
     }
   },
   
-  createGameFromFile: async (file: { name: string; path: string }) => {
+  createGamesFromFiles: async (file: { name: string; path: string }) => {
     try {
-      const scanResult = await ScannerService.scanFile(file.path);
-      if (scanResult.type !== 'game') throw new Error(`Not a game ROM: ${scanResult.type}`);
-      const gameData = await ScannerService.importGame(scanResult);
-      const game = await LibraryService.createGame(gameData);
-      return { success: true, game: game.game };
+      const results = await ScannerService.scanPath(file.path);
+
+      if (results.length === 0) {
+        throw new Error("No identifiable games found in this location.");
+      }
+
+      const createdGames = [];
+
+      for (const result of results) {
+        if (result.type === 'game') {
+          const gameData = await ScannerService.importGame(result);
+          const gameEntry = await LibraryService.createGame(gameData);
+          createdGames.push(gameEntry.game); 
+        }
+      }
+
+      if (createdGames.length === 0) {
+        return { success: false, message: "No games found (only system files detected)." };
+      }
+
+      return { success: true, games: createdGames };
     } catch (err) {
       console.error("Create Game Failed:", err);
       return { success: false, message: err.message };

@@ -1,15 +1,6 @@
 import type { Game, IpcResponse, LibraryResponse } from "../../shared/types";
 
-export type CreateGameRes = {
-  success: boolean;
-  game: Game;
-  message?: undefined;
-};
-
 export const gameClient = {
-  create: (fileInfo: CreateGameRes) =>
-    window.electron.invoke("game:create", fileInfo) as Promise<IpcResponse & { game?: Game }>,
-
   getAll: () =>
     window.electron.invoke("game:getAll") as Promise<LibraryResponse | (IpcResponse & { games?: Game[] })>,
 

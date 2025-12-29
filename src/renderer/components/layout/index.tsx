@@ -16,7 +16,7 @@ export default function Layout() {
 
   const onFilesDropped = async (files: FileList) => {
     setLoadingFile(true);
-    setLoadingMessage("Importing & Extracting...");
+    setLoadingMessage("Installing...");
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -25,15 +25,15 @@ export default function Layout() {
       if (files.length > 1) setLoadingMessage(`Processing ${i + 1} of ${files.length}...`);
       
       try {
-        const result: ScanResponse = await window.electron.invoke('process-file-drop', filePath);
+        const result: {success: boolean, games: ScanResponse[], biosCount: number, message?: string } = await window.electron.invoke('process-file-drop', filePath);
         console.log('Drop Result:', result);
         
         if (result.success) {
-          if (result.type === 'game') {
+          if (result.games && result.games.length > 0) {
             setRefreshLibraryTrigger(prev => prev + 1);
-          } 
-          else if (result.type === 'bios') {
-             setLastBiosUpdate(Date.now().toString());
+          }
+          if (result.biosCount && result.biosCount > 0) {
+            setLastBiosUpdate(Date.now().toString());
           }
         } else {
           console.warn("File drop issue:", result.message);

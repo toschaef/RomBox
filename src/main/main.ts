@@ -7,6 +7,9 @@ import registerSettingsHandlers from './ipc/settingsHandler';
 import { ScannerService } from './services/ScannerService';
 import { LibraryService } from './services/LibraryService';
 import { EngineService } from './services/EngineService';
+import { Extractor } from './utils/extractor';
+import path from 'path';
+import fs from 'fs';
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
@@ -40,22 +43,40 @@ app.on('ready', () => {
 
 ipcMain.handle('process-file-drop', async (_, filePath) => {
   try {
-    // scan
-    const result = await ScannerService.scanFile(filePath);
+    const results = await ScannerService.scanPath(filePath);
+    const processedGames = [];
+    let biosCount = 0;
 
-    if (result.type === 'game') {
-      // import
-      const gameData = await ScannerService.importGame(result);
-      // save to db
-      const game = await LibraryService.createGame(gameData);
-      return { success: true, type: 'game', game };
-    } 
-    else if (result.type === 'bios') {
-      // install bios
-      await EngineService.installBios(result.consoleId, result.filePath);
-      return { success: true, type: 'bios' };
+    for (const result of results) {
+      if (result.type === 'game') {
+        const gameData = await ScannerService.importGame(result);
+        const game = await LibraryService.createGame(gameData);
+        processedGames.push(game);
+      } 
+      else if (result.type === 'bios') {
+        const originalName = result.zipEntryName 
+          ? path.basename(result.zipEntryName) 
+          : path.basename(result.filePath);
+
+        const tempPath = path.join(app.getPath('temp'), originalName);
+        
+        try {
+          await Extractor.extractToFile(result.filePath, tempPath, result.zipEntryName);
+          
+          await EngineService.installBios(result.consoleId, tempPath);
+          biosCount++;
+        } finally {
+          if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+        }
+      }
     }
-    return { success: false, message: "Unknown file" };
+
+    return { 
+      success: true, 
+      games: processedGames, 
+      biosCount,
+      message: `Processed ${processedGames.length} games and ${biosCount} BIOS files.` 
+    };
   } catch (err) {
     console.error("Drop failed:", err);
     return { success: false, message: err.message };

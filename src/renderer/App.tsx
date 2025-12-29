@@ -1,8 +1,8 @@
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import Layout from './components/layout';
-import Library from './pages/Library';
-import Settings from './pages/Settings';
-import Controls from './pages/Controls';
+import Library from './components/pages/Library';
+import Settings from './components/pages/Settings';
+import Controls from './components/pages/Controls';
 
 export default function App() {
   return (

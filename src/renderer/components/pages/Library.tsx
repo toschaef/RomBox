@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import type { Game } from '../../shared/types';
-import GameGrid from '../components/library/GameGrid';
-import UpdateGameModal from '../components/inputs/UpdateGameModal';
-import type { LayoutContextType } from '../components/layout';
-import { gameClient } from '../clients/gameClient';
+import type { Game } from '../../../shared/types';
+import GameGrid from '../library/GameGrid';
+import UpdateGameModal from '../inputs/UpdateGameModal';
+import type { LayoutContextType } from '../layout';
+import { gameClient } from '../../clients/gameClient';
 
 export default function Library() {
   const [games, setGames] = useState<Game[]>([]);

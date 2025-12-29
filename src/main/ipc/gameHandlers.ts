@@ -3,16 +3,6 @@ import { LibraryService } from '../services/LibraryService';
 import { LaunchService } from '../services/LaunchService';
 
 export default function registerGameHandlers() {
-  
-  ipcMain.handle('game:create', async (event, fileInfo) => {
-    try {
-      console.log('Received file for creation:', fileInfo);
-      return await LibraryService.createGameFromFile(fileInfo);
-    } catch (err) {
-      console.error('Failed to create game:', err.message);
-      return { success: false, message: err.message };
-    }
-  });
 
   ipcMain.handle('game:getAll', async () => {
     try {

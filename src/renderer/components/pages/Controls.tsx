@@ -1,11 +1,11 @@
 import { useEffect, useState, useRef, useMemo } from "react";
-import { useControllerInput } from "../hooks/useControllerInput";
-import { SECTION_ORDER } from "../config/controllerLayouts";
-import type { LogicalAction } from "../../shared/types/controls";
-import ControlsHeader from "../components/controls/ControlsHeader";
-import ListeningOverlay from "../components/controls/ListeningOverlay";
-import ControlsSection from "../components/controls/ControlsSection";
-import { useControlsPage } from "../hooks/useControlsPage";
+import { useControllerInput } from "../../hooks/useControllerInput";
+import { SECTION_ORDER } from "../../config/controllerLayouts";
+import type { LogicalAction } from "../../../shared/types/controls";
+import ControlsHeader from "../controls/ControlsHeader";
+import ListeningOverlay from "../controls/ListeningOverlay";
+import ControlsSection from "../controls/ControlsSection";
+import { useControlsPage } from "../../hooks/useControlsPage";
 
 export default function Controls() {
   const {
