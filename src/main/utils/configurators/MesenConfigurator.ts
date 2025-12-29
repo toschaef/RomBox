@@ -5,11 +5,20 @@ import { osHandler } from "../../platform";
 import type { ActionBindings } from "../../../shared/types/controls";
 import { MesenTranslator } from "../translators/MesenTranslator";
 import type { ConsoleID } from "../../../shared/types";
-import { getMesenBucket } from "../schema/mesen";
 
 type JsonObject = Record<string, unknown>;
 type MesenMapping = Record<string, number>;
-type MappingSlot = "Mapping1" | "Mapping2";
+type MappingSlot = "Mapping1" | "Mapping2" | "Mapping3" | "Mapping4";
+
+type InputRoot =
+  | { kind: "port"; port: number }
+  | { kind: "key"; key: string };
+
+type MesenSpec = {
+  bucket: string;
+  root: InputRoot;
+  type: string;
+};
 
 function isObject(v: unknown): v is JsonObject {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -18,25 +27,45 @@ function isObject(v: unknown): v is JsonObject {
 function ensureObject(obj: JsonObject, key: string): JsonObject {
   const existing = obj[key];
   if (isObject(existing)) return existing;
-
   const created: JsonObject = {};
   obj[key] = created;
   return created;
 }
 
-/** returns settings[bucket].Port{port}.Mapping{slot} as a mapping object if exists */
-function ensureMappingNode(
-  settings: JsonObject,
-  bucket: string,
-  port = 1,
-  slot: MappingSlot = "Mapping1"
-): MesenMapping {
-  const sys = ensureObject(settings, bucket);
-  const portNode = ensureObject(sys, `Port${port}`);
-  const slotNode = ensureObject(portNode, slot);
-
-  return slotNode as unknown as MesenMapping;
+function rootKey(root: InputRoot): string {
+  return root.kind === "port" ? `Port${root.port}` : root.key;
 }
+
+function ensureRootNode(settings: JsonObject, spec: MesenSpec): JsonObject {
+  const sys = ensureObject(settings, spec.bucket);
+  return ensureObject(sys, rootKey(spec.root));
+}
+
+function ensureMappingNode(settings: JsonObject, spec: MesenSpec, slot: MappingSlot): MesenMapping {
+  const root = ensureRootNode(settings, spec);
+  const node = ensureObject(root, slot);
+  return node as unknown as MesenMapping;
+}
+
+function ensureControllerType(settings: JsonObject, spec: MesenSpec): void {
+  const root = ensureRootNode(settings, spec);
+  const cur = root["Type"];
+  if (cur === undefined || cur === "None") root["Type"] = spec.type;
+}
+
+const MESEN_SPEC: Partial<Record<ConsoleID, MesenSpec>> = {
+  nes:  { bucket: "Nes",      root: { kind: "port", port: 1 }, type: "NesController" },
+  snes: { bucket: "Snes",     root: { kind: "port", port: 1 }, type: "SnesController" },
+  pce:  { bucket: "PcEngine", root: { kind: "port", port: 1 }, type: "PceController" },
+
+  gb:   { bucket: "Gameboy",  root: { kind: "key", key: "Controller" }, type: "GameboyController" },
+  gba:  { bucket: "Gba",      root: { kind: "key", key: "Controller" }, type: "GbaController" },
+
+  sms:  { bucket: "Sms",      root: { kind: "port", port: 1 }, type: "SmsController" },
+  gg:   { bucket: "Sms",      root: { kind: "port", port: 1 }, type: "SmsController" },
+};
+
+const ALL_SLOTS: readonly MappingSlot[] = ["Mapping1", "Mapping2", "Mapping3", "Mapping4"] as const;
 
 export class MesenConfigurator extends BaseConfigurator {
   private translator = new MesenTranslator();
@@ -46,11 +75,8 @@ export class MesenConfigurator extends BaseConfigurator {
   }
 
   async configure(): Promise<void> {
-    const bucket = getMesenBucket(this.consoleId);
-    if (!bucket) {
-      console.warn(`[MesenConfigurator] Console ${this.consoleId} not handled by Mesen; skipping`);
-      return;
-    }
+    const spec = MESEN_SPEC[this.consoleId];
+    if (!spec) return;
 
     const configPath = osHandler.getEmulatorConfigPath("mesen");
     const settingsFile = path.join(configPath, "settings.json");
@@ -65,33 +91,26 @@ export class MesenConfigurator extends BaseConfigurator {
       return;
     }
 
-    const mapping = this.translator.translate(bindings, 1);
-    const keys = Object.keys(mapping);
-
-    console.log(`[MesenConfigurator] Bucket=${bucket} Port1 Mapping1 keys=${keys.length}`);
-    if (keys.length === 0) {
-      console.warn("[MesenConfigurator] Mapping empty; not writing.");
-      return;
-    }
-
     osHandler.updateJson<unknown>(
       settingsFile,
       (settingsUnknown) => {
         const settings: JsonObject = isObject(settingsUnknown) ? settingsUnknown : {};
 
-        const node = ensureMappingNode(settings, bucket, 1, "Mapping1");
+        ensureControllerType(settings, spec);
 
-        const beforeStart = typeof node.Start === "number" ? node.Start : undefined;
-        Object.assign(node, mapping);
-        const afterStart = typeof node.Start === "number" ? node.Start : undefined;
+        const root = ensureRootNode(settings, spec);
+        console.log(`[MesenConfigurator] ${spec.bucket} Type =`, root["Type"]);
 
-        console.log(
-          `[MesenConfigurator] Patched ${bucket}.Port1.Mapping1 Start:`,
-          beforeStart,
-          "->",
-          afterStart
-        );
+        const gamepadMap = this.translator.translateForDevice(bindings, 1, "gamepad");
+        const keyboardMap = this.translator.translateForDevice(bindings, 1, "keyboard");
+        const preferredMap = Object.keys(gamepadMap).length > 0 ? gamepadMap : keyboardMap;
 
+        for (const slot of ALL_SLOTS) {
+          const node = ensureMappingNode(settings, spec, slot);
+          Object.assign(node, preferredMap);
+        }
+
+        console.log(`[MesenConfigurator] Patched ${spec.bucket}.${rootKey(spec.root)}.Mapping1`);
         return settings;
       },
       {}

@@ -97,20 +97,24 @@ export const APPLE_KEYCODE_BY_CODE: Record<string, number> = {
   AltRight: 61,
 };
 
-export const MESEN_BUCKET_BY_CONSOLE: Record<ConsoleID, string> = {
+export const MESEN_BUCKET_BY_CONSOLE: Partial<Record<ConsoleID, string>> = {
   nes: "Nes",
   snes: "Snes",
   gb: "Gameboy",
-  gba: "GameboyAdvance",
+  gba: "Gba",
   pce: "PcEngine",
   sms: "Sms",
-  gg: "GameGear",
+  gg: "Sms",
+};
 
-  n64: "",
-  ds: "",
-  "3ds": "",
-  gc: "",
-  wii: "",
+export const MESEN_PORT_TYPE_BY_CONSOLE: Partial<Record<ConsoleID, string>> = {
+  nes: "NesController",
+  snes: "SnesController",
+  gb: "GbController",
+  gba: "GbaController",
+  sms: "SmsController",
+  gg: "SmsController",
+  pce: "PceController",
 };
 
 export function getMesenBucket(consoleId: ConsoleID): string | null {

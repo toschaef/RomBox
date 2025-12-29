@@ -7,6 +7,7 @@ import {
   APPLE_KEYCODE_BY_CODE,
 } from "../schema/mesen";
 
+type Device = "keyboard" | "gamepad";
 
 function mesenKeyboardCode(code: string): number | null {
   const apple = APPLE_KEYCODE_BY_CODE[code];
@@ -37,19 +38,25 @@ function firstNumber(list: PhysicalBinding[], player: number): number | null {
 
 export class MesenTranslator {
   translate(bindings: ActionBindings, player = 1): Record<string, number> {
+    return this.translateForDevice(bindings, player, null);
+  }
+
+  translateForDevice(
+    bindings: ActionBindings,
+    player = 1,
+    device: Device | null
+  ): Record<string, number> {
     const mapping: Record<string, number> = {};
 
     for (const [action, list] of Object.entries(bindings) as [LogicalAction, PhysicalBinding[]][]) {
       const mesenName = MESEN_ACTION_MAP[action];
       if (!mesenName) continue;
 
-      const n = firstNumber(list, player);
-      if (n !== null) mapping[mesenName] = n;
+      const filtered = device ? list.filter(b => b.device === device) : list;
+      if (filtered.length === 0) continue;
 
-      if (n === null) {
-        console.debug(`[MesenTranslator] No mapping for ${action} (player ${player})`);
-        continue;
-      }
+      const n = firstNumber(filtered, player);
+      if (n !== null) mapping[mesenName] = n;
     }
 
     return mapping;
