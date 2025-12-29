@@ -23,7 +23,9 @@ export interface PlatformHandler {
   /** returns directory where the emulator stores its INI/config files */
   getEmulatorConfigPath(emulatorId: string): string;
 
-  // platform specific
-  
-  hideDolphinMainWindow?: () => void;
+  getPlatformId(): "macos" | "windows" | "linux";
+
+  readJson<T = unknown>(filePath: string, fallback?: T): T;
+  writeJson(filePath: string, data: unknown): void;
+  updateJson<T = unknown>(filePath: string, updater: (current: T) => T, fallback?: T): void;
 }
