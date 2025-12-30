@@ -41,7 +41,7 @@ export const LaunchService = {
       const child = osHandler.launchProcess(binary, args);
       engineConfig.postLaunch?.();
 
-      child.stdout?.on('data', (d) => console.log(`[Emulator]: ${d}`));
+      // child.stdout?.on('data', (d) => console.log(`[Emulator]: ${d}`));
       child.stderr?.on('data', (d) => console.error(`[Emulator Err]: ${d}`));
       
       child.on('error', (err) => console.error("[LaunchService] Failed to spawn:", err));

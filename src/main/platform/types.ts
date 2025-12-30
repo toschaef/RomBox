@@ -1,4 +1,5 @@
 import { ChildProcess } from "child_process";
+import { Platform } from "../../shared/types";
 
 export interface PlatformHandler {
 
@@ -24,6 +25,7 @@ export interface PlatformHandler {
   getEmulatorConfigPath(emulatorId: string): string;
 
   getPlatformId(): "macos" | "windows" | "linux";
+  getPlatform(): Platform;
 
   readJson<T = unknown>(filePath: string, fallback?: T): T;
   writeJson(filePath: string, data: unknown): void;

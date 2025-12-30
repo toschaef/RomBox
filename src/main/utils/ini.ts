@@ -1,63 +1,92 @@
-import fs from 'fs';
+import fs from "fs";
+
+type IniUpdates = Record<string, Record<string, string>>;
+
+const ROOT = "";
 
 export const IniEditor = {
-  updateIni: (filePath: string, updates: Record<string, Record<string, string>>) => {
-    let lines: string[] = [];
-    
-    if (fs.existsSync(filePath)) {
-      lines = fs.readFileSync(filePath, 'utf-8').split(/\r?\n/);
-    }
+  updateIni(filePath: string, updates: IniUpdates) {
+    const existing = fs.existsSync(filePath)
+      ? fs.readFileSync(filePath, "utf-8").split(/\r?\n/)
+      : [];
 
-    const newLines: string[] = [];
-    let currentSection = '';
-    const processedKeys = new Set<string>();
+    const out: string[] = [];
+    let currentSection = ROOT;
 
-    // update keys
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
-        currentSection = trimmed.slice(1, -1);
-        newLines.push(line);
+    const processed = new Set<string>();
+
+    const sectionHeaderRe = /^\s*\[([^\]]+)\]\s*$/;
+    const kvRe = /^\s*([^=;#]+?)\s*=\s*(.*?)\s*$/;
+    for (const line of existing) {
+      const headerMatch = line.match(sectionHeaderRe);
+      if (headerMatch) {
+        currentSection = headerMatch[1].trim();
+        out.push(line);
         continue;
       }
 
-      const match = line.match(/^([^=]+)=(.*)/);
-      if (match && currentSection) {
-        const key = match[1].trim();
-        if (updates[currentSection] && updates[currentSection][key] !== undefined) {
-          const val = updates[currentSection][key];
-          newLines.push(`${key} = ${val}`);
-          processedKeys.add(`${currentSection}.${key}`);
+      const kvMatch = line.match(kvRe);
+      if (kvMatch) {
+        const key = kvMatch[1].trim();
+
+        const sectionUpdates = updates[currentSection];
+        if (sectionUpdates && sectionUpdates[key] !== undefined) {
+          const val = sectionUpdates[key];
+          out.push(`${key} = ${val}`);
+          processed.add(`${currentSection}.${key}`);
         } else {
-          newLines.push(line);
+          const rootUpdates = updates[ROOT];
+          if (currentSection === ROOT && rootUpdates && rootUpdates[key] !== undefined) {
+            const val = rootUpdates[key];
+            out.push(`${key} = ${val}`);
+            processed.add(`${ROOT}.${key}`);
+          } else {
+            out.push(line);
+          }
         }
       } else {
-        newLines.push(line);
+        out.push(line);
       }
     }
 
-    // add missing keys
+    const findSectionEndIndex = (section: string) => {
+      if (section === ROOT) return out.length;
+      const header = `[${section}]`;
+
+      const start = out.findIndex((l) => l.trim() === header);
+      if (start === -1) return -1;
+
+      for (let i = start + 1; i < out.length; i++) {
+        if (sectionHeaderRe.test(out[i])) return i;
+      }
+      return out.length;
+    };
+
     for (const [section, keys] of Object.entries(updates)) {
-      const missingKeys = Object.entries(keys).filter(([k]) => !processedKeys.has(`${section}.${k}`));
-      
-      if (missingKeys.length > 0) {
-        const header = `[${section}]`;
-        if (!newLines.includes(header)) {
-             newLines.push('');
-             newLines.push(header);
-        }
-        
-        // append keys
-        if (!newLines[newLines.length - 1].includes(header)) {
-             newLines.push(header); 
+      for (const [k, v] of Object.entries(keys)) {
+        const id = `${section}.${k}`;
+        if (processed.has(id)) continue;
+
+        if (section === ROOT) {
+          out.push(`${k} = ${v}`);
+          processed.add(id);
+          continue;
         }
 
-        for (const [k, v] of missingKeys) {
-          newLines.push(`${k} = ${v}`);
+        const header = `[${section}]`;
+        let end = findSectionEndIndex(section);
+
+        if (end === -1) {
+          if (out.length && out[out.length - 1].trim() !== "") out.push("");
+          out.push(header);
+          end = out.length;
         }
+
+        out.splice(end, 0, `${k} = ${v}`);
+        processed.add(id);
       }
     }
 
-    fs.writeFileSync(filePath, newLines.join('\n'));
-  }
+    fs.writeFileSync(filePath, out.join("\n"));
+  },
 };

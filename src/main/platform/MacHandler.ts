@@ -6,6 +6,7 @@ import { homedir } from "os";
 import type { PlatformHandler } from "./types";
 import { findFile } from "../utils/fsUtils";
 import { Extractor } from "../utils/extractor";
+import { Platform } from "../../shared/types";
 
 type FinalizeOptions = {
   resetMesenSupportDir?: boolean;
@@ -165,6 +166,8 @@ export class MacHandler implements PlatformHandler {
         return path.join(home, "Library", "Application Support", "Mesen2");
       case "ares":
         return path.join(home, "Library", "Application Support", "ares");
+      case "melonds":
+        return path.join(home, "Library", "Preferences", "melonDS");
       default:
         return path.join(home, "Library", "Application Support", emulatorId);
     }
@@ -172,6 +175,10 @@ export class MacHandler implements PlatformHandler {
 
   getPlatformId(): "macos" {
     return "macos";
+  }
+
+  getPlatform(): Platform {
+    return "darwin";
   }
 
   // json helpers

@@ -3,6 +3,7 @@ import { EmulatorConfigurator } from './types';
 import { DolphinConfigurator } from './DolphinConfigurator';
 import { AresConfigurator } from './AresConfigurator';
 import { MesenConfigurator } from './MesenConfigurator';
+import { MelonDSConfigurator } from './MelonDSConfigurator';
 
 export const getConfigurator = (consoleId: string): EmulatorConfigurator | null => {
   switch (consoleId) {
@@ -14,6 +15,9 @@ export const getConfigurator = (consoleId: string): EmulatorConfigurator | null 
     case 'gb':
     case 'gba':
       return new MesenConfigurator(consoleId);
+
+    case 'ds':
+      return new MelonDSConfigurator();
 
     case 'gc':
     case 'wii':
