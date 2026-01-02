@@ -3,8 +3,6 @@
 
 ### known issues:
 
-melonDS has no default controls
-
 azahar is in finnish
 
 azahar has annoying popup on close
@@ -20,7 +18,7 @@ the ci tag doesnt work because the tests are untracked
 
 controller support
 
-controls on n64, ds, 3ds, gc/wii 
+controls on n64, 3ds, gc/wii 
 
 display game cover (aws lambda)
 
@@ -30,4 +28,6 @@ more consoles
 
 mii/font support for 3ds
 
-settings/theme customization
+settings
+
+theme customization
