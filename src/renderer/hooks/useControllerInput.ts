@@ -1,107 +1,149 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { PhysicalBinding } from "../../shared/types/controls";
+import type { GamepadToken } from "../../shared/controls/gamepadTokens";
+import { axisToDigitalToken } from "../../shared/controls/gamepadTokens";
 
 const AXIS_THRESHOLD = 0.65;
 
-const BUTTON_NAME_MAP: Record<number, string> = {
-  0: "GP_BTN_A",
-  1: "GP_BTN_B",
-  2: "GP_BTN_X",
-  3: "GP_BTN_Y",
-  4: "GP_BTN_LB",
-  5: "GP_BTN_RB",
-  6: "GP_BTN_LT",
-  7: "GP_BTN_RT",
-  8: "GP_BTN_BACK",
-  9: "GP_BTN_START",
-  10: "GP_BTN_LS",
-  11: "GP_BTN_RS",
+export type Detected =
+  | { device: "keyboard"; input: string }
+  | { device: "gamepad"; kind: "button"; input: GamepadToken }
+  | { device: "gamepad"; kind: "axis"; stick: "left" | "right"; axis: "x" | "y"; sign: 1 | -1 };
+
+const BUTTON_NAME_MAP: Record<number, GamepadToken> = {
+  0: "GP_A",
+  1: "GP_B",
+  2: "GP_X",
+  3: "GP_Y",
+  4: "GP_L1",
+  5: "GP_R1",
+  6: "GP_L2",
+  7: "GP_R2",
+  8: "GP_SELECT",
+  9: "GP_START",
+  10: "GP_L3",
+  11: "GP_R3",
   12: "GP_DPAD_UP",
   13: "GP_DPAD_DOWN",
   14: "GP_DPAD_LEFT",
   15: "GP_DPAD_RIGHT",
 };
 
-function areSetsEqual(a: Set<string>, b: Set<string>) {
-  if (a.size !== b.size) return false;
-  for (const item of a) if (!b.has(item)) return false;
-  return true;
+function isAxisDetected(d: Detected): d is Extract<Detected, { device: "gamepad"; kind: "axis" }> {
+  return d.device === "gamepad" && d.kind === "axis";
+}
+
+function axisMetaFromIndex(idx: number): { stick: "left" | "right"; axis: "x" | "y" } {
+  const stick: "left" | "right" = idx < 2 ? "left" : "right";
+  const axis: "x" | "y" = idx % 2 === 0 ? "x" : "y";
+  return { stick, axis };
+}
+
+function axisDetected(idx: number, value: number): Detected | null {
+  if (Math.abs(value) < AXIS_THRESHOLD) return null;
+  const { stick, axis } = axisMetaFromIndex(idx);
+  const sign: 1 | -1 = value > 0 ? 1 : -1;
+  return { device: "gamepad", kind: "axis", stick, axis, sign };
 }
 
 export function useControllerInput() {
   const [currentlyPressed, setCurrentlyPressed] = useState<Set<string>>(new Set());
-  const [lastDetected, setLastDetected] = useState<{ binding: PhysicalBinding; at: number } | null>(null);
+  const [lastDetected, setLastDetected] = useState<{ input: Detected; at: number } | null>(null);
 
-  const keyboardState = useRef<Set<string>>(new Set());
+  const keyboardDown = useRef(new Set<string>());
+  const prevPressed = useRef(new Set<string>());
+
+  const prevAxisToken = useRef(new Map<number, GamepadToken>());
+
   const rafId = useRef<number>(0);
 
-  const clearLastDetectedInput = useCallback(() => {
-    setLastDetected(null);
-  }, []);
+  const clearLastDetectedInput = useCallback(() => setLastDetected(null), []);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (keyboardState.current.has(e.code)) return;
-      
-      keyboardState.current.add(e.code);
-      setLastDetected({
-        binding: { device: "keyboard", input: e.code },
-        at: performance.now(),
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (keyboardDown.current.has(e.code)) return;
+      keyboardDown.current.add(e.code);
+
+      setLastDetected({ input: { device: "keyboard", input: e.code }, at: performance.now() });
+
+      setCurrentlyPressed((prev) => {
+        const next = new Set(prev);
+        next.add(e.code);
+        return next;
       });
-
-      setCurrentlyPressed(new Set(keyboardState.current));
     };
 
-    const handleKeyUp = (e: KeyboardEvent) => {
-      keyboardState.current.delete(e.code);
-      setCurrentlyPressed(new Set(keyboardState.current));
+    const onKeyUp = (e: KeyboardEvent) => {
+      keyboardDown.current.delete(e.code);
+      setCurrentlyPressed((prev) => {
+        const next = new Set(prev);
+        next.delete(e.code);
+        return next;
+      });
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
     };
   }, []);
 
   useEffect(() => {
     const poll = () => {
       const pads = navigator.getGamepads?.() ?? [];
-      const gp = pads.find((p) => p && p.connected);
+      const gp = pads.find((p) => p && p.connected) ?? null;
 
-      const nextFramePressed = new Set(keyboardState.current);
-      let foundGamepadInput: string | null = null;
+      const nextPressed = new Set<string>(keyboardDown.current);
+      let detectedThisFrame: Detected | null = null;
 
       if (gp) {
-        gp.buttons.forEach((btn, idx) => {
-          if (btn.pressed) {
-            const name = BUTTON_NAME_MAP[idx] ?? `GP_BTN_${idx}`;
-            nextFramePressed.add(name);
-            if (!foundGamepadInput) foundGamepadInput = name;
+        // buttons (pressed + rising edge detection)
+        for (let i = 0; i < gp.buttons.length; i++) {
+          if (!gp.buttons[i]?.pressed) continue;
+
+          const token = BUTTON_NAME_MAP[i];
+          if (!token) continue;
+
+          nextPressed.add(token);
+
+          if (!detectedThisFrame && !prevPressed.current.has(token)) {
+            detectedThisFrame = { device: "gamepad", kind: "button", input: token };
           }
-        });
+        }
 
-        const [ax0, ax1] = gp.axes;
-        
-        if (ax1 < -AXIS_THRESHOLD) { nextFramePressed.add("GP_LS_UP"); if(!foundGamepadInput) foundGamepadInput = "GP_LS_UP"; }
-        if (ax1 > AXIS_THRESHOLD) { nextFramePressed.add("GP_LS_DOWN"); if(!foundGamepadInput) foundGamepadInput = "GP_LS_DOWN"; }
-        if (ax0 < -AXIS_THRESHOLD) { nextFramePressed.add("GP_LS_LEFT"); if(!foundGamepadInput) foundGamepadInput = "GP_LS_LEFT"; }
-        if (ax0 > AXIS_THRESHOLD) { nextFramePressed.add("GP_LS_RIGHT"); if(!foundGamepadInput) foundGamepadInput = "GP_LS_RIGHT"; }
+        // axes (pressed + threshold crossing detection)
+        for (let i = 0; i < gp.axes.length; i++) {
+          const value = gp.axes[i];
+          const d = axisDetected(i, value);
+
+          if (!d) {
+            prevAxisToken.current.delete(i);
+            continue;
+          }
+
+          if (!isAxisDetected(d)) continue;
+
+          const token = axisToDigitalToken({ stick: d.stick, axis: d.axis, sign: d.sign });
+          nextPressed.add(token);
+
+          const prevTok = prevAxisToken.current.get(i);
+          if (!prevTok || prevTok !== token) {
+            prevAxisToken.current.set(i, token);
+            if (!detectedThisFrame) detectedThisFrame = d;
+          }
+        }
+      } else {
+        prevAxisToken.current.clear();
       }
 
-      setCurrentlyPressed((prev) => {
-        if (areSetsEqual(prev, nextFramePressed)) return prev;
-        return nextFramePressed;
-      });
+      setCurrentlyPressed(nextPressed);
 
-      if (foundGamepadInput) {
-        setLastDetected({
-            binding: { device: "gamepad", input: foundGamepadInput },
-            at: performance.now()
-        });
+      if (detectedThisFrame) {
+        setLastDetected({ input: detectedThisFrame, at: performance.now() });
       }
 
+      prevPressed.current = nextPressed;
       rafId.current = requestAnimationFrame(poll);
     };
 
@@ -111,7 +153,7 @@ export function useControllerInput() {
 
   return {
     currentlyPressed,
-    lastDetectedInput: lastDetected?.binding ?? null,
+    lastDetectedInput: lastDetected?.input ?? null,
     lastDetectedAt: lastDetected?.at ?? null,
     clearLastDetectedInput,
   };

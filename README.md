@@ -29,3 +29,5 @@ ui improvement
 more consoles
 
 mii/font support for 3ds
+
+settings/theme customization

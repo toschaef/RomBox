@@ -1,54 +1,6 @@
-import type { LogicalAction } from "../../../shared/types/controls";
-import { ConsoleID } from "../../../shared/types";
+import type { ConsoleID } from "../../../shared/types";
 
 export const BASE_GAMEPAD = 0x1000;
-
-export const MESEN_ACTION_MAP: Record<LogicalAction, string> = {
-  MOVE_UP: "Up",
-  MOVE_DOWN: "Down",
-  MOVE_LEFT: "Left",
-  MOVE_RIGHT: "Right",
-  FACE_PRIMARY: "A",
-  FACE_SECONDARY: "B",
-  FACE_TERTIARY: "X",
-  FACE_QUATERNARY: "Y",
-  BUMPER_L: "L",
-  BUMPER_R: "R",
-  TRIGGER_L: "L2",
-  TRIGGER_R: "R2",
-  START: "Start",
-  SELECT: "Select",
-};
-
-export const GP_FIXED_TO_INDEX: Record<string, number> = {
-  GP_DPAD_UP: 8,
-  GP_DPAD_DOWN: 9,
-  GP_DPAD_LEFT: 10,
-  GP_DPAD_RIGHT: 11,
-
-  GP_LS_RIGHT: 16,
-  GP_LS_LEFT: 17,
-  GP_LS_DOWN: 18,
-  GP_LS_UP: 19,
-
-  GP_RS_RIGHT: 20,
-  GP_RS_LEFT: 21,
-  GP_RS_DOWN: 22,
-  GP_RS_UP: 23,
-
-  GP_A: 0,
-  GP_B: 1,
-  GP_X: 2,
-  GP_Y: 3,
-  GP_L1: 4,
-  GP_R1: 5,
-  GP_START: 6,
-  GP_SELECT: 7,
-  GP_L2: 12,
-  GP_R2: 13,
-  GP_L3: 14,
-  GP_R3: 15,
-};
 
 // _keyCodeMap[128] from Mesen2 MacOSKeyManager.h
 export const MESEN_KEYCODE_MAP_128: number[] = [
@@ -110,7 +62,7 @@ export const MESEN_BUCKET_BY_CONSOLE: Partial<Record<ConsoleID, string>> = {
 export const MESEN_PORT_TYPE_BY_CONSOLE: Partial<Record<ConsoleID, string>> = {
   nes: "NesController",
   snes: "SnesController",
-  gb: "GbController",
+  gb: "GameboyController",
   gba: "GbaController",
   sms: "SmsController",
   gg: "SmsController",
@@ -118,6 +70,9 @@ export const MESEN_PORT_TYPE_BY_CONSOLE: Partial<Record<ConsoleID, string>> = {
 };
 
 export function getMesenBucket(consoleId: ConsoleID): string | null {
-  const b = MESEN_BUCKET_BY_CONSOLE[consoleId];
-  return b ? b : null;
+  return MESEN_BUCKET_BY_CONSOLE[consoleId] ?? null;
+}
+
+export function getMesenControllerType(consoleId: ConsoleID): string | null {
+  return MESEN_PORT_TYPE_BY_CONSOLE[consoleId] ?? null;
 }

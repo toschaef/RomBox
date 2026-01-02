@@ -1,5 +1,5 @@
 import type { Platform } from "../../../shared/types";
-import type { ActionBindings, PhysicalBinding } from "../../../shared/types/controls";
+import type { ControlsProfile } from "../../../shared/controls/types";
 
 export type EmulatorPatch =
   | { kind: "json-merge"; path: string[]; value: unknown }
@@ -16,16 +16,5 @@ export interface TranslateContext {
 export interface IEmulatorTranslator {
   id: string;
   platform?: Platform;
-
-  /** returns translated keybind for configurator */
-  translate(bindings: ActionBindings, ctx: TranslateContext): EmulatorPatch[];
-}
-
-/** maps and returns first keybind in arr */
-export function firstMapped<T>(arr: PhysicalBinding[], mapFn: (b: PhysicalBinding) => T | null): T | null {
-  for (const b of arr) {
-    const v = mapFn(b);
-    if (v !== null) return v;
-  }
-  return null;
+  translate(profile: ControlsProfile, ctx: TranslateContext): EmulatorPatch[];
 }

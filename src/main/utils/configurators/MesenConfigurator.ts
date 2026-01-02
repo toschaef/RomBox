@@ -2,7 +2,6 @@ import path from "path";
 import { BaseConfigurator } from "./BaseConfigurator";
 import { ControlsService } from "../../services/ControlsService";
 import { osHandler } from "../../platform";
-import type { ActionBindings } from "../../../shared/types/controls";
 import { MesenTranslator } from "../translators/MesenTranslator";
 import type { ConsoleID } from "../../../shared/types";
 
@@ -82,14 +81,17 @@ export class MesenConfigurator extends BaseConfigurator {
     const settingsFile = path.join(configPath, "settings.json");
 
     const svc = new ControlsService();
-    let bindings: ActionBindings;
+    const profile = svc.getDefaultProfile();
 
-    try {
-      bindings = svc.getDefaultProfile().bindings;
-    } catch {
-      console.warn("[MesenConfigurator] No default profile found; skipping.");
-      return;
-    }
+    const keyboardMap  = this.translator.translateForDevice(profile, 1, "keyboard", "dpad");
+    const gamepadDpad  = this.translator.translateForDevice(profile, 1, "gamepad", "dpad");
+    const gamepadMove  = this.translator.translateForDevice(profile, 1, "gamepad", "move");
+
+    const slotMaps: Partial<Record<MappingSlot, Record<string, number>>> = {
+      Mapping1: keyboardMap,
+      Mapping2: gamepadDpad,
+      Mapping3: gamepadMove,
+    };
 
     osHandler.updateJson<unknown>(
       settingsFile,
@@ -99,18 +101,15 @@ export class MesenConfigurator extends BaseConfigurator {
         ensureControllerType(settings, spec);
 
         const root = ensureRootNode(settings, spec);
-        console.log(`[MesenConfigurator] ${spec.bucket} Type =`, root["Type"]);
-
-        const gamepadMap = this.translator.translateForDevice(bindings, 1, "gamepad");
-        const keyboardMap = this.translator.translateForDevice(bindings, 1, "keyboard");
-        const preferredMap = Object.keys(gamepadMap).length > 0 ? gamepadMap : keyboardMap;
 
         for (const slot of ALL_SLOTS) {
+          const mapForSlot = slotMaps[slot];
+          if (!mapForSlot || Object.keys(mapForSlot).length === 0) continue;
+
           const node = ensureMappingNode(settings, spec, slot);
-          Object.assign(node, preferredMap);
+          Object.assign(node, mapForSlot);
         }
 
-        console.log(`[MesenConfigurator] Patched ${spec.bucket}.${rootKey(spec.root)}.Mapping1`);
         return settings;
       },
       {}

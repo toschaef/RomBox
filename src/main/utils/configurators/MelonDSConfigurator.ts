@@ -8,6 +8,13 @@ import { ControlsService } from "../../services/ControlsService";
 import { MelonDSTranslator } from "../translators/MelonDSTranslator";
 import type { EmulatorPatch, TranslateContext } from "../translators/ITranslator";
 
+function readMelonJoystickID(tomlPath: string): number | null {
+  if (!fs.existsSync(tomlPath)) return null;
+  const text = fs.readFileSync(tomlPath, "utf-8");
+  const match = text.match(/JoystickID\s*=\s*(\d+)/);
+  return match ? Number(match[1]) : null;
+}
+
 export class MelonDSConfigurator extends BaseConfigurator {
   async configure(): Promise<void> {
     console.log("[melonds][config] configure() entered");
@@ -21,7 +28,7 @@ export class MelonDSConfigurator extends BaseConfigurator {
       player: 1,
     };
 
-    const patches = new MelonDSTranslator().translate(profile.bindings, ctx);
+    const patches = new MelonDSTranslator().translate(profile, ctx);
     console.log(`[melonds][config] translated patches=${patches.length}`);
 
     if (!patches.length) {
@@ -40,6 +47,12 @@ export class MelonDSConfigurator extends BaseConfigurator {
 
     const targetPath = hasToml ? tomlPath : hasIni ? iniPath : tomlPath;
     const targetKind: "toml" | "ini" = targetPath.endsWith(".toml") ? "toml" : "ini";
+
+    const existingId = readMelonJoystickID(targetPath);
+    if (existingId !== null) {
+      profile.melonJoystickId = existingId;
+      svc.saveProfile(profile);
+    }
 
     if (!hasToml && !hasIni) {
       console.log("[melonds][config] no config found; creating melonDS.toml scaffold");

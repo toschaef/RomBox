@@ -86,10 +86,6 @@ export class MacHandler implements PlatformHandler {
     if (isAppBundle) {
       console.log(`[Mac] App bundle detected: ${appPath}`);
       targetBinary = this.resolveBundleBinary(binaryPath);
-
-      // if (opts.resetMesenSupportDir) {
-      //   this.clearMesenSupportDir();
-      // }
     }
 
     console.log(`[Mac] Finalizing: ${targetBinary}`);
@@ -117,11 +113,13 @@ export class MacHandler implements PlatformHandler {
     return found;
   }
 
+  // rework this for prod, but good for dev
   clearPlatformData(): void {
     const home = homedir();
     const pathsToDelete = [
       path.join(home, ".config", "Mesen2"),
       path.join(home, "Library", "Application Support", "Mesen2"),
+      path.join(home, "Library", "Application Support", "Dolphin"),
       path.join(home, "Library", "Preferences", "melonDS"),
       path.join(home, "Library", "Preferences", "azahar"),
     ];
