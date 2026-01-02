@@ -2,7 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import { BaseConfigurator } from './BaseConfigurator';
 import { osHandler } from '../../platform';
-import { IniEditor } from '../ini';
+import { IniEditor } from '../editors/ini';
 
 export class DolphinConfigurator extends BaseConfigurator {
   

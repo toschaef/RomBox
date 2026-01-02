@@ -1,6 +1,6 @@
 import fs from "fs";
 
-export const TomlKVEditor = {
+export const TomlEditor = {
   updateTomlKV(filePath: string, updates: Record<string, string>) {
     const existing = fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf-8") : "";
     const lines = existing.split(/\r?\n/);

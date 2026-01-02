@@ -1,8 +1,8 @@
 import fs from "fs";
 import path from "path";
 import { BaseConfigurator } from "./BaseConfigurator";
-import { IniEditor } from "../ini";
-import { TomlKVEditor } from "../toml";
+import { IniEditor } from "../editors/ini";
+import { TomlEditor } from "../editors/toml";
 import { osHandler } from "../../platform";
 import { ControlsService } from "../../services/ControlsService";
 import { MelonDSTranslator } from "../translators/MelonDSTranslator";
@@ -81,9 +81,9 @@ export class MelonDSConfigurator extends BaseConfigurator {
         if (!Object.keys(kv).length) continue;
 
         if (section === "") {
-          TomlKVEditor.updateTomlKV(targetPath, kv);
+          TomlEditor.updateTomlKV(targetPath, kv);
         } else {
-          TomlKVEditor.updateTomlTableKV(targetPath, section, kv);
+          TomlEditor.updateTomlTableKV(targetPath, section, kv);
         }
       }
     } else {
