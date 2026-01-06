@@ -1,8 +1,8 @@
 import fs from "fs";
 
-type BmlLine = { raw: string; indent: number; text: string };
+type Line = { raw: string; indent: number; text: string };
 
-function parseLines(text: string): BmlLine[] {
+function parseLines(text: string): Line[] {
   const lines = text.split(/\r?\n/);
   return lines.map((raw) => {
     const m = raw.match(/^(\s*)(.*)$/);
@@ -14,139 +14,143 @@ function parseLines(text: string): BmlLine[] {
 
 const KV_RE = /^([^:]+):\s*(.*)$/;
 
-function isHeader(line: BmlLine) {
-  const m = line.text.match(KV_RE);
-  if (!m) return false;
-  const key = m[1].trim();
-  const val = m[2];
-  return key.length > 0 && (val === "" || val.trim() === "");
+function isKV(line: Line): boolean {
+  return KV_RE.test(line.text);
 }
 
-function keyOf(line: BmlLine): string | null {
+function kvKey(line: Line): string | null {
   const m = line.text.match(KV_RE);
-  if (!m) return null;
-  return m[1].trim();
+  return m ? m[1].trim() : null;
 }
 
-function setLineValue(line: BmlLine, value: string): string {
+function setKV(line: Line, value: string): string {
   const m = line.text.match(KV_RE);
   if (!m) return line.raw;
   const key = m[1].trim();
-  const pad = " ".repeat(line.indent);
-  return `${pad}${key}: ${value}`;
+  return `${" ".repeat(line.indent)}${key}: ${value}`;
 }
 
-function findBlockRange(lines: BmlLine[], path: string[]): { headerIndex: number; start: number; end: number } | null {
-  let searchStart = 0;
-  let currentHeaderIndex = -1;
-  let currentIndent = -1;
+function isTopSectionHeader(line: Line): boolean {
+  const t = line.text.trim();
+  if (!t) return false;
+  if (line.indent !== 0) return false;
+  return !t.includes(":");
+}
 
-  for (let depth = 0; depth < path.length; depth++) {
-    const target = path[depth];
-    let found = -1;
+function sectionName(line: Line): string | null {
+  return isTopSectionHeader(line) ? line.text.trim() : null;
+}
 
-    for (let i = searchStart; i < lines.length; i++) {
-      const ln = lines[i];
-      if (!isHeader(ln)) continue;
-
-      const k = keyOf(ln);
-      if (k !== target) continue;
-
-      if (depth === 0) {
-        found = i;
-        break;
-      } else {
-        if (ln.indent > currentIndent) {
-          found = i;
-          break;
-        }
-      }
+function findTopSectionRange(lines: Line[], name: string) {
+  let headerIndex = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const n = sectionName(lines[i]);
+    if (n === name) {
+      headerIndex = i;
+      break;
     }
-
-    if (found === -1) return null;
-
-    currentHeaderIndex = found;
-    currentIndent = lines[found].indent;
-    searchStart = found + 1;
   }
+  if (headerIndex === -1) return null;
 
-  const headerIndent = lines[currentHeaderIndex].indent;
-  const start = currentHeaderIndex + 1;
-
+  const start = headerIndex + 1;
   let end = lines.length;
   for (let i = start; i < lines.length; i++) {
-    if (lines[i].indent <= headerIndent && isHeader(lines[i])) {
-      end = i;
-      break;
-    }
-    if (lines[i].indent <= headerIndent && lines[i].text.trim() !== "") {
+    if (isTopSectionHeader(lines[i])) {
       end = i;
       break;
     }
   }
 
-  return { headerIndex: currentHeaderIndex, start, end };
+  return { headerIndex, start, end };
 }
 
-function ensureBlock(lines: BmlLine[], path: string[]): { headerIndex: number; start: number; end: number } {
-  const existing = findBlockRange(lines, path);
+function ensureTopSection(lines: Line[], name: string) {
+  const existing = findTopSectionRange(lines, name);
   if (existing) return existing;
-
-  let indent = 0;
-  if (path.length > 1) {
-    const parent = findBlockRange(lines, path.slice(0, -1));
-    if (parent) indent = lines[parent.headerIndex].indent + 2;
-  }
 
   if (lines.length && lines[lines.length - 1].raw.trim() !== "") {
     lines.push({ raw: "", indent: 0, text: "" });
   }
 
-  const parentExists = path.length > 1 && findBlockRange(lines, path.slice(0, -1));
-  const chain = parentExists ? [path[path.length - 1]] : path;
+  const headerIndex = lines.length;
+  lines.push({ raw: name, indent: 0, text: name });
 
-  let currentIndent = parentExists ? indent : 0;
-  for (const part of chain) {
-    lines.push({ raw: `${" ".repeat(currentIndent)}${part}:`, indent: currentIndent, text: `${part}:` });
-    currentIndent += 2;
-  }
-
-  const outText = lines.map((l) => l.raw).join("\n");
-  const reparsed = parseLines(outText);
-  const got = findBlockRange(reparsed, path);
-  if (!got) throw new Error(`BmlEditor.ensureBlock failed to create path: ${path.join(" > ")}`);
+  const reparsed = parseLines(lines.map((l) => l.raw).join("\n"));
+  const got = findTopSectionRange(reparsed, name);
+  if (!got) throw new Error(`Failed to create section "${name}"`);
   return got;
 }
 
 export const BmlEditor = {
-  updateBml(filePath: string, blockPath: string[], updates: Record<string, string>) {
-    const existing = fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf-8") : "";
-    let lines = parseLines(existing);
+  updateBml(filePath: string, blockPath: readonly string[], updates: Record<string, string>) {
+    if (blockPath.length !== 1) {
+      throw new Error(`BmlEditor.updateBml only supports top-level sections; got "${blockPath.join(" > ")}"`);
+    }
 
-    const block = ensureBlock(lines, blockPath);
+    const section = blockPath[0];
+    const existingText = fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf-8") : "";
+    let lines = parseLines(existingText);
+
+    const sec = ensureTopSection(lines, section);
 
     const seen = new Set<string>();
     let replaced = 0;
 
-    for (let i = block.start; i < block.end; i++) {
+    for (let i = sec.start; i < sec.end; i++) {
       const ln = lines[i];
-      const m = ln.text.match(KV_RE);
-      if (!m) continue;
+      if (!isKV(ln)) continue;
 
-      const key = m[1].trim();
-      if (updates[key] === undefined) continue;
+      const key = kvKey(ln);
+      if (!key) continue;
 
-      lines[i] = { ...ln, raw: setLineValue(ln, updates[key]) };
-      seen.add(key);
+      const next = updates[key];
+      if (next === undefined) continue;
+
+      lines[i] = { ...ln, raw: setKV(ln, next) };
       replaced++;
     }
 
-    const missing = Object.entries(updates).filter(([k]) => !seen.has(k));
-    if (missing.length) {
-      const insertAt = block.end;
-      const baseIndent = lines[block.headerIndex].indent + 2;
+    const toRemove: number[] = [];
+    seen.clear();
 
-      const insertLines: BmlLine[] = missing.map(([k, v]) => ({
+    for (let i = sec.start; i < sec.end; i++) {
+      const ln = lines[i];
+      if (!isKV(ln)) continue;
+
+      const key = kvKey(ln);
+      if (!key) continue;
+
+      if (seen.has(key)) {
+        toRemove.push(i);
+      } else {
+        seen.add(key);
+      }
+    }
+
+    for (let i = toRemove.length - 1; i >= 0; i--) {
+      lines.splice(toRemove[i], 1);
+    }
+
+    const reparsed = parseLines(lines.map((l) => l.raw).join("\n"));
+    const sec2 = findTopSectionRange(reparsed, section);
+    if (!sec2) throw new Error(`Section "${section}" vanished after dedupe`);
+    lines = reparsed;
+
+    const present = new Set<string>();
+    for (let i = sec2.start; i < sec2.end; i++) {
+      const ln = lines[i];
+      if (!isKV(ln)) continue;
+      const key = kvKey(ln);
+      if (key) present.add(key);
+    }
+
+    const missing = Object.entries(updates).filter(([k]) => !present.has(k));
+    console.log(`[BmlEditor] section=${section} replaced=${replaced} missing=${missing.length} file=${filePath}`);
+    if (missing.length) {
+      const insertAt = sec2.end;
+      const baseIndent = 2;
+
+      const insertLines: Line[] = missing.map(([k, v]) => ({
         indent: baseIndent,
         text: `${k}: ${v}`,
         raw: `${" ".repeat(baseIndent)}${k}: ${v}`,
@@ -155,11 +159,6 @@ export const BmlEditor = {
       lines.splice(insertAt, 0, ...insertLines);
     }
 
-    const out = lines.map((l) => l.raw).join("\n");
-    fs.writeFileSync(filePath, out);
-
-    console.log(
-      `[BmlEditor] block="${blockPath.join(" > ")}" replaced=${replaced} appended=${missing.length} file=${filePath}`
-    );
+    fs.writeFileSync(filePath, lines.map((l) => l.raw).join("\n"), "utf-8");
   },
 };

@@ -119,6 +119,7 @@ export class MacHandler implements PlatformHandler {
     const pathsToDelete = [
       path.join(home, ".config", "Mesen2"),
       path.join(home, "Library", "Application Support", "Mesen2"),
+      path.join(home, "Library", "Application Support", "ares"),
       path.join(home, "Library", "Application Support", "Dolphin"),
       path.join(home, "Library", "Preferences", "melonDS"),
       path.join(home, "Library", "Preferences", "azahar"),
@@ -181,12 +182,39 @@ export class MacHandler implements PlatformHandler {
 
   // json helpers
 
-  readJson<T = unknown>(filePath: string, fallback: T = {} as T): T {
+  readJson<T>(filePath: string, fallback: T): T {
     try {
-      if (!fs.existsSync(filePath)) return fallback;
-      return JSON.parse(fs.readFileSync(filePath, "utf-8")) as T;
-    } catch {
+      const raw = fs.readFileSync(filePath, "utf-8");
+      const text = raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw;
+      return JSON.parse(text) as T;
+    } catch (err) {
+      console.warn(`[osHandler] JSON parse failed for ${filePath}:`, (err as Error).message);
       return fallback;
+    }
+  }
+
+  updateJson<T>(
+    filePath: string,
+    updater: (current: T) => T,
+    fallback: T
+  ) {
+    const exists = fs.existsSync(filePath);
+
+    if (exists) {
+      const raw = fs.readFileSync(filePath, "utf-8");
+      const text = raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw;
+
+      try {
+        const current = JSON.parse(text) as T;
+        const next = updater(current);
+        this.writeJson(filePath, next);
+      } catch (err) {
+        console.warn(`[osHandler] updateJson aborted: parse failed for ${filePath}:`, (err as Error).message);
+        return;
+      }
+    } else {
+      const next = updater(fallback);
+      this.writeJson(filePath, next);
     }
   }
 
@@ -194,15 +222,13 @@ export class MacHandler implements PlatformHandler {
     const dir = path.dirname(filePath);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
+    if (fs.existsSync(filePath)) {
+      fs.copyFileSync(filePath, `${filePath}.bak`);
+    }
+
     const tmp = `${filePath}.tmp`;
     fs.writeFileSync(tmp, JSON.stringify(data, null, 2), "utf-8");
     fs.renameSync(tmp, filePath);
-  }
-
-  updateJson<T = unknown>(filePath: string, updater: (current: T) => T, fallback: T = {} as T): void {
-    const current = this.readJson<T>(filePath, fallback);
-    const next = updater(current);
-    this.writeJson(filePath, next);
   }
 
   // helpers

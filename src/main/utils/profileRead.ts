@@ -87,3 +87,25 @@ export function getStickDirFromMove(profile: ControlsProfile, dir: "up" | "down"
 export function getDirUnion(profile: ControlsProfile, dir: Dir): DigitalBinding | undefined {
   return getDirFromDpad(profile, dir) ?? getDirFromMove(profile, dir);
 }
+
+export function getDirFromBinding(binding: StickBinding | DpadBinding, dir: Dir): DigitalBinding | undefined {
+  if (binding.type === "dpad") {
+    return pickDir(binding, dir);
+  }
+
+  const stick = binding.stick;
+  const threshold = DEFAULT_AXIS_THRESHOLD;
+
+  const invX = !!binding.invertX;
+  const invY = !!binding.invertY;
+
+  if (dir === "left")  return { type: "gp_axis_digital", stick, axis: "x", dir: invX ? "pos" : "neg", threshold };
+  if (dir === "right") return { type: "gp_axis_digital", stick, axis: "x", dir: invX ? "neg" : "pos", threshold };
+  if (dir === "up")    return { type: "gp_axis_digital", stick, axis: "y", dir: invY ? "pos" : "neg", threshold };
+
+  return { type: "gp_axis_digital", stick, axis: "y", dir: invY ? "neg" : "pos", threshold };
+}
+
+export function getDirFromLook(profile: ControlsProfile, dir: Dir): DigitalBinding | undefined {
+  return getDirFromBinding(profile.player1.look, dir);
+}

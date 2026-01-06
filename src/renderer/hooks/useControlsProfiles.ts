@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { controlsClient } from "../clients/controlsClient";
-import { ControlsProfile, ProfileMeta } from "../../shared/controls/types";
+import type { ControlsProfile, ControllerProfileMeta } from "../../shared/controls/types";
 import { createDefaultProfileShape } from "../../shared/controls/types";
 
 function now() {
@@ -48,7 +48,7 @@ export function makeResetProfile(p: ControlsProfile): ControlsProfile {
 }
 
 export function useControlsProfiles() {
-  const [profiles, setProfiles] = useState<ProfileMeta[]>([]);
+  const [profiles, setProfiles] = useState<ControllerProfileMeta[]>([]);
   const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
   const [profile, setProfile] = useState<ControlsProfile | null>(null);
   const [saving, setSaving] = useState(false);
@@ -102,7 +102,7 @@ export function useControlsProfiles() {
       await controlsClient.deleteProfile(id);
       const list = await refreshProfiles();
       if (activeProfileId === id) {
-        const def = list.find((x) => x.is_default) ?? list[0];
+        const def = list.find((x) => x.is_default === 1) ?? list[0];
         if (def) await changeProfile(def.id);
         else await loadDefault();
       }

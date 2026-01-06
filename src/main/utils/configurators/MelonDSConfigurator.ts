@@ -8,9 +8,9 @@ import { ControlsService } from "../../services/ControlsService";
 import { MelonDSTranslator } from "../translators/MelonDSTranslator";
 import type { EmulatorPatch, TranslateContext } from "../translators/ITranslator";
 
-function readMelonJoystickID(tomlPath: string): number | null {
-  if (!fs.existsSync(tomlPath)) return null;
-  const text = fs.readFileSync(tomlPath, "utf-8");
+function readMelonJoystickID(filePath: string): number | null {
+  if (!fs.existsSync(filePath)) return null;
+  const text = fs.readFileSync(filePath, "utf-8");
   const match = text.match(/JoystickID\s*=\s*(\d+)/);
   return match ? Number(match[1]) : null;
 }
@@ -18,27 +18,14 @@ function readMelonJoystickID(tomlPath: string): number | null {
 export class MelonDSConfigurator extends BaseConfigurator {
   async configure(): Promise<void> {
     console.log("[melonds][config] configure() entered");
+
     const svc = new ControlsService();
-
     const profile = svc.getDefaultProfile();
-    console.log(`[melonds][config] profile="${profile.name}" id=${profile.id}`);
 
-    const ctx: TranslateContext = {
-      platform: osHandler.getPlatform(),
-      player: 1,
-    };
-
-    const patches = new MelonDSTranslator().translate(profile, ctx);
-    console.log(`[melonds][config] translated patches=${patches.length}`);
-
-    if (!patches.length) {
-      console.warn("[melonds][config] no patches produced; aborting");
-      return;
-    }
+    const consoleId = "ds" as const;
+    const p1 = await svc.getEffectiveConsoleBindings(consoleId, profile.id);
 
     const configDir = osHandler.getEmulatorConfigPath("melonds");
-    console.log(`[melonds][config] configDir=${configDir}`);
-
     const tomlPath = path.join(configDir, "melonDS.toml");
     const iniPath = path.join(configDir, "melonDS.ini");
 
@@ -49,7 +36,7 @@ export class MelonDSConfigurator extends BaseConfigurator {
     const targetKind: "toml" | "ini" = targetPath.endsWith(".toml") ? "toml" : "ini";
 
     const existingId = readMelonJoystickID(targetPath);
-    if (existingId !== null) {
+    if (existingId !== null && profile.melonJoystickId !== existingId) {
       profile.melonJoystickId = existingId;
       svc.saveProfile(profile);
     }
@@ -72,6 +59,20 @@ export class MelonDSConfigurator extends BaseConfigurator {
       fs.writeFileSync(targetPath, scaffold, "utf-8");
     }
 
+    const ctx: TranslateContext = {
+      platform: osHandler.getPlatform(),
+      player: 1,
+    };
+
+    const joystickId = profile.melonJoystickId ?? 0;
+    const patches = new MelonDSTranslator().translateFromPlayer(p1, ctx, joystickId);
+
+    console.log(`[melonds][config] translated patches=${patches.length}`);
+    if (!patches.length) {
+      console.warn("[melonds][config] no patches produced; aborting");
+      return;
+    }
+
     const updatesBySection = patchesToIniUpdates(patches);
 
     const before = fs.existsSync(targetPath) ? fs.readFileSync(targetPath, "utf-8") : "";
@@ -80,11 +81,8 @@ export class MelonDSConfigurator extends BaseConfigurator {
       for (const [section, kv] of Object.entries(updatesBySection)) {
         if (!Object.keys(kv).length) continue;
 
-        if (section === "") {
-          TomlEditor.updateTomlKV(targetPath, kv);
-        } else {
-          TomlEditor.updateTomlTableKV(targetPath, section, kv);
-        }
+        if (section === "") TomlEditor.updateTomlKV(targetPath, kv);
+        else TomlEditor.updateTomlTableKV(targetPath, section, kv);
       }
     } else {
       IniEditor.updateIni(targetPath, updatesBySection);
@@ -92,13 +90,6 @@ export class MelonDSConfigurator extends BaseConfigurator {
 
     const after = fs.readFileSync(targetPath, "utf-8");
     console.log(`[melonds][config] wrote=${before !== after} path=${targetPath}`);
-
-    console.log(`[melonds][config] target=${targetKind} sections=${Object.keys(updatesBySection).length}`);
-    for (const [section, kv] of Object.entries(updatesBySection)) {
-      console.log(`[melonds][config] section="${section || "(root)"}" keys=${Object.keys(kv).length}`);
-    }
-
-
     console.log("[melonds][config] done");
   }
 }

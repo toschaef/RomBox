@@ -2,9 +2,7 @@ import { EngineConfig, Game } from '../../shared/types';
 import path from 'path';
 import { homedir } from 'os';
 import { IS_MAC } from '../../shared/constants'
-import { MESEN_SHARED, DOLPHIN_SHARED,
-         MELON_VERSION, RMG_VERSION, ARES_VERSION, AZAHAR_VERSION
-        } from './shared';
+import { MESEN_SHARED, DOLPHIN_SHARED, MELON_VERSION, RMG_VERSION, ARES_VERSION, AZAHAR_VERSION } from './shared';
 
 
 

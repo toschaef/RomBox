@@ -13,12 +13,16 @@ version tag doesnt work because repo is private
 
 the ci tag doesnt work because the tests are untracked
 
+GroupBindingCard doesnt start listening for an input if you don't click the edge
+
+GroupBindingCard doesnt prevent event defaults (page scrolling on arrow key/space binds)
+
 
 ### todo:
 
-controller support
+controller support on every console
 
-controls on n64, 3ds, gc/wii 
+controls on N64, 3ds, gc/wii 
 
 display game cover (aws lambda)
 
@@ -31,3 +35,7 @@ mii/font support for 3ds
 settings
 
 theme customization
+
+controller options per console
+
+multiplayer support

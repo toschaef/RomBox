@@ -1,6 +1,42 @@
+import type { ConsoleID } from "../types";
 import type { GamepadToken } from "./gamepadTokens";
 
 export type InputDevice = "keyboard" | "gamepad" | "auto";
+
+export type N64SpecialBinding = {
+  type: "n64";
+
+  c?: DpadBinding;
+  z?: DigitalBinding;
+};
+
+export type GCSpecialBinding = {
+  type: "gc";
+
+  z?: DigitalBinding;
+}
+
+export type WiiSpecialBinding = {
+  type: "wii";
+
+  nunchuckC?: DigitalBinding;
+  nunchuckZ?: DigitalBinding;
+
+  home?: DigitalBinding;
+}
+
+export type SpecialBinding =
+  | N64SpecialBinding
+  | GCSpecialBinding
+  | WiiSpecialBinding
+
+export type ControllerProfileMeta = {
+  id: string;
+  name: string;
+  created_at: number;
+  updated_at: number;
+  is_default: number;
+};
 
 export type DigitalBinding =
   | { type: "key"; code: string }
@@ -58,6 +94,11 @@ export type PlayerBindings = {
   face: FaceBinding;
   shoulders: ShoulderBinding;
   system: SystemBinding;
+
+  c?: DpadBinding;
+  z?: DigitalBinding;
+
+  special?: SpecialBinding;
 };
 
 export type ControlsProfile = {
@@ -68,10 +109,31 @@ export type ControlsProfile = {
   isDefault: boolean;
   preferredDevice: InputDevice;
   player1: PlayerBindings;
+
   melonJoystickId?: number;
+  preferredControllerId?: string;
 };
 
-export function createDefaultProfileShape(): Omit<ControlsProfile, "id" | "name" | "createdAt" | "updatedAt" | "isDefault"> {
+export type ConsoleLayoutBase = {
+  id: string;
+  consoleId: ConsoleID;
+  profileId: string;
+  createdAt: number;
+  updatedAt: number;
+  isUserModified: boolean;
+};
+
+export type ConsoleLayout<C extends ConsoleID = ConsoleID> = ConsoleLayoutBase & {
+  consoleId: C;
+  bindings: PlayerBindings;
+};
+
+export type AnyConsoleLayout = ConsoleLayout;
+
+export function createDefaultProfileShape(): Omit<
+  ControlsProfile,
+  "id" | "name" | "createdAt" | "updatedAt" | "isDefault"
+> {
   return {
     preferredDevice: "auto",
     player1: {
@@ -84,11 +146,3 @@ export function createDefaultProfileShape(): Omit<ControlsProfile, "id" | "name"
     },
   };
 }
-
-export type ProfileMeta = {
-  id: string;
-  name: string;
-  created_at: number;
-  updated_at: number;
-  is_default: number;
-};

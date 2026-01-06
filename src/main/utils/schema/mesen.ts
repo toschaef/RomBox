@@ -2,7 +2,7 @@ import type { ConsoleID } from "../../../shared/types";
 
 export const BASE_GAMEPAD = 0x1000;
 
-// _keyCodeMap[128] from Mesen2 MacOSKeyManager.h
+/**  _keyCodeMap[128] from Mesen2 MacOSKeyManager.h */
 export const MESEN_KEYCODE_MAP_128: number[] = [
   44, 62, 47, 49, 51, 50, 69, 67, 46, 65,
   154, 45, 60, 66, 48, 61, 68, 63, 35, 36,
@@ -19,7 +19,6 @@ export const MESEN_KEYCODE_MAP_128: number[] = [
   91, 20, 90, 23, 25, 26, 24, 0,
 ];
 
-// todo: do the rest of the keys
 export const APPLE_KEYCODE_BY_CODE: Record<string, number> = {
   KeyA: 0, KeyS: 1, KeyD: 2, KeyF: 3, KeyH: 4, KeyG: 5,
   KeyZ: 6, KeyX: 7, KeyC: 8, KeyV: 9, KeyB: 11, KeyQ: 12,

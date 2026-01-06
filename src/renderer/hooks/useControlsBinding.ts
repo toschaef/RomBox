@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ControlsProfile } from "../../shared/controls/types";
-import { applyBindEvent, bindLabel, type BindPlan, type BindState, type InputEvent } from "../controls/bindMachine";
+import type { ControlsProfile, AnyConsoleLayout } from "../../shared/controls/types";
 import { useControllerInput, type Detected } from "./useControllerInput";
+import { applyBindEvent, bindLabel, type BindPlan, type BindState as StdBindState, type InputEvent } from "../controls/bindMachine";
+import {
+  applyBindEventConsole,
+  bindLabelConsole,
+  type BindPlanConsole,
+  type BindState as ConsoleBindState,
+} from "../controls/consoleBindMachine";
 
 function toInputEvent(d: Detected, at: number): InputEvent | null {
   if (d.device === "keyboard") return { kind: "key", code: d.input, at };
@@ -13,42 +19,76 @@ function toInputEvent(d: Detected, at: number): InputEvent | null {
   return null;
 }
 
-export function useControlsBinding(args: {
-  profile: ControlsProfile | null;
-  onProfileChange: (next: ControlsProfile) => void;
-}) {
-  const { profile, onProfileChange } = args;
-  const [bindState, setBindState] = useState<BindState>({ active: false });
+type Mode =
+  | { kind: "standard"; profile: ControlsProfile; onChange: (p: ControlsProfile) => void }
+  | { kind: "console"; layout: AnyConsoleLayout; onChange: (l: AnyConsoleLayout) => void };
+
+export function useControlsBinding(mode: Mode) {
+  const [stdState, setStdState] = useState<StdBindState>({ active: false });
+  const [consoleState, setConsoleState] = useState<ConsoleBindState>({ active: false });
 
   const { lastDetectedInput, lastDetectedAt, clearLastDetectedInput, currentlyPressed } = useControllerInput();
 
-  const startBind = useCallback((plan: BindPlan) => {
-    clearLastDetectedInput();
-    setBindState({ active: true, plan, step: 0, startedAt: performance.now() });
-  }, [clearLastDetectedInput]);
+  const startBind = useCallback(
+    (plan: BindPlan | BindPlanConsole) => {
+      clearLastDetectedInput();
+
+      if (mode.kind === "standard") {
+        setStdState({ active: true, plan: plan as any, step: 0, startedAt: performance.now() });
+      } else {
+        setConsoleState({ active: true, plan: plan as any, step: 0, startedAt: performance.now() });
+      }
+    },
+    [mode.kind, clearLastDetectedInput]
+  );
 
   const cancelBind = useCallback(() => {
-    setBindState({ active: false });
+    setStdState({ active: false });
+    setConsoleState({ active: false });
     clearLastDetectedInput();
   }, [clearLastDetectedInput]);
 
   useEffect(() => {
-    if (!profile) return;
-    if (!bindState.active) return;
     if (!lastDetectedInput || !lastDetectedAt) return;
 
     const e = toInputEvent(lastDetectedInput, lastDetectedAt);
     if (!e) return;
 
-    const out = applyBindEvent(profile, bindState, e);
-    if (!out) return;
+    if (mode.kind === "standard") {
+      if (!stdState.active) return;
+      const out = applyBindEvent(mode.profile, stdState, e);
+      if (!out) return;
 
-    onProfileChange(out.profile);
-    setBindState(out.state);
-    clearLastDetectedInput();
-  }, [profile, bindState, lastDetectedInput, lastDetectedAt, onProfileChange, clearLastDetectedInput]);
+      mode.onChange(out.profile);
+      setStdState(out.state);
+      clearLastDetectedInput();
+      return;
+    }
 
-  const overlayLabel = useMemo(() => bindLabel(bindState), [bindState]);
+    if (mode.kind === "console") {
+      if (!consoleState.active) return;
+      const out = applyBindEventConsole(mode.layout, consoleState, e);
+      if (!out) return;
 
-  return { bindState, overlayLabel, currentlyPressed, startBind, cancelBind };
+      mode.onChange(out.layout);
+      setConsoleState(out.state);
+      clearLastDetectedInput();
+    }
+  }, [
+    mode,
+    stdState,
+    consoleState,
+    lastDetectedInput,
+    lastDetectedAt,
+    clearLastDetectedInput,
+  ]);
+
+  const overlayLabel = useMemo(() => {
+    if (mode.kind === "standard") return bindLabel(stdState as any);
+    return bindLabelConsole(consoleState as any);
+  }, [mode.kind, stdState, consoleState]);
+
+  const bindStateActive = mode.kind === "standard" ? stdState.active : consoleState.active;
+
+  return { bindStateActive, overlayLabel, currentlyPressed, startBind, cancelBind, stdState, consoleState };
 }

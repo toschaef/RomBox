@@ -3,21 +3,13 @@ import { BaseConfigurator } from "./BaseConfigurator";
 import { ControlsService } from "../../services/ControlsService";
 import { osHandler } from "../../platform";
 import { MesenTranslator } from "../translators/MesenTranslator";
+import { getMesenBucket, getMesenControllerType } from "../schema/mesen";
 import type { ConsoleID } from "../../../shared/types";
 
 type JsonObject = Record<string, unknown>;
-type MesenMapping = Record<string, number>;
 type MappingSlot = "Mapping1" | "Mapping2" | "Mapping3" | "Mapping4";
 
-type InputRoot =
-  | { kind: "port"; port: number }
-  | { kind: "key"; key: string };
-
-type MesenSpec = {
-  bucket: string;
-  root: InputRoot;
-  type: string;
-};
+const ALL_SLOTS: readonly MappingSlot[] = ["Mapping1", "Mapping2", "Mapping3", "Mapping4"] as const;
 
 function isObject(v: unknown): v is JsonObject {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -31,40 +23,29 @@ function ensureObject(obj: JsonObject, key: string): JsonObject {
   return created;
 }
 
-function rootKey(root: InputRoot): string {
-  return root.kind === "port" ? `Port${root.port}` : root.key;
+function ensureMappingNode(root: JsonObject, slot: MappingSlot): JsonObject {
+  return ensureObject(root, slot);
 }
 
-function ensureRootNode(settings: JsonObject, spec: MesenSpec): JsonObject {
-  const sys = ensureObject(settings, spec.bucket);
-  return ensureObject(sys, rootKey(spec.root));
+function preferredRootKey(consoleId: ConsoleID): "Port1" | "Controller" {
+  if (consoleId === "gb" || consoleId === "gba") return "Controller";
+  return "Port1";
 }
 
-function ensureMappingNode(settings: JsonObject, spec: MesenSpec, slot: MappingSlot): MesenMapping {
-  const root = ensureRootNode(settings, spec);
-  const node = ensureObject(root, slot);
-  return node as unknown as MesenMapping;
+function isRootKeyCandidate(k: string) {
+  return k === "Port1" || k.startsWith("Port1") || k === "Controller" || k.startsWith("Controller");
 }
 
-function ensureControllerType(settings: JsonObject, spec: MesenSpec): void {
-  const root = ensureRootNode(settings, spec);
-  const cur = root["Type"];
-  if (cur === undefined || cur === "None") root["Type"] = spec.type;
+function collectRootKeysToWrite(bucketNode: JsonObject, consoleId: ConsoleID): { keys: string[]; preferred: string } {
+  const preferred = preferredRootKey(consoleId);
+
+  const existing = Object.keys(bucketNode)
+    .filter((k) => isRootKeyCandidate(k))
+    .filter((k) => isObject(bucketNode[k]));
+
+  const all = new Set<string>([...existing, preferred]);
+  return { keys: [...all], preferred };
 }
-
-const MESEN_SPEC: Partial<Record<ConsoleID, MesenSpec>> = {
-  nes:  { bucket: "Nes",      root: { kind: "port", port: 1 }, type: "NesController" },
-  snes: { bucket: "Snes",     root: { kind: "port", port: 1 }, type: "SnesController" },
-  pce:  { bucket: "PcEngine", root: { kind: "port", port: 1 }, type: "PceController" },
-
-  gb:   { bucket: "Gameboy",  root: { kind: "key", key: "Controller" }, type: "GameboyController" },
-  gba:  { bucket: "Gba",      root: { kind: "key", key: "Controller" }, type: "GbaController" },
-
-  sms:  { bucket: "Sms",      root: { kind: "port", port: 1 }, type: "SmsController" },
-  gg:   { bucket: "Sms",      root: { kind: "port", port: 1 }, type: "SmsController" },
-};
-
-const ALL_SLOTS: readonly MappingSlot[] = ["Mapping1", "Mapping2", "Mapping3", "Mapping4"] as const;
 
 export class MesenConfigurator extends BaseConfigurator {
   private translator = new MesenTranslator();
@@ -74,45 +55,63 @@ export class MesenConfigurator extends BaseConfigurator {
   }
 
   async configure(): Promise<void> {
-    const spec = MESEN_SPEC[this.consoleId];
-    if (!spec) return;
+    const bucket = getMesenBucket(this.consoleId);
+    const type = getMesenControllerType(this.consoleId);
+
+    if (!bucket || !type) {
+      console.error(`[MesenConfigurator] ABORTING: Bucket or Type missing for ${this.consoleId}`);
+      return;
+    }
 
     const configPath = osHandler.getEmulatorConfigPath("mesen");
     const settingsFile = path.join(configPath, "settings.json");
 
     const svc = new ControlsService();
     const profile = svc.getDefaultProfile();
+    const p1 = await svc.getEffectiveConsoleBindings(this.consoleId, profile.id);
 
-    const keyboardMap  = this.translator.translateForDevice(profile, 1, "keyboard", "dpad");
-    const gamepadDpad  = this.translator.translateForDevice(profile, 1, "gamepad", "dpad");
-    const gamepadMove  = this.translator.translateForDevice(profile, 1, "gamepad", "move");
-
-    const slotMaps: Partial<Record<MappingSlot, Record<string, number>>> = {
-      Mapping1: keyboardMap,
-      Mapping2: gamepadDpad,
-      Mapping3: gamepadMove,
+    const slotPlan: Record<MappingSlot, { device: "keyboard" | "gamepad"; dirSource: "move" | "dpad" }> = {
+      Mapping1: { device: "keyboard", dirSource: "move" },
+      Mapping2: { device: "keyboard", dirSource: "dpad" },
+      Mapping3: { device: "gamepad", dirSource: "move" },
+      Mapping4: { device: "gamepad", dirSource: "dpad" },
     };
+
+    const slotMaps = {
+      Mapping1: this.translator.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping1.device, slotPlan.Mapping1.dirSource, this.consoleId),
+      Mapping2: this.translator.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping2.device, slotPlan.Mapping2.dirSource, this.consoleId),
+      Mapping3: this.translator.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping3.device, slotPlan.Mapping3.dirSource, this.consoleId),
+      Mapping4: this.translator.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping4.device, slotPlan.Mapping4.dirSource, this.consoleId),
+    } satisfies Record<MappingSlot, Record<string, number>>;
 
     osHandler.updateJson<unknown>(
       settingsFile,
       (settingsUnknown) => {
         const settings: JsonObject = isObject(settingsUnknown) ? settingsUnknown : {};
+        
+        const bucketNode = ensureObject(settings, bucket);
 
-        ensureControllerType(settings, spec);
+        const { keys: rootKeysToWrite } = collectRootKeysToWrite(bucketNode, this.consoleId);
 
-        const root = ensureRootNode(settings, spec);
+        for (const rootKey of rootKeysToWrite) {
+          const rootNode = ensureObject(bucketNode, rootKey);
 
-        for (const slot of ALL_SLOTS) {
-          const mapForSlot = slotMaps[slot];
-          if (!mapForSlot || Object.keys(mapForSlot).length === 0) continue;
+          if (rootNode["Type"] !== type) {
+            rootNode["Type"] = type;
+          }
 
-          const node = ensureMappingNode(settings, spec, slot);
-          Object.assign(node, mapForSlot);
+          for (const slot of ALL_SLOTS) {
+            const mapForSlot = slotMaps[slot];
+
+            if (Object.keys(mapForSlot).length === 0) {
+                continue;
+            }
+            const node = ensureMappingNode(rootNode, slot);
+            Object.assign(node, mapForSlot);
+          }
         }
 
         return settings;
-      },
-      {}
-    );
+    }, {});
   }
 }

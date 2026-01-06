@@ -19,7 +19,7 @@ export interface PlatformHandler {
   clearPlatformData(): void;
 
   /** prepares permissions and spawns a process */
-  launchProcess(binaryPath: string, args: string[]): ChildProcess;
+  launchProcess(binaryPath: string, args: string[], opts?: { cwd?: string }): ChildProcess;
 
   /** returns directory where the emulator stores its INI/config files */
   getEmulatorConfigPath(emulatorId: string): string;

@@ -4,7 +4,8 @@ export type SectionKey =
   | "face"
   | "rightStick"
   | "shoulders"
-  | "system";
+  | "system"
+  | "special";
 
 export const SECTION_ORDER = [
   { key: "leftStick", title: "Left Stick (stick or 4 buttons)" },
