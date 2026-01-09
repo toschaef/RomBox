@@ -22,6 +22,11 @@ import type {
   StickBinding,
 } from "../../../shared/controls/types";
 
+import {
+  getConsoleDigital as getConsoleDigitalById,
+  clearConsoleDigital as clearConsoleDigitalById,
+} from "../../controls/consolePath";
+
 import type { BindPlan } from "../../controls/bindMachine";
 import type { BindPlanConsole } from "../../controls/consoleBindMachine";
 
@@ -407,22 +412,21 @@ function ConsoleControlsView(props: {
               {items
                 .filter((x: any) => x.kind === "digital")
                 .map((item: any) => {
-                  const path = item.id as ConsoleDigitalPath;
-                  const binding = getConsoleDigital(layout, path);
+                  const id = item.id as string;
+                  const binding = getConsoleDigitalById(layout, id);
                   const active = isDigitalPressed(binding);
-
-                  const listening = bindStateActive && planEquals({ kind: "digital", path } as any);
+                  const listening = bindStateActive && planEquals({ kind: "digital", path: id } as any);
 
                   return (
                     <DigitalBindingCard
-                      key={`${layout.consoleId}:${item.id}`}
+                      key={`${layout.consoleId}:${id}`}
                       title={item.label}
                       iconSrc={item.icon}
                       binding={binding}
                       isActive={active}
                       isListening={listening}
-                      onBind={() => startBind({ kind: "digital", path } as any)}
-                      onClear={() => void saveLayout(clearConsoleDigital(layout, path))}
+                      onBind={() => startBind({ kind: "digital", path: id } as any)}
+                      onClear={() => void saveLayout(clearConsoleDigitalById(layout, id))}
                     />
                   );
                 })}

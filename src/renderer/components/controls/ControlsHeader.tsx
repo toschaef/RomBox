@@ -71,7 +71,7 @@ export default function ControlsHeader(props: {
               >
                 {profiles.map((p) => (
                   <option key={p.id} value={p.id} className="bg-bg-secondary text-fg-primary">
-                    {p.name} {p.is_default ? "(Default)" : ""}
+                    {p.name}
                   </option>
                 ))}
               </select>

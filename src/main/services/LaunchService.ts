@@ -19,12 +19,13 @@ export const LaunchService = {
     }
 
     // configuration
-    const configurator = getConfigurator(game.consoleId);
+    const configurator = getConfigurator(game);
     if (configurator) {
       try {
         await configurator.configure();
-      } catch (err) {
-        console.warn(`[LaunchService] Config warning:`, err.message);
+      } catch (err: any) {
+        console.warn(`[LaunchService] Config warning:`, err?.message ?? err);
+        if (err?.stack) console.warn(err.stack);
       }
     }
 
@@ -42,7 +43,7 @@ export const LaunchService = {
       engineConfig.postLaunch?.();
 
       // child.stdout?.on('data', (d) => console.log(`[Emulator]: ${d}`));
-      child.stderr?.on('data', (d) => console.error(`[Emulator Err]: ${d}`));
+      // child.stderr?.on('data', (d) => console.error(`[Emulator Err]: ${d}`));
       
       child.on('error', (err) => console.error("[LaunchService] Failed to spawn:", err));
       child.on('close', (code) => {
@@ -54,7 +55,7 @@ export const LaunchService = {
       return { success: true };
 
     } catch (err) {
-      console.error("Launch Failed:", err);
+      console.error("[LaunchService] Launch Failed:", err);
       return { success: false, message: err.message };
     }
   }

@@ -5,6 +5,7 @@ import type {
   StickBinding,
 } from "../../shared/controls/types";
 import type { GamepadToken } from "../../shared/controls/gamepadTokens";
+import { setConsoleDigital } from "./consolePath";
 
 export type InputEvent =
   | { kind: "key"; code: string; at: number }
@@ -12,12 +13,7 @@ export type InputEvent =
   | { kind: "gp_axis"; stick: "left" | "right"; axis: "x" | "y"; value: number; at: number };
 
 export type BindPlanConsole =
-  | { kind: "digital"; path:
-      | "face.primary" | "face.secondary" | "face.tertiary" | "face.quaternary"
-      | "shoulders.bumperL" | "shoulders.bumperR" | "shoulders.triggerL" | "shoulders.triggerR"
-      | "system.start" | "system.select"
-      | "z"
-    }
+  | { kind: "digital"; path: string }
   | { kind: "dpad"; group: "move" | "dpad" | "c" }
   | { kind: "stick"; group: "move" | "c"; stick: "left" | "right" };
 
@@ -43,19 +39,12 @@ function digitalFromEvent(e: InputEvent): DigitalBinding | null {
   return null;
 }
 
-function setDigital(layout: AnyConsoleLayout, path: Extract<BindPlanConsole, { kind: "digital" }>, value: DigitalBinding) {
-  const next = structuredClone(layout);
-
-  if (path.path === "z") {
-    if (next.consoleId !== "n64") return layout;
-    (next.bindings as any).z = value;
-    return next;
-  }
-
-  const [group, key] = path.path.split(".") as ["face" | "shoulders" | "system", string];
-  (next.bindings as any)[group] ??= { type: group === "system" ? "system" : group };
-  (next.bindings as any)[group][key] = value;
-  return next;
+function setDigital(
+  layout: AnyConsoleLayout,
+  plan: Extract<BindPlanConsole, { kind: "digital" }>,
+  value: DigitalBinding
+): AnyConsoleLayout {
+  return setConsoleDigital(layout, plan.path, value);
 }
 
 function setGroupDpad(layout: AnyConsoleLayout, group: "move" | "dpad" | "c", nextDpad: DpadBinding) {

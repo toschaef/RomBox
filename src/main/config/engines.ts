@@ -126,7 +126,7 @@ export const ENGINES: Record<string, EngineConfig> = {
     getLaunchCommand: (game, binPath) => [binPath, game.filePath] 
   },
 
-'3ds': {
+  '3ds': {
     id: '3ds',
     name: 'Azahar',
     installDir: 'azahar',

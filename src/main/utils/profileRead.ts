@@ -12,13 +12,17 @@ export function dpadDirBinding(dpad: DpadBinding, dir: Dir): DigitalBinding | un
 export function getDpadLike(profile: ControlsProfile, dir: Dir): DigitalBinding | undefined {
   const p1 = profile.player1;
 
-  if (p1.move.type === "dpad") {
-    const fromMove = pickDir(p1.move, dir);
+  const move = (p1 as any).move as DpadBinding | StickBinding | undefined;
+  if (move && move.type === "dpad") {
+    const fromMove = pickDir(move, dir);
     if (fromMove) return fromMove;
   }
 
-  const fromDpad = pickDir(p1.dpad, dir);
-  if (fromDpad) return fromDpad;
+  const dpad = (p1 as any).dpad as DpadBinding | undefined;
+  if (dpad && dpad.type === "dpad") {
+    const fromDpad = pickDir(dpad, dir);
+    if (fromDpad) return fromDpad;
+  }
 
   return undefined;
 }
@@ -88,7 +92,12 @@ export function getDirUnion(profile: ControlsProfile, dir: Dir): DigitalBinding 
   return getDirFromDpad(profile, dir) ?? getDirFromMove(profile, dir);
 }
 
-export function getDirFromBinding(binding: StickBinding | DpadBinding, dir: Dir): DigitalBinding | undefined {
+export function getDirFromBinding(
+  binding: StickBinding | DpadBinding | undefined,
+  dir: Dir
+): DigitalBinding | undefined {
+  if (!binding) return undefined;
+
   if (binding.type === "dpad") {
     return pickDir(binding, dir);
   }

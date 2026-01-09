@@ -121,8 +121,8 @@ export class MacHandler implements PlatformHandler {
       path.join(home, "Library", "Application Support", "Mesen2"),
       path.join(home, "Library", "Application Support", "ares"),
       path.join(home, "Library", "Application Support", "Dolphin"),
+      path.join(home, "Library", "Application Support", "azahar"),
       path.join(home, "Library", "Preferences", "melonDS"),
-      path.join(home, "Library", "Preferences", "azahar"),
     ];
 
     for (const p of pathsToDelete) {
@@ -136,6 +136,12 @@ export class MacHandler implements PlatformHandler {
   launchProcess(binaryPath: string, args: string[]): ChildProcess {
     console.log(`[Mac] Launch: ${binaryPath}`);
 
+    const env = {
+      ...process.env,
+      LANG: "en_US.UTF-8",
+      LC_ALL: "en_US.UTF-8",
+    };
+
     if (binaryPath.includes(".app")) {
       const appPath = this.getAppBundlePath(binaryPath);
       if (!appPath) throw new Error(`Could not find app bundle in path: ${binaryPath}`);
@@ -143,16 +149,11 @@ export class MacHandler implements PlatformHandler {
       const bundleName = path.basename(appPath, ".app");
       const wrapperPath = path.join(appPath, "Contents", "MacOS", bundleName);
 
-      if (this.isWrapperScript(wrapperPath)) {
-        console.log(`[Mac] Launch wrapper: ${wrapperPath}`);
-        return spawn(wrapperPath, args, { detached: true, stdio: ["ignore", "pipe", "pipe"] });
-      }
-
-      console.log(`[Mac] Open app bundle: ${appPath}`);
-      return spawn("open", ["-a", appPath, "--args", ...args], { detached: true, stdio: ["ignore", "pipe", "pipe"] });
+      console.log(`[Mac] Launch app executable: ${wrapperPath}`);
+      return spawn(wrapperPath, args, { detached: true, stdio: ["ignore", "pipe", "pipe"], env });
     }
 
-    return spawn(binaryPath, args, { detached: true, stdio: ["ignore", "pipe", "pipe"] });
+    return spawn(binaryPath, args, { detached: true, stdio: ["ignore", "pipe", "pipe"], env });
   }
 
   getEmulatorConfigPath(emulatorId: string): string {
@@ -167,6 +168,8 @@ export class MacHandler implements PlatformHandler {
         return path.join(home, "Library", "Application Support", "ares");
       case "melonds":
         return path.join(home, "Library", "Preferences", "melonDS");
+      case "azahar":
+        return path.join(home, "Library", "Application Support", "Azahar", "config");
       default:
         return path.join(home, "Library", "Application Support", emulatorId);
     }
@@ -291,23 +294,6 @@ export class MacHandler implements PlatformHandler {
     const appPath = this.getAppBundlePath(binaryPath) ?? binaryPath;
     const bundleName = path.basename(appPath, ".app");
     return path.join(appPath, "Contents", "MacOS", bundleName);
-  }
-
-  private isWrapperScript(wrapperPath: string): boolean {
-    try {
-      const content = fs.readFileSync(wrapperPath, "utf8");
-      return content.startsWith("#!/bin/bash");
-    } catch {
-      return false;
-    }
-  }
-
-  private clearMesenSupportDir(): void {
-    const mesenSupportDir = path.join(homedir(), "Library", "Application Support", "Mesen2");
-    if (fs.existsSync(mesenSupportDir)) {
-      console.log("[Mac] Reset Mesen2 support dir");
-      fs.rmSync(mesenSupportDir, { recursive: true, force: true });
-    }
   }
 
   private async ensureWrapper(targetBinary: string, verbose?: boolean): Promise<void> {

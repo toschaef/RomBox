@@ -4,9 +4,11 @@ import { DolphinConfigurator } from './DolphinConfigurator';
 import { AresConfigurator } from './AresConfigurator';
 import { MesenConfigurator } from './MesenConfigurator';
 import { MelonDSConfigurator } from './MelonDSConfigurator';
+import { AzaharConfigurator } from './AzaharConfigurator';
+import type { Game } from '../../../shared/types';
 
-export const getConfigurator = (consoleId: string): EmulatorConfigurator | null => {
-  switch (consoleId) {
+export const getConfigurator = (game: Game): EmulatorConfigurator | null => {
+  switch (game.consoleId) {
     case 'nes':
     case 'gg':
     case 'sms':
@@ -14,14 +16,17 @@ export const getConfigurator = (consoleId: string): EmulatorConfigurator | null 
     case 'snes':
     case 'gb':
     case 'gba':
-      return new MesenConfigurator(consoleId);
+      return new MesenConfigurator(game.consoleId);
 
     case 'ds':
       return new MelonDSConfigurator();
 
+    case '3ds':
+      return new AzaharConfigurator();
+
     case 'gc':
     case 'wii':
-      return new DolphinConfigurator();
+      return new DolphinConfigurator(game);
 
     case 'n64':
       if (IS_MAC) {

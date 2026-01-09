@@ -10,6 +10,57 @@ import { Downloader } from '../utils/downloader';
 
 const BASE_PATH = path.join(app.getPath('userData'), 'engines');
 
+// move this logic evemtually
+function resolveNativeHelperPath(helperName: string): string | null {
+  if (app.isPackaged) {
+    const p = path.join(process.resourcesPath, "native", helperName);
+    return fs.existsSync(p) ? p : null;
+  }
+
+  const candidates = [
+    path.resolve(app.getAppPath(), "src", "native", helperName),
+    path.resolve(process.cwd(), "src", "native", helperName),
+    path.resolve(process.cwd(), "..", "src", "native", helperName),
+    path.resolve(process.cwd(), "..", "..", "src", "native", helperName),
+  ];
+
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p;
+  }
+
+  console.warn("[EngineService] native helper not found. Tried:\n" + candidates.join("\n"));
+  return null;
+}
+
+function ensureDir(p: string) {
+  if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
+}
+
+function tryChmod755(p: string) {
+  try {
+    fs.chmodSync(p, 0o755);
+  } catch {}
+}
+
+function installAzaharSdlProbe(): { ok: boolean; dest?: string; reason?: string } {
+  const srcName = process.platform === "darwin" ? "sdlprobe-macos" : "sdlprobe";
+  const src = resolveNativeHelperPath(srcName);
+  if (!src) return { ok: false, reason: `native helper missing: ${srcName}` };
+
+  const azConfigDir = osHandler.getEmulatorConfigPath("azahar");
+  ensureDir(azConfigDir);
+
+  const dest = path.join(azConfigDir, "rombox-azahar-sdlprobe");
+
+  try {
+    fs.copyFileSync(src, dest);
+    tryChmod755(dest);
+    return { ok: true, dest };
+  } catch (err) {
+    return { ok: false, reason: (err as Error).message };
+  }
+}
+
 export const EngineService = {
   getEnginePath: async (consoleId: string) => {
     const config = ENGINES[consoleId];
@@ -101,6 +152,15 @@ export const EngineService = {
       const needsWrapper = config.dependencies && config.dependencies.length > 0;
       
       await osHandler.finalizeInstall(resolvedBinary, !!needsWrapper);
+
+      if (consoleId === '3ds') {
+        const r = installAzaharSdlProbe();
+        if (r.ok) {
+          console.log("[EngineService][azahar] sdlprobe installed:", r.dest);
+        } else {
+          console.warn("[EngineService][azahar] sdlprobe not installed:", r.reason);
+        }
+      }
 
       return { success: true };
     } catch (err) {

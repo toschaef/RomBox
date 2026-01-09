@@ -3,10 +3,6 @@
 
 ### known issues:
 
-azahar is in finnish
-
-azahar has annoying popup on close
-
 the install modal persists on install error
 
 version tag doesnt work because repo is private
@@ -17,12 +13,16 @@ GroupBindingCard doesnt start listening for an input if you don't click the edge
 
 GroupBindingCard doesnt prevent event defaults (page scrolling on arrow key/space binds)
 
+Azahar doesnt configure controller controls unless controller is connected on launch
+
 
 ### todo:
 
-controller support on every console
+engines page with bios listed + repair/delete/reset
 
-controls on N64, 3ds, gc/wii 
+controller support on gc/wii, N64
+
+keyboard controls on N64
 
 display game cover (aws lambda)
 
@@ -32,7 +32,9 @@ more consoles
 
 mii/font support for 3ds
 
-settings
+general settings (auto install engine, fullscreen)
+
+emulator specific settings
 
 theme customization
 

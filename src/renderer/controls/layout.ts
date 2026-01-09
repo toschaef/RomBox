@@ -13,6 +13,7 @@ export const SECTION_ORDER = [
   { key: "face", title: "Right Buttons" },
   { key: "rightStick", title: "Right Stick (stick or 4 buttons)" },
   { key: "shoulders", title: "Triggers / Bumpers" },
+  { key: "special", label: "Special" },
   { key: "system", title: "System" },
 ] as const;
 
