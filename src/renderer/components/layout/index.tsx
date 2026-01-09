@@ -104,6 +104,16 @@ export default function Layout() {
           >
             Controls
           </NavLink>
+
+          <NavLink 
+            to="/engines" 
+            className={({ isActive }) => `
+              flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all
+              ${isActive ? 'bg-bg-muted text-fg-primary border border-border-highlight' : 'text-fg-muted hover:bg-bg-muted hover:text-fg-primary'}
+            `}
+          >
+            Engines
+          </NavLink>
           
           <NavLink 
             to="/settings" 
@@ -123,7 +133,7 @@ export default function Layout() {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-hidden relative">
+      <main className="flex-1 min-h-0 overflow-y-auto relative">
         <Outlet context={{ lastBiosUpdate, refreshLibraryTrigger } as LayoutContextType} />
       </main>
     </div>

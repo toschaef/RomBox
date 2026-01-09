@@ -5,12 +5,13 @@ import { app } from 'electron';
 import { homedir } from 'os';
 import { ENGINES } from '../config/engines';
 import { osHandler } from '../platform';
-import { Platform, EngineConfig } from '../../shared/types';
+import { Platform, EngineConfig, EngineInfo, EngineStatus, EmulatorID, ConsoleID } from '../../shared/types';
 import { Downloader } from '../utils/downloader';
+import { getConsoleIdFromEmulatorId } from '../../shared/constants';
 
 const BASE_PATH = path.join(app.getPath('userData'), 'engines');
 
-// move this logic evemtually
+// move this logic eventually
 function resolveNativeHelperPath(helperName: string): string | null {
   if (app.isPackaged) {
     const p = path.join(process.resourcesPath, "native", helperName);
@@ -61,6 +62,31 @@ function installAzaharSdlProbe(): { ok: boolean; dest?: string; reason?: string 
   }
 }
 
+function dirSizeBytes(p: string): number {
+  if (!fs.existsSync(p)) return 0;
+
+  const st = fs.statSync(p);
+  if (st.isFile()) return st.size;
+
+  let total = 0;
+  for (const name of fs.readdirSync(p)) {
+    if (name.startsWith(".")) continue;
+    total += dirSizeBytes(path.join(p, name));
+  }
+  return total;
+}
+
+function dirMtimeMs(p: string): number | null {
+  if (!fs.existsSync(p)) return null;
+
+  try {
+    return fs.statSync(p).mtimeMs;
+  } catch {
+    return null;
+  }
+}
+
+
 export const EngineService = {
   getEnginePath: async (consoleId: string) => {
     const config = ENGINES[consoleId];
@@ -78,7 +104,114 @@ export const EngineService = {
     }
   },
 
-  installEngine: async (consoleId: string, onProgress: (s: string) => void) => {
+  getEngines: async (): Promise<EngineInfo[]> => {
+    const platform = process.platform as Platform;
+    const entries = Object.entries(ENGINES) as Array<[string, EngineConfig]>;
+
+    const infos = await Promise.all(
+      entries.map(async ([consoleId, cfg]): Promise<EngineInfo> => {
+        const dirName = cfg.installDir || consoleId;
+        const installDirAbs = path.join(BASE_PATH, dirName);
+        const installExists = fs.existsSync(installDirAbs);
+
+        const supported = !!cfg.downloads?.[platform] && !!cfg.binaries?.[platform];
+
+        const needsBios = !!cfg.bios;
+        let biosInstalled = true;
+        let biosMissingFiles: string[] = [];
+
+        if (needsBios) {
+          biosInstalled = EngineService.isBiosInstalled(consoleId);
+          const firmwareDir =
+            cfg.bios!.installDir || path.join(homedir(), ".config", "Mesen2", "Firmware");
+          biosMissingFiles = cfg.bios!.files
+            .filter((f) => !fs.existsSync(path.join(firmwareDir, f.filename)))
+            .map((f) => f.filename);
+        }
+
+        let resolvedBinaryPath: string | null = null;
+        let status: EngineStatus = "not_installed";
+        let lastError: string | undefined;
+
+        if (!supported) {
+          status = "unsupported";
+        } else if (!installExists) {
+          status = "not_installed";
+        } else {
+          try {
+            const binaryConfigPath = cfg.binaries[platform]!;
+            resolvedBinaryPath = await osHandler.resolveBinaryPath(installDirAbs, binaryConfigPath);
+            status = resolvedBinaryPath ? "installed" : "broken";
+          } catch (err) {
+            status = "broken";
+            lastError = (err as Error).message;
+            resolvedBinaryPath = null;
+          }
+        }
+
+        const dto = {
+          id: cfg.id,
+          name: cfg.name,
+          acceptedExtensions: cfg.acceptedExtensions,
+          installDir: cfg.installDir,
+          bios: cfg.bios,
+          downloads: cfg.downloads,
+          binaries: cfg.binaries,
+          dependencies: cfg.dependencies,
+        };
+
+        return {
+          ...dto,
+          consoleId,
+
+          status,
+          platform,
+          installDir: installDirAbs,
+          installExists,
+
+          resolvedBinaryPath,
+
+          needsBios,
+          biosInstalled,
+          biosMissingFiles,
+
+          installSizeBytes: installExists ? dirSizeBytes(installDirAbs) : 0,
+          installMtimeMs: installExists ? dirMtimeMs(installDirAbs) : null,
+
+          ...(lastError ? { lastError } : {}),
+        };
+      })
+    );
+
+    const rank: Record<EngineStatus, number> = {
+      installed: 0,
+      broken: 1,
+      not_installed: 2,
+      unsupported: 3,
+    };
+
+    infos.sort((a, b) => {
+      const ra = rank[a.status];
+      const rb = rank[b.status];
+      if (ra !== rb) return ra - rb;
+      return a.consoleId.localeCompare(b.consoleId);
+    });
+
+    return infos;
+  },
+
+  deleteEngine: (consoleId: ConsoleID) => {
+    try {
+      osHandler.deleteEngine(consoleId);
+      return { success: true };
+    } catch (err) {
+      console.log('[EngineService] Error deleting engine', err.message);
+      return { success: false, err: err.message }
+    }
+  },
+
+  installEngine: async (emulatorId: EmulatorID, onProgress: (s: string) => void) => {
+    const consoleId = getConsoleIdFromEmulatorId(emulatorId);
     const config = ENGINES[consoleId];
     if (!config) throw new Error("Invalid Engine");
 
@@ -91,7 +224,7 @@ export const EngineService = {
     fs.mkdirSync(installDir, { recursive: true });
 
     try {
-      onProgress('Downloading...');
+      onProgress('Downloading');
       const configWithHeaders = config as EngineConfig & { headers?: Record<string, string> };
       const customHeaders = configWithHeaders.headers || {};
 
@@ -100,7 +233,7 @@ export const EngineService = {
         headers: customHeaders
       });
 
-      onProgress('Extracting...');
+      onProgress('Extracting');
       const stats = fs.statSync(downloadedFilePath);
       if (stats.size < 1024 * 1024) throw new Error("Downloaded file is too small (invalid).");
 

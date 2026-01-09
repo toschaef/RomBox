@@ -6,7 +6,8 @@ import { homedir } from "os";
 import type { PlatformHandler } from "./types";
 import { findFile } from "../utils/fsUtils";
 import { Extractor } from "../utils/extractor";
-import { Platform } from "../../shared/types";
+import { ConsoleID, Platform } from "../../shared/types";
+import { app } from 'electron';
 
 type FinalizeOptions = {
   resetMesenSupportDir?: boolean;
@@ -173,6 +174,35 @@ export class MacHandler implements PlatformHandler {
       default:
         return path.join(home, "Library", "Application Support", emulatorId);
     }
+  }
+
+  deleteEngine(emulatorId: string): void {
+    const home = homedir();
+    const rombox: string = path.join(app.getPath("userData"), 'engines', emulatorId);
+    let engine: string;
+
+    switch (emulatorId.toLowerCase()) {
+      case "dolphin":
+        engine = path.join(home, "Library", "Application Support", "Dolphin", "Config");
+        break;
+      case "mesen":
+        engine = path.join(home, "Library", "Application Support", "Mesen2");
+        break;
+      case "ares":
+        engine = path.join(home, "Library", "Application Support", "ares");
+        break;
+      case "melonds":
+        engine = path.join(home, "Library", "Preferences", "melonDS");
+        break;
+      case "azahar":
+        engine = path.join(home, "Library", "Application Support", "Azahar", "config");
+        break;
+      default:
+        throw new Error('Invalid Emulator ID');
+    }
+
+    fs.rmSync(engine, { recursive: true, force: true });
+    fs.rmSync(rombox, { recursive: true, force: true });
   }
 
   getPlatformId(): "macos" {

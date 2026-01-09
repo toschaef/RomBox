@@ -1,4 +1,4 @@
-import type { ConsoleID } from "./types"
+import type { ConsoleID, EmulatorID } from "./types"
 
 export const IS_MAC = typeof process !== 'undefined' && process.platform 
   ? process.platform === 'darwin' 
@@ -22,6 +22,33 @@ export const CONSOLEID_ENGLISH_MAP: Record<ConsoleID, string> = {
 }
 
 export const getConsoleNameFromId = (id: ConsoleID) => CONSOLEID_ENGLISH_MAP[id];
+
+export const CONSOLEID_EMULATORID_MAP: Record<ConsoleID, EmulatorID> = {
+  'nes': 'mesen',
+  'gg': 'mesen',
+  'sms': 'mesen',
+  'pce': 'mesen',
+  'snes': 'mesen',
+  'gb': 'mesen',
+  'gba': 'mesen',
+  'n64': 'ares',
+  'ds': 'melonds',
+  '3ds': 'azahar',
+  'gc': 'dolphin',
+  'wii': 'dolphin',
+}
+
+export const getEmulatorIdFromConsoleId = (id: ConsoleID) => CONSOLEID_EMULATORID_MAP[id];
+
+export const EMULATORID_CONSOLEID_MAP: Record<EmulatorID, ConsoleID> = {
+  'mesen' : 'nes',
+  'ares': 'n64',
+  'melonds': 'ds',
+  'azahar': '3ds',
+  'dolphin': 'gc',
+}
+export const getConsoleIdFromEmulatorId = (id: EmulatorID) => EMULATORID_CONSOLEID_MAP[id];
+
 
 export const EXTENSION_MAP: Record<string, ConsoleID> = {
   '.nes': 'nes',

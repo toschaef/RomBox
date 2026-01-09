@@ -8,6 +8,8 @@ export type ConsoleID =
   'ds'  | '3ds'  |
   'gc'  | 'wii';
 
+export type EmulatorID = 'ares' | 'azahar' |  'dolphin' | 'melonds' | 'mesen'
+
 export type Platform = 'win32' | 'darwin' | 'linux';
 
 export interface Game {
@@ -61,6 +63,33 @@ export interface EngineConfig {
   getLaunchCommand: (game: Game, emulatorPath: string) => string[];
   postLaunch?: () => void;
 }
+
+export type EngineInfoDTO = Omit<EngineConfig,
+  | "detect"
+  | "getLaunchCommand"
+  | "postLaunch"
+>;
+
+export type EngineStatus = "not_installed" | "installed" | "broken" | "unsupported";
+
+export type EngineInfo = EngineInfoDTO & {
+  consoleId: string;
+
+  status: EngineStatus;
+  platform: Platform;
+  installDir: string;
+  installExists: boolean;
+
+  resolvedBinaryPath: string | null;
+
+  needsBios: boolean;
+  biosInstalled: boolean;
+  biosMissingFiles: string[];
+
+  installSizeBytes: number;
+  installMtimeMs: number | null;
+  lastError?: string;
+};
 
 export interface IpcResponse {
   success: boolean;

@@ -1,5 +1,6 @@
 import { ChildProcess } from "child_process";
 import { Platform } from "../../shared/types";
+import type { ConsoleID, IpcResponse } from "../../shared/types";
 
 export interface PlatformHandler {
 
@@ -23,6 +24,8 @@ export interface PlatformHandler {
 
   /** returns directory where the emulator stores its INI/config files */
   getEmulatorConfigPath(emulatorId: string): string;
+
+  deleteEngine(consoleId: ConsoleID): void;
 
   getPlatformId(): "macos" | "windows" | "linux";
   getPlatform(): Platform;
