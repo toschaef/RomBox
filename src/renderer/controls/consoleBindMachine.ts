@@ -3,7 +3,7 @@ import type {
   DigitalBinding,
   DpadBinding,
   StickBinding,
-} from "../../shared/controls/types";
+} from "../../shared/types/controls";
 import type { GamepadToken } from "../../shared/controls/gamepadTokens";
 import { setConsoleDigital } from "./consolePath";
 

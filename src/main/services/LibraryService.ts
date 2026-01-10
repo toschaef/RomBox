@@ -10,8 +10,8 @@ export const LibraryService = {
     try {
       const db = getDB();
       const stmt = db.prepare(`
-        insert into games (id, title, filePath, consoleId) 
-        values (@id, @title, @filePath, @consoleId)
+        insert into games (id, title, filePath, consoleId, engineId) 
+        values (@id, @title, @filePath, @consoleId, @engineId)
       `);
       stmt.run(gameData);
       return { success: true, game: gameData };
@@ -36,6 +36,9 @@ export const LibraryService = {
           const gameData = await ScannerService.importGame(result);
           const gameEntry = await LibraryService.createGame(gameData);
           createdGames.push(gameEntry.game); 
+        }
+        else if (result.type === 'bios') {
+          await ScannerService.importBios(result);
         }
       }
 

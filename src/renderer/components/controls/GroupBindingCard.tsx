@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { DpadBinding, StickBinding, DigitalBinding } from "../../../shared/controls/types";
+import type { DpadBinding, StickBinding, DigitalBinding } from "../../../shared/types/controls";
 
 function fmtStick(s: StickBinding) {
   return `${s.stick === "left" ? "Left Stick" : "Right Stick"} dz=${Math.round(s.deadzone * 100)}%`;

@@ -1,5 +1,5 @@
 import type { EmulatorPatch, TranslateContext } from "./ITranslator";
-import type { PlayerBindings, DigitalBinding } from "../../../shared/controls/types";
+import type { PlayerBindings, DigitalBinding } from "../../../shared/types/controls";
 import { digitalToGamepadToken, type Dir } from "../profileRead";
 import { MELONDS, melondsJoyCodeForToken } from "../schema/melonds";
 import type { GamepadToken } from "../../../shared/controls/gamepadTokens";

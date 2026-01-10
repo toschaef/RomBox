@@ -1,5 +1,5 @@
 import type { Platform } from "../../../shared/types";
-import type { ControlsProfile } from "../../../shared/controls/types";
+import type { ControlsProfile } from "../../../shared/types/controls";
 import { ConsoleID } from "../../../shared/types";
 
 export type EmulatorPatch =

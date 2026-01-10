@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Game } from '../../../shared/types';
 import { getConsoleNameFromId } from '../../../shared/constants';
 import { engineClient } from '../../clients/engineClient';
-import { getEmulatorIdFromConsoleId } from '../../../shared/constants';
+import { getEngineIdFromConsoleId } from '../../../shared/constants';
 
 interface Props {
   game: Game;
@@ -14,7 +14,7 @@ export default function InstallModal({ game, onClose, onSuccess }: Props) {
   const [status, setStatus] = useState<'idle' | 'installing' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [progressText, setProgressText] = useState('Initializing');
-  const emulatorId = getEmulatorIdFromConsoleId(game.consoleId);
+  const engineId = getEngineIdFromConsoleId(game.consoleId);
 
   useEffect(() => {
     const removeListener = engineClient.onInstallStatusUpdate((msg: string) => {
@@ -28,7 +28,7 @@ export default function InstallModal({ game, onClose, onSuccess }: Props) {
     setErrorMessage('');
 
     try {
-      const result = await engineClient.installEngine(emulatorId);
+      const result = await engineClient.installEngine(engineId);
       
       if (result.success) {
         onSuccess();

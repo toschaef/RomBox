@@ -1,11 +1,9 @@
 import { randomUUID } from "crypto";
 import { getDB } from "../data/db";
 import { JsonEditor } from "../utils/editors/json";
-import type { ControlsProfile, ConsoleLayout, ControllerProfileMeta, AnyConsoleLayout } from "../../shared/controls/types";
+import type { ControlsProfile, ConsoleLayout, ControllerProfileMeta, PlayerBindings } from "../../shared/types/controls";
 import type { ConsoleID } from "../../shared/types";
-import { createDefaultProfileShape } from "../../shared/controls/types";
-import { makeDefaultConsoleBindings } from "../../shared/controls/layoutDefaults";
-import { PlayerBindings } from "../../shared/controls/types";
+import { createDefaultProfileShape , makeDefaultConsoleBindings } from "../../shared/controls/layoutDefaults";
 
 type RawProfileRow = {
   id: string;

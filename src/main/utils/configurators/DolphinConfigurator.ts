@@ -8,7 +8,7 @@ import type { Game } from "../../../shared/types";
 import { DolphinTranslator } from "../translators/DolphinTranslator";
 import type { EmulatorPatch, TranslateContext } from "../translators/ITranslator";
 import { resolveConsoleBindings } from "../resolveConsoleBindings";
-import type { PlayerBindings } from "../../../shared/controls/types";
+import type { PlayerBindings } from "../../../shared/types/controls";
 import { DOLPHIN } from "../schema/dolphin";
 
 

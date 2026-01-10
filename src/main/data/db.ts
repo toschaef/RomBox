@@ -16,6 +16,7 @@ export function initDB() {
       title TEXT NOT NULL,
       filePath TEXT NOT NULL,
       consoleId TEXT NOT NULL,
+      engineId TEXT NOT NULL,
       coverImage TEXT
     );
 

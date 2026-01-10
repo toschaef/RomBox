@@ -1,4 +1,4 @@
-import type { DpadBinding, StickBinding, FaceBinding, ShoulderBinding, DigitalBinding } from "../types";
+import type { DpadBinding, StickBinding, FaceBinding, ShoulderBinding, DigitalBinding } from "../../types/controls";
 
 export type SystemBindings = {
   start?: DigitalBinding;

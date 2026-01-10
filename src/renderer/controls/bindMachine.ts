@@ -1,4 +1,4 @@
-import type { ControlsProfile, DigitalBinding, DpadBinding, StickBinding } from "../../shared/controls/types";
+import type { ControlsProfile, DigitalBinding, DpadBinding, StickBinding } from "../../shared/types/controls";
 import type { GamepadToken } from "../../shared/controls/gamepadTokens";
 
 export type InputEvent =

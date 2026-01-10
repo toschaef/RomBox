@@ -1,4 +1,5 @@
 import { EngineService } from './EngineService';
+import { BiosService } from './BiosService'
 import { ENGINES } from '../config/engines';
 import { osHandler } from '../platform';
 import { getConfigurator } from '../utils/configurators';
@@ -9,13 +10,35 @@ export const LaunchService = {
     console.log(`[LaunchService] Requesting launch for: ${game.title}`);
 
     // validation
-    const enginePath = await EngineService.getEnginePath(game.consoleId);
+    const enginePath = await EngineService.getEnginePath(game.engineId);
     if (!enginePath) {
       return { success: false, code: 'MISSING_ENGINE', message: `Emulator for ${game.consoleId} not installed.` };
     }
 
-    if (!EngineService.isBiosInstalled(game.consoleId)) {
-      return { success: false, code: 'MISSING_BIOS', message: `BIOS missing for ${game.consoleId}` };
+    const bios = BiosService.getConsoleBiosStatus(game.consoleId);
+
+    if (bios.needsBios && bios.biosState !== "ok") {
+      BiosService.ensureBiosInstalledFromCache(game.consoleId);
+      const bios2 = BiosService.getConsoleBiosStatus(game.consoleId);
+
+      if (bios2.biosState === "missing") {
+        return {
+          success: false,
+          code: "MISSING_BIOS",
+          message: `Required BIOS missing for ${game.consoleId}: ${bios2.missingRequiredFiles.join(", ")}`,
+        };
+      }
+    }
+
+    if (bios.needsBios && bios.biosState === "missing") {
+      const missing = bios.missingRequiredFiles.join(", ");
+      return {
+        success: false,
+        code: "MISSING_BIOS",
+        message: missing
+          ? `Required BIOS missing for ${game.consoleId}: ${missing}`
+          : `Required BIOS missing for ${game.consoleId}`,
+      };
     }
 
     // configuration
@@ -29,7 +52,7 @@ export const LaunchService = {
       }
     }
 
-    const engineConfig = ENGINES[game.consoleId];
+    const engineConfig = ENGINES[game.engineId];
     const fullCommand = engineConfig.getLaunchCommand 
       ? engineConfig.getLaunchCommand(game, enginePath)
       : [enginePath, game.filePath];
@@ -40,7 +63,6 @@ export const LaunchService = {
     // execution
     try {
       const child = osHandler.launchProcess(binary, args);
-      engineConfig.postLaunch?.();
 
       // child.stdout?.on('data', (d) => console.log(`[Emulator]: ${d}`));
       // child.stderr?.on('data', (d) => console.error(`[Emulator Err]: ${d}`));

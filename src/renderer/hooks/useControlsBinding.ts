@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ControlsProfile, AnyConsoleLayout } from "../../shared/controls/types";
+import type { ControlsProfile, AnyConsoleLayout } from "../../shared/types/controls";
 import { useControllerInput, type Detected } from "./useControllerInput";
 import { applyBindEvent, bindLabel, type BindPlan, type BindState as StdBindState, type InputEvent } from "../controls/bindMachine";
 import {

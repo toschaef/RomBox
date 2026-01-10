@@ -3,19 +3,35 @@ import crypto from "crypto";
 import fs from 'fs';
 import { app } from 'electron';
 import { Extractor } from '../utils/extractor';
-import { BIOS_FILENAMES, getConsoleIdFromExtension } from '../../shared/constants';
+import { CONSOLES } from '../config/consoles'
+import { getConsoleIdFromExtension } from '../../shared/constants';
 import type { Game, ConsoleID } from '../../shared/types';
+import type { EngineID } from '../../shared/types/engines';
 import { detectConsoleFromHeader } from '../utils/identifier';
 import { scanZipEntries } from '../utils/fsUtils';
+import { getEngineIdFromConsoleId } from '../../shared/constants';
+import { BiosService } from './BiosService';
 
 export type ScanResult = 
-  | { type: 'game'; consoleId: string; filePath: string; zipEntryName?: string }
-  | { type: 'bios'; consoleId: string; filePath: string; zipEntryName?: string };
+  | { type: 'game'; consoleId: ConsoleID; engineId: EngineID; filePath: string; zipEntryName?: string }
+  | { type: 'bios'; consoleId: ConsoleID; engineId: EngineID; filePath: string; zipEntryName?: string };
 
 interface NormalizedEntry {
   name: string;
   size: number;
 }
+
+const BIOS_NAME_TO_CONSOLE: Record<string, ConsoleID> = (() => {
+  const out: Record<string, ConsoleID> = {};
+  for (const consoleId of Object.keys(CONSOLES) as ConsoleID[]) {
+    const bios = CONSOLES[consoleId].bios;
+    if (!bios) continue;
+    for (const f of bios.files) {
+      out[f.filename.toLowerCase()] = consoleId;
+    }
+  }
+  return out;
+})();
 
 const identifyConsole = async (
     filename: string, 
@@ -83,9 +99,12 @@ export const ScannerService = {
     const filename = path.basename(filePath);
     const results: ScanResult[] = [];
 
-    if (BIOS_FILENAMES[filename.toLowerCase()]) {
-      return [{ type: 'bios', consoleId: BIOS_FILENAMES[filename.toLowerCase()], filePath }];
+    const hit = BIOS_NAME_TO_CONSOLE[filename.toLowerCase()];
+    if (hit) {
+      const engineId = getEngineIdFromConsoleId(hit);
+      return [{ type: "bios", consoleId: hit, engineId, filePath }];
     }
+
 
     if (['.zip', '.7z'].includes(ext)) {
       try {
@@ -95,13 +114,15 @@ export const ScannerService = {
         for (const entry of entries) {
           const entryName = path.basename(entry.name).toLowerCase();
           const entryExt = path.extname(entry.name).toLowerCase();
-
-          if (BIOS_FILENAMES[entryName]) {
+          const hit = BIOS_NAME_TO_CONSOLE[entryName];
+          if (hit) {
+            const engineId = getEngineIdFromConsoleId(hit);
             results.push({
-              type: 'bios',
-              consoleId: BIOS_FILENAMES[entryName],
+              type: "bios",
+              consoleId: hit,
+              engineId,
               filePath,
-              zipEntryName: entry.name
+              zipEntryName: entry.name,
             });
             continue;
           }
@@ -122,16 +143,22 @@ export const ScannerService = {
              continue;
           }
 
-          const id = await identifyConsole(entry.name, entry.size);
-          if (id) {
-            results.push({
-              type: 'game',
-              consoleId: id,
-              filePath,
-              zipEntryName: entry.name
-            });
+          {
+            const consoleId = await identifyConsole(entry.name, entry.size) as ConsoleID;
+
+            if (consoleId) {
+              const engineId = getEngineIdFromConsoleId(consoleId);
+              results.push({
+                type: 'game',
+                consoleId,
+                engineId,
+                filePath,
+                zipEntryName: entry.name
+              });
+            }
           }
         }
+  
         return results;
       } catch (err) {
         console.warn(`[Scanner] Failed to inspect archive ${ext}:`, err.message);
@@ -141,8 +168,11 @@ export const ScannerService = {
 
     try {
       const stats = fs.statSync(filePath);
-      const id = await identifyConsole(filename, stats.size, filePath);
-      if (id) return [{ type: 'game', consoleId: id, filePath }];
+      const consoleId = await identifyConsole(filename, stats.size, filePath) as ConsoleID;
+      if (consoleId) {
+        const engineId = getEngineIdFromConsoleId(consoleId)
+        return [{ type: 'game', consoleId, engineId, filePath }];
+      }
     } catch (err) {
       console.warn("[Scanner] Error checking raw file:", err.message);
     }
@@ -151,7 +181,7 @@ export const ScannerService = {
   },
 
   importGame: async (scanResult: ScanResult & { type: 'game' }): Promise<Game> => {
-    console.log('[Import] Starting import process...');
+    console.log('[Import] Starting import');
     const sourceName = scanResult.zipEntryName ? path.basename(scanResult.zipEntryName) : path.basename(scanResult.filePath);
     
     const title = sourceName
@@ -185,7 +215,29 @@ export const ScannerService = {
       id: crypto.randomUUID(),
       title, 
       filePath: newFilePath,
-      consoleId: scanResult.consoleId as ConsoleID,
+      consoleId: scanResult.consoleId,
+      engineId: getEngineIdFromConsoleId(scanResult.consoleId),
     };
+  },
+  async importBios(scanResult: ScanResult & { type: "bios" }) {
+    if (!scanResult.zipEntryName) {
+      return BiosService.installBios(scanResult.consoleId, scanResult.filePath);
+    }
+
+    const tempDir = path.join(app.getPath("temp"), "rombox_bios");
+    fs.mkdirSync(tempDir, { recursive: true });
+
+    const tempPath = path.join(
+      tempDir,
+      `bios_${scanResult.consoleId}_${Date.now()}_${path.basename(scanResult.zipEntryName)}`
+    );
+
+    await Extractor.extractToFile(scanResult.filePath, tempPath, scanResult.zipEntryName);
+
+    try {
+      return await BiosService.installBios(scanResult.consoleId, tempPath);
+    } finally {
+      try { fs.rmSync(tempPath, { force: true }); } catch {}
+    }
   },
 };

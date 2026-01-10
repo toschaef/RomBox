@@ -2,7 +2,7 @@ import { ipcMain } from 'electron';
 import { EngineService } from '../services/EngineService';
 
 export default function registerEngineHandlers() {
-  ipcMain.handle('engine:get-engines', async (event, consoleId) => {
+  ipcMain.handle('engine:get', async (event, consoleId) => {
     try {
       return await EngineService.getEngines();
     } catch (err) {
@@ -11,29 +11,20 @@ export default function registerEngineHandlers() {
     }
   });
 
-  ipcMain.handle('engine:install-engine', async (event, consoleId) => {
+  ipcMain.handle('engine:install-engine', async (event, engineId) => {
     const progressCallback = (status: string) => {
       event.sender.send('install-status-update', status);
     };
-    return await EngineService.installEngine(consoleId, progressCallback);
+    return await EngineService.installEngine(engineId, progressCallback);
   });
 
   ipcMain.handle('engine:delete-engine', async (event, consoleId) => {
     return await EngineService.deleteEngine(consoleId);
   });
 
-  ipcMain.handle('engine:is-installed', async (event, consoleId) => {
-    const path = await EngineService.getEnginePath(consoleId);
+  ipcMain.handle('engine:is-installed', async (event, emulatorId) => {
+    const path = await EngineService.getEnginePath(emulatorId);
     return path !== null;
-  });
-
-  ipcMain.handle('engine:install-bios', async (_, { consoleId, filePath }) => {
-    try {
-      return await EngineService.installBios(consoleId, filePath);
-    } catch (err) {
-      console.error("Failed to install BIOS:", err.message);
-      return { success: false, message: err.message };
-    }
   });
 
   ipcMain.handle('engine:clear', async () => {

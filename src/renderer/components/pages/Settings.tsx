@@ -47,7 +47,7 @@ export default function Settings() {
                 <p className="text-sm text-fg-muted">Deletes all downloaded emulators <span className='text-fg-secondary font-bold'>along with game save data.</span></p>
               </div>
               <button
-                onClick={() => handleAction('Clear Engines', 'engine:deleteAll', 'Uninstall all emulators?')}
+                onClick={() => handleAction('Clear Engines', 'engine:clear', 'Uninstall all emulators?')}
                 disabled={!!loading}
                 className="px-4 py-2 bg-bg-muted text-fg-primary hover:bg-red-500/10 hover:text-red-400 border border-border-muted rounded-md text-sm font-bold transition-all"
               >

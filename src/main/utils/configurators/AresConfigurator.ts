@@ -7,13 +7,11 @@ import { BmlEditor } from "../editors/bml";
 import { ARES } from "../schema/ares";
 import { AresTranslator } from "../translators/AresTranslator";
 import { EngineService } from "../../services/EngineService";
-import type { ConsoleID } from "../../../shared/types";
 
 function exists(p: string) {
   try { fs.accessSync(p, fs.constants.F_OK); return true; } catch { return false; }
 }
 function statSafe(p: string) { try { return fs.statSync(p); } catch { return null; } }
-function readSafe(p: string) { try { return fs.readFileSync(p, "utf-8"); } catch { return null; } }
 
 function ensureDirForFile(filePath: string) {
   const dir = path.dirname(filePath);
@@ -71,7 +69,7 @@ export class AresConfigurator extends BaseConfigurator {
   private translator = new AresTranslator();
 
   async configure(): Promise<void> {
-    const enginePath = await EngineService.getEnginePath('n64');
+    const enginePath = await EngineService.getEnginePath('ares');
     console.log(`[ares][config] enginePath=${enginePath ?? "(null)"}`);
 
     const { candidates, existing } = pickSettingsPath(enginePath ?? null);

@@ -1,4 +1,4 @@
-import type { PlayerBindings, DigitalBinding, DpadBinding } from "../../../shared/controls/types";
+import type { PlayerBindings, DigitalBinding, DpadBinding } from "../../../shared/types/controls";
 import type { Dir } from "../profileRead";
 import { ARES, resolveQuartzKeyboardKeyIndex } from "../schema/ares";
 

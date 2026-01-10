@@ -1,6 +1,6 @@
 import type { EmulatorPatch, TranslateContext } from "./ITranslator";
-import type { DigitalBinding } from "../../../shared/controls/types";
-import type { PlayerBindings } from "../../../shared/controls/types";
+import type { DigitalBinding } from "../../../shared/types/controls";
+import type { PlayerBindings } from "../../../shared/types/controls";
 import { digitalToGamepadToken } from "../profileRead";
 import { AZAHAR, azProfileKey, azProfileDefaultKey, qtKeycodeFromDomCode } from "../schema/azahar";
 import type { AzaharLearnedSDL } from "../azahar/sdlprobe";

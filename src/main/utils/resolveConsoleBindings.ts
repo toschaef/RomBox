@@ -1,5 +1,5 @@
 import type { ConsoleID } from "../../shared/types";
-import type { ControlsProfile, AnyConsoleLayout, PlayerBindings } from "../../shared/controls/types";
+import type { ControlsProfile, AnyConsoleLayout, PlayerBindings } from "../../shared/types/controls";
 import { makeDefaultConsoleBindings } from "../../shared/controls/layoutDefaults";
 
 export async function resolveConsoleBindings(args: {

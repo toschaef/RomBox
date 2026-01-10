@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { controlsClient } from "../clients/controlsClient";
-import type { ControlsProfile, ControllerProfileMeta } from "../../shared/controls/types";
-import { createDefaultProfileShape } from "../../shared/controls/types";
+import type { ControlsProfile, ControllerProfileMeta } from "../../shared/types/controls";
+import { createDefaultProfileShape } from "../../shared/controls/layoutDefaults";
 
 function now() {
   return Date.now();

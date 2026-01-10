@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import type { DigitalBinding, DpadBinding, StickBinding } from "../../shared/controls/types";
+import type { DigitalBinding, DpadBinding, StickBinding } from "../../shared/types/controls";
 import { axisToDigitalToken } from "../../shared/controls/gamepadTokens";
 
 export function useControlsPressed(currentlyPressed: Set<string>) {

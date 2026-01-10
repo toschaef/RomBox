@@ -1,5 +1,5 @@
-import type { ConsoleID } from "../types";
-import type { GamepadToken } from "./gamepadTokens";
+import type { ConsoleID } from "..";
+import type { GamepadToken } from "../../controls/gamepadTokens";
 
 export type InputDevice = "keyboard" | "gamepad" | "auto";
 
@@ -129,20 +129,3 @@ export type ConsoleLayout<C extends ConsoleID = ConsoleID> = ConsoleLayoutBase &
 };
 
 export type AnyConsoleLayout = ConsoleLayout;
-
-export function createDefaultProfileShape(): Omit<
-  ControlsProfile,
-  "id" | "name" | "createdAt" | "updatedAt" | "isDefault"
-> {
-  return {
-    preferredDevice: "auto",
-    player1: {
-      move: { type: "dpad" },
-      dpad: { type: "dpad" },
-      look: { type: "stick", stick: "right", deadzone: 0.15 },
-      face: { type: "face" },
-      shoulders: { type: "shoulders" },
-      system: { type: "system" },
-    },
-  };
-}

@@ -8,6 +8,14 @@ export interface LayoutContextType {
   refreshLibraryTrigger: number;
 }
 
+const PAGES = [
+  "", // Libary
+  "Controls",
+  "Engines",
+  "Bios",
+  "Settings",
+]
+
 export default function Layout() {
   const [lastBiosUpdate, setLastBiosUpdate] = useState<string | null>(null);
   const [refreshLibraryTrigger, setRefreshLibraryTrigger] = useState(0);
@@ -79,51 +87,24 @@ export default function Layout() {
       {/* sidebar */}
       <aside className="w-64 flex flex-col border-r border-border-subtle bg-bg-secondary/30">
         <div className="p-6">
-          <div className="text-xl font-black tracking-tighter text-transparent bg-clip-text bg-linear-to-r from-accent-primary to-accent-secondary">
-            ROMBOX
+          <div className="text-xl font-black font-stretch-expanded tracking-wide text-transparent bg-clip-text bg-linear-to-r from-accent-primary to-accent-secondary">
+            RomBox
           </div>
         </div>
 
         <nav className="flex-1 px-4 space-y-2">
-          <NavLink 
-            to="/" 
-            className={({ isActive }) => `
-              flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all
-              ${isActive ? 'bg-bg-muted text-fg-primary border border-border-highlight' : 'text-fg-muted hover:bg-bg-muted hover:text-fg-primary'}
-            `}
-          >
-            Library
-          </NavLink>
-
-          <NavLink 
-            to="/controls" 
-            className={({ isActive }) => `
-              flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all
-              ${isActive ? 'bg-bg-muted text-fg-primary border border-border-highlight' : 'text-fg-muted hover:bg-bg-muted hover:text-fg-primary'}
-            `}
-          >
-            Controls
-          </NavLink>
-
-          <NavLink 
-            to="/engines" 
-            className={({ isActive }) => `
-              flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all
-              ${isActive ? 'bg-bg-muted text-fg-primary border border-border-highlight' : 'text-fg-muted hover:bg-bg-muted hover:text-fg-primary'}
-            `}
-          >
-            Engines
-          </NavLink>
-          
-          <NavLink 
-            to="/settings" 
-            className={({ isActive }) => `
-              flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all
-              ${isActive ? 'bg-bg-muted text-fg-primary border border-border-highlight' : 'text-fg-muted hover:bg-bg-muted hover:text-fg-primary'}
-            `}
-          >
-            Settings
-          </NavLink>
+          {PAGES.map((p) =>
+            <NavLink 
+              to={`/${p.toLowerCase()}`}
+              key={p}
+              className={({ isActive }) => `
+                flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all
+                ${isActive ? 'bg-bg-muted text-fg-primary border border-border-highlight' : 'text-fg-muted hover:bg-bg-muted hover:text-fg-primary'}
+              `}
+            >
+              {p || "Library"}
+            </NavLink>
+          )}
         </nav>
 
         <div className="p-6 text-xs text-fg-muted opacity-50 text-center">

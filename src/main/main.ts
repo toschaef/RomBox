@@ -4,9 +4,10 @@ import registerGameHandlers from './ipc/gameHandlers';
 import registerEngineHandlers from './ipc/engineHandlers';
 import registerControlsHandlers from './ipc/controlsHandler';
 import registerSettingsHandlers from './ipc/settingsHandler';
+import registerBiosHandlers from './ipc/biosHandler';
 import { ScannerService } from './services/ScannerService';
 import { LibraryService } from './services/LibraryService';
-import { EngineService } from './services/EngineService';
+import { BiosService } from './services/BiosService';
 import { Extractor } from './utils/extractor';
 import path from 'path';
 import fs from 'fs';
@@ -28,6 +29,7 @@ const createWindow = (): void => {
   });
 
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
+  // mainWindow.webContents.openDevTools();
 };
 
 app.on('ready', () => {
@@ -37,6 +39,7 @@ app.on('ready', () => {
   registerEngineHandlers();
   registerControlsHandlers();
   registerSettingsHandlers();
+  registerBiosHandlers();
   
   createWindow();
 });
@@ -63,7 +66,7 @@ ipcMain.handle('process-file-drop', async (_, filePath) => {
         try {
           await Extractor.extractToFile(result.filePath, tempPath, result.zipEntryName);
           
-          await EngineService.installBios(result.consoleId, tempPath);
+          await BiosService.installBios(result.consoleId, tempPath);
           biosCount++;
         } finally {
           if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);

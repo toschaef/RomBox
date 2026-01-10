@@ -1,6 +1,6 @@
 import { ipcMain } from "electron";
 import { ControlsService } from "../services/ControlsService";
-import type { ControlsProfile } from "../../shared/controls/types";
+import type { ControlsProfile } from "../../shared/types/controls";
 import { ConsoleID } from "../../shared/types";
 
 const svc = new ControlsService();

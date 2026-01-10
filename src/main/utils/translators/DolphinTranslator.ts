@@ -1,6 +1,6 @@
 import path from "path";
 import type { IEmulatorTranslator, TranslateContext, EmulatorPatch } from "./ITranslator";
-import type { ControlsProfile, DigitalBinding } from "../../../shared/controls/types";
+import type { ControlsProfile, DigitalBinding } from "../../../shared/types/controls";
 import { axisToDigitalToken } from "../../../shared/controls/gamepadTokens";
 import { getDirFromDpad, getDirFromLook, getDirFromMove } from "../profileRead";
 import { DOLPHIN, quartzKeyFromDomCode, dolphinExprForGamepadToken } from "../schema/dolphin";

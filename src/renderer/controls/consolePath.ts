@@ -1,4 +1,4 @@
-import type { AnyConsoleLayout, DigitalBinding } from "../../shared/controls/types";
+import type { AnyConsoleLayout, DigitalBinding } from "../../shared/types/controls";
 
 
 export function getConsoleDigital(layout: AnyConsoleLayout, id: string): DigitalBinding | undefined {

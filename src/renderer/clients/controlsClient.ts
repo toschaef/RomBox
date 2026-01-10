@@ -1,4 +1,4 @@
-import type { ControlsProfile, AnyConsoleLayout, ControllerProfileMeta } from "../../shared/controls/types";
+import type { ControlsProfile, AnyConsoleLayout, ControllerProfileMeta } from "../../shared/types/controls";
 import type { ConsoleID } from "../../shared/types";
 
 export const controlsClient = {

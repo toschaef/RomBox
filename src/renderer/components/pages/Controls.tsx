@@ -20,7 +20,7 @@ import type {
   DigitalBinding,
   DpadBinding,
   StickBinding,
-} from "../../../shared/controls/types";
+} from "../../../shared//types/controls";
 
 import {
   getConsoleDigital as getConsoleDigitalById,

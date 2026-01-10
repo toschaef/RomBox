@@ -6,7 +6,8 @@ import { homedir } from "os";
 import type { PlatformHandler } from "./types";
 import { findFile } from "../utils/fsUtils";
 import { Extractor } from "../utils/extractor";
-import { ConsoleID, Platform } from "../../shared/types";
+import type { Platform } from "../../shared/types";
+import type { EngineID } from "../../shared/types/engines";
 import { app } from 'electron';
 
 type FinalizeOptions = {
@@ -157,10 +158,10 @@ export class MacHandler implements PlatformHandler {
     return spawn(binaryPath, args, { detached: true, stdio: ["ignore", "pipe", "pipe"], env });
   }
 
-  getEmulatorConfigPath(emulatorId: string): string {
+  getEmulatorConfigPath(engineId: EngineID): string {
     const home = homedir();
 
-    switch (emulatorId) {
+    switch (engineId) {
       case "dolphin":
         return path.join(home, "Library", "Application Support", "Dolphin", "Config");
       case "mesen":
@@ -172,16 +173,16 @@ export class MacHandler implements PlatformHandler {
       case "azahar":
         return path.join(home, "Library", "Application Support", "Azahar", "config");
       default:
-        return path.join(home, "Library", "Application Support", emulatorId);
+        return path.join(home, "Library", "Application Support", engineId);
     }
   }
 
-  deleteEngine(emulatorId: string): void {
+  deleteEngine(engineId: EngineID): void {
     const home = homedir();
-    const rombox: string = path.join(app.getPath("userData"), 'engines', emulatorId);
+    const rombox: string = path.join(app.getPath("userData"), 'engines', engineId);
     let engine: string;
 
-    switch (emulatorId.toLowerCase()) {
+    switch (engineId.toLowerCase()) {
       case "dolphin":
         engine = path.join(home, "Library", "Application Support", "Dolphin", "Config");
         break;

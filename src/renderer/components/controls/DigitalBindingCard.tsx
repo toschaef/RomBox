@@ -1,4 +1,4 @@
-import type { DigitalBinding } from "../../../shared/controls/types";
+import type { DigitalBinding } from "../../../shared/types/controls";
 
 function formatDigital(d?: DigitalBinding): string {
   if (!d) return "Unmapped";

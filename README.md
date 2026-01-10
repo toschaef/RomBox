@@ -1,7 +1,7 @@
 ![Version](https://img.shields.io/github/package-json/v/toschaef/RomBox)
 ![RomBox CI](https://github.com/toschaef/RomBox/actions/workflows/ci.yaml/badge.svg)
 
-### known issues:
+## known issues:
 
 the install modal persists on install error
 
@@ -16,13 +16,21 @@ GroupBindingCard doesnt prevent event defaults (page scrolling on arrow key/spac
 Azahar doesnt configure controller controls unless controller is connected on launch
 
 
-### todo:
+## todo:
 
-engines page with bios listed + repair/delete/reset
+### soon:
+
+reorganize types
+
+snes bios support
+
+general settings (auto install engine, fullscreen)
+
+### future
 
 controller support on gc/wii, N64
 
-keyboard controls on N64
+keyboard support on N64
 
 display game cover (aws lambda)
 
@@ -30,9 +38,7 @@ ui improvement
 
 more consoles
 
-mii/font support for 3ds
-
-general settings (auto install engine, fullscreen)
+optional bios support (miis/fonts for 3ds)
 
 emulator specific settings
 

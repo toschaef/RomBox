@@ -1,5 +1,5 @@
 import type { ConsoleID } from "../types";
-import type { ControlsProfile, PlayerBindings } from "./types";
+import type { ControlsProfile, PlayerBindings } from "../types/controls";
 
 export function makeDefaultConsoleBindings(consoleId: ConsoleID, profile: ControlsProfile): PlayerBindings {
   const p1 = profile.player1;
@@ -19,4 +19,21 @@ export function makeDefaultConsoleBindings(consoleId: ConsoleID, profile: Contro
   }
 
   return common;
+}
+
+export function createDefaultProfileShape(): Omit<
+  ControlsProfile,
+  "id" | "name" | "createdAt" | "updatedAt" | "isDefault"
+> {
+  return {
+    preferredDevice: "auto",
+    player1: {
+      move: { type: "dpad" },
+      dpad: { type: "dpad" },
+      look: { type: "stick", stick: "right", deadzone: 0.15 },
+      face: { type: "face" },
+      shoulders: { type: "shoulders" },
+      system: { type: "system" },
+    },
+  };
 }

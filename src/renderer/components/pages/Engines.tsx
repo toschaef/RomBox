@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState, useRef } from "react";
-import type { EngineInfo, EngineStatus, ConsoleID, EmulatorID } from "../../../shared/types";
+import type { ConsoleID } from "../../../shared/types";
+import type { EngineID } from "../../../shared/types/engines";
+import type { EngineInfo, EngineStatus } from "../../../shared/types/engines";
 import { engineClient } from "../../clients/engineClient";
-import { getConsoleNameFromId, getEmulatorIdFromConsoleId, ENGINE_MAP } from "../../../shared/constants";
+import { getConsoleNameFromId, getEngineIdFromConsoleId, ENGINE_MAP } from "../../../shared/constants";
 
 function clsx(...xs: Array<string | false | null | undefined>) {
   return xs.filter(Boolean).join(" ");
@@ -23,40 +25,31 @@ function statusPillClass(s: EngineStatus): string {
 
 type ActionState =
   | { kind: "idle" }
-  | { kind: "working"; emulatorId: EmulatorID; action: "install" | "delete" | "repair" };
+  | { kind: "working"; engineId: EngineID; action: "install" | "delete" | "repair" };
 
 type EmulatorRow = {
-  emulatorId: EmulatorID;
+  engineId: EngineID;
   displayName: string;
   platform: string;
   consoles: ConsoleID[];
   status: EngineStatus;
 
   needsBios: boolean;
-  biosInstalled: boolean;
-  biosMissingFiles: string[];
+  biosState: "ok" | "warning" | "missing" | "none";
+  biosMissingRequired: string[];
+  biosMissingWarning: string[];
 
   lastError?: string;
 };
 
-const PRIMARY_CONSOLE_FOR_EMULATOR: Record<EmulatorID, ConsoleID> = {
+const PRIMARY_CONSOLE_FOR_EMULATOR: Record<EngineID, ConsoleID> = {
   dolphin: "gc",
   azahar: "3ds",
   melonds: "ds",
   ares: "n64",
+  rmg: "n64",
   mesen: "snes",
 };
-
-function aggregateStatus(list: EngineInfo[]): EngineStatus {
-  const statuses = list.map((e) => e.status);
-
-  if (statuses.length === 0) return "unsupported";
-  if (statuses.every((s) => s === "unsupported")) return "unsupported";
-  if (statuses.some((s) => s === "broken")) return "broken";
-  if (statuses.every((s) => s === "installed")) return "installed";
-
-  return "not_installed";
-}
 
 export default function Engines() {
   const [engines, setEngines] = useState<EngineInfo[] | null>(null);
@@ -64,7 +57,9 @@ export default function Engines() {
   const [action, setAction] = useState<ActionState>({ kind: "idle" });
   const [toast, setToast] = useState<string | null>(null);
   const [installStatus, setInstallStatus] = useState<string>("");
-  const [menuOpenFor, setMenuOpenFor] = useState<EmulatorID | null>(null);
+  const [menuOpenFor, setMenuOpenFor] = useState<EngineID | null>(null);
+
+  console.log("[Engines] engines:", engines);
 
   const menuRef = useRef<HTMLDivElement | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -100,6 +95,10 @@ export default function Engines() {
     try {
       const list = await engineClient.getEngines();
       setEngines(list);
+    } catch (err) {
+      console.error("[Engines] getEngines failed", err);
+      setToast((err as Error).message);
+      setEngines([]);
     } finally {
       setLoading(false);
     }
@@ -115,66 +114,50 @@ export default function Engines() {
 
   const rows = useMemo<EmulatorRow[]>(() => {
     const list = engines ?? [];
-    const groups = new Map<EmulatorID, EngineInfo[]>();
 
-    for (const e of list) {
-      const emuId = getEmulatorIdFromConsoleId(e.consoleId as ConsoleID);
-      const arr = groups.get(emuId) ?? [];
-      arr.push(e);
-      groups.set(emuId, arr);
-    }
+    const PREFERRED_ORDER: EngineID[] = ["dolphin", "azahar", "melonds", "ares", "rmg", "mesen"];
+    const orderIndex = new Map<EngineID, number>(PREFERRED_ORDER.map((id, i) => [id, i]));
 
-    const order: EmulatorID[] = ["dolphin", "azahar", "melonds", "ares", "mesen"];
-    const out: EmulatorRow[] = [];
+    return list
+      .filter((e) => e.status !== "unsupported")
+      .slice()
+      .sort((a, b) => {
+        const ia = orderIndex.get(a.engineId) ?? 999;
+        const ib = orderIndex.get(b.engineId) ?? 999;
+        if (ia !== ib) return ia - ib;
+        return a.engineId.localeCompare(b.engineId);
+      })
+      .map((e) => {
+        const primaryConsole = PRIMARY_CONSOLE_FOR_EMULATOR[e.engineId];
+        const displayName = ENGINE_MAP[primaryConsole] ?? e.name ?? e.engineId;
 
-    for (const emuId of order) {
-      const arr = groups.get(emuId) ?? [];
-      if (arr.length === 0) continue;
+        const req = e.biosMissingRequired.map((x) => `${x.consoleId}:${x.filename}`);
+        const warn = e.biosMissingWarning.map((x) => `${x.consoleId}:${x.filename}`);
 
-      const consoles = arr.map((x) => x.consoleId as ConsoleID);
-      const status = aggregateStatus(arr);
-      const platform = arr[0].platform;
-
-      const needsBios = arr.some((x) => x.needsBios);
-      const biosInstalled = needsBios ? arr.every((x) => !x.needsBios || x.biosInstalled) : true;
-
-      const missing = new Set<string>();
-      for (const e of arr) {
-        if (e.needsBios && !e.biosInstalled) {
-          for (const f of e.biosMissingFiles) missing.add(f);
-        }
-      }
-
-      const firstErr = arr.find((x) => x.status === "broken" && x.lastError)?.lastError;
-
-      const primaryConsole = PRIMARY_CONSOLE_FOR_EMULATOR[emuId];
-      const displayName = ENGINE_MAP[primaryConsole] ?? emuId;
-
-      out.push({
-        emulatorId: emuId,
-        displayName,
-        platform,
-        consoles,
-        status,
-        needsBios,
-        biosInstalled,
-        biosMissingFiles: Array.from(missing),
-        lastError: firstErr,
+        return {
+          engineId: e.engineId,
+          displayName,
+          platform: e.platform,
+          consoles: e.consoles,
+          status: e.status,
+          needsBios: e.needsBios,
+          biosState: e.biosState,
+          biosMissingRequired: req,
+          biosMissingWarning: warn,
+          lastError: e.lastError,
+        };
       });
-    }
-
-    return out;
   }, [engines]);
 
-  const busyEmu = action.kind === "working" ? action.emulatorId : null;
+  const busyEmu = action.kind === "working" ? action.engineId : null;
 
   const doInstall = async (row: EmulatorRow) => {
-    setAction({ kind: "working", emulatorId: row.emulatorId, action: "install" });
+    setAction({ kind: "working", engineId: row.engineId, action: "install" });
     setToast(null);
     setInstallStatus("");
 
     try {
-      const r = await engineClient.installEngine(row.emulatorId);
+      const r = await engineClient.installEngine(row.engineId);
       if (!r.success) throw new Error(r.message || r.error || "Install failed");
       setToast(`${row.displayName} installed.`);
     } catch (err) {
@@ -186,12 +169,12 @@ export default function Engines() {
   };
 
   const doDelete = async (row: EmulatorRow) => {
-    setAction({ kind: "working", emulatorId: row.emulatorId, action: "delete" });
+    setAction({ kind: "working", engineId: row.engineId, action: "delete" });
     setToast(null);
     setInstallStatus("");
 
     try {
-      const r = await engineClient.deleteEngine(row.emulatorId);
+      const r = await engineClient.deleteEngine(row.engineId);
       if (!r.success) throw new Error(r.message || r.error || "Uninstall failed");
       setToast(`${row.displayName} removed.`);
     } catch (err) {
@@ -203,15 +186,15 @@ export default function Engines() {
   };
 
   const doRepair = async (row: EmulatorRow) => {
-    setAction({ kind: "working", emulatorId: row.emulatorId, action: "repair" });
+    setAction({ kind: "working", engineId: row.engineId, action: "repair" });
     setToast(null);
     setInstallStatus("");
 
     try {
-      const del = await engineClient.deleteEngine(row.emulatorId);
+      const del = await engineClient.deleteEngine(row.engineId);
       if (!del.success) throw new Error(del.message || del.error || "Delete failed during repair");
 
-      const ins = await engineClient.installEngine(row.emulatorId);
+      const ins = await engineClient.installEngine(row.engineId);
       if (!ins.success) throw new Error(ins.message || ins.error || "Install failed during repair");
 
       setToast(`${row.displayName} repaired.`);
@@ -226,14 +209,14 @@ export default function Engines() {
   const pageHeader = (
     <div className="flex items-start justify-between gap-4 p-6">
       <div>
-        <h1 className="w-full text-3xl font-bold py-4 text-fg-primary">Engines</h1>
+        <h1 className="w-full text-3xl font-bold py-4 px-2 text-fg-primary">Engines</h1>
 
-        {installStatus ? (
+        {/* {installStatus ? (
           <div className="mt-3 text-base text-fg-secondary">
             <span className="uppercase tracking-widest font-bold text-fg-muted mr-2">Install</span>
             {installStatus}
           </div>
-        ) : null}
+        ) : null} */}
       </div>
 
       <div className="flex items-center gap-3">
@@ -246,7 +229,7 @@ export default function Engines() {
           )}
           disabled={loading || action.kind === "working"}
         >
-          Refresh
+          Repair All
         </button>
 
         <button
@@ -278,17 +261,17 @@ export default function Engines() {
     <div className="relative h-full w-full overflow-y-auto">
       {pageHeader}
 
-      {toast ? (
+      {/* {toast ? (
         <div className="px-6 pb-4">
           <div className="rounded-xl border border-border-subtle bg-bg-secondary p-4 text-base text-fg-secondary">
             {toast}
           </div>
         </div>
-      ) : null}
+      ) : null} */}
 
       <div className="px-6 pb-10 space-y-4">
         {rows.map((row) => {
-          const isBusy = busyEmu === row.emulatorId;
+          const isBusy = busyEmu === row.engineId;
 
           const supportsText = row.consoles
             .slice()
@@ -297,30 +280,37 @@ export default function Engines() {
             .join(", ");
 
           return (
-            <div key={row.emulatorId} className="rounded-2xl border border-border-subtle bg-bg-secondary">
+            <div key={row.engineId} className="rounded-2xl border border-border-subtle bg-bg-secondary">
               <div className="p-6 flex items-center justify-between gap-6">
                 <div className="min-w-0">
                   <div className="flex items-center gap-3 flex-wrap">
-                    <div className="text-fg-primary text-xl font-bold">{row.displayName}</div>
+                    <div className="text-fg-primary text-l font-bold">{row.displayName}</div>
 
                     <span
                       className={clsx(
-                        "inline-flex items-center px-3 py-1 rounded-lg border text-sm font-bold",
+                        "inline-flex items-center px-2 py-1 rounded-lg border text-xs font-bold",
                         statusPillClass(row.status)
                       )}
                     >
                       {statusLabel(row.status)}
                     </span>
 
-                    {row.needsBios ? (
-                      row.biosInstalled ? (
-                        <span className="inline-flex items-center px-3 py-1 rounded-lg border border-border-subtle text-sm font-bold text-fg-secondary bg-bg-secondary">
+                    {row.needsBios && row.biosState !== "none" ? (
+                      row.biosState === "ok" ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-lg border border-border-subtle text-xs font-bold text-fg-secondary bg-bg-secondary">
                           BIOS OK
+                        </span>
+                      ) : row.biosState === "warning" ? (
+                        <span
+                          className="inline-flex items-center px-2 py-1 rounded-lg border border-border-muted text-xs font-bold text-fg-secondary bg-bg-secondary"
+                          title={row.biosMissingWarning.join(", ")}
+                        >
+                          BIOS warning
                         </span>
                       ) : (
                         <span
-                          className="inline-flex items-center px-3 py-1 rounded-lg border border-fg-primary text-sm font-bold text-fg-secondary bg-bg-secondary"
-                          title={row.biosMissingFiles.join(", ")}
+                          className="inline-flex items-center px-2 py-1 rounded-lg border border-fg-primary text-xs font-bold text-fg-secondary bg-bg-secondary"
+                          title={row.biosMissingRequired.join(", ")}
                         >
                           BIOS missing
                         </span>
@@ -328,13 +318,21 @@ export default function Engines() {
                     ) : null}
                   </div>
 
-                  <div className="mt-3 text-fg-muted text-base">
-                    Supports: <span className="text-fg-secondary font-bold">{supportsText}</span>
+                  <div className="mt-3 text-fg-muted text-sm">
+                    Supports: <span className="text-fg-secondary font-medium">{supportsText}</span>
                   </div>
 
-                  {!row.biosInstalled && row.biosMissingFiles.length ? (
-                    <div className="mt-3 text-base text-fg-muted">
-                      Missing BIOS: <span className="text-fg-secondary">{row.biosMissingFiles.join(", ")}</span>
+                  {row.needsBios && row.biosState === "missing" && row.biosMissingRequired.length ? (
+                    <div className="mt-3 text-sm text-fg-muted">
+                      Missing required BIOS:{" "}
+                      <span className="text-fg-secondary">{row.biosMissingRequired.join(", ")}</span>
+                    </div>
+                  ) : null}
+
+                  {row.needsBios && row.biosState === "warning" && row.biosMissingWarning.length ? (
+                    <div className="mt-3 text-sm text-fg-muted">
+                      Missing optional BIOS:{" "}
+                      <span className="text-fg-secondary">{row.biosMissingWarning.join(", ")}</span>
                     </div>
                   ) : null}
 
@@ -368,7 +366,7 @@ export default function Engines() {
                         ref={menuButtonRef}
                         type="button"
                         aria-label="More options"
-                        onClick={() => setMenuOpenFor((cur) => (cur === row.emulatorId ? null : row.emulatorId))}
+                        onClick={() => setMenuOpenFor((cur) => (cur === row.engineId ? null : row.engineId))}
                         disabled={isBusy || action.kind === "working"}
                         className={clsx(
                           "h-12 w-12 rounded-xl border flex items-center justify-center transition-colors",
@@ -379,8 +377,9 @@ export default function Engines() {
                         <span className="text-xl leading-none">⋯</span>
                       </button>
 
-                      {menuOpenFor === row.emulatorId ? (
+                      {menuOpenFor === row.engineId ? (
                         <div
+                          ref={menuRef}
                           className="absolute right-0 top-14 z-20 w-56 rounded-xl border border-border-subtle bg-bg-secondary shadow-lg overflow-hidden"
                           onMouseDown={(e) => e.stopPropagation()}
                         >

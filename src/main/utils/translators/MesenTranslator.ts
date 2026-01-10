@@ -1,4 +1,4 @@
-import type { PlayerBindings, DigitalBinding } from "../../../shared/controls/types";
+import type { PlayerBindings, DigitalBinding } from "../../../shared/types/controls";
 import { GP_FIXED_TO_INDEX, type GamepadToken } from "../../../shared/controls/gamepadTokens";
 import { BASE_GAMEPAD, MESEN_KEYCODE_MAP_128, APPLE_KEYCODE_BY_CODE } from "../schema/mesen";
 import { digitalToGamepadToken, type Dir } from "../profileRead";

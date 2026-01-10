@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { AnyConsoleLayout, ControlsProfile } from "../../shared/controls/types";
+import type { AnyConsoleLayout, ControlsProfile } from "../../shared/types/controls";
 import type { ConsoleID } from "../../shared/types";
 import { controlsClient } from "../clients/controlsClient";
 import { CONSOLE_OPTIONS } from "../controls/consoleLayouts";

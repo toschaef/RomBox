@@ -1,25 +1,23 @@
-import type { ConsoleID, EmulatorID, IpcResponse, EngineInfo } from "../../shared/types";
+import type { ConsoleID, IpcResponse } from "../../shared/types";
+import type { EngineID, EngineInfo } from "../../shared/types/engines";
 
 export const engineClient = {
-  installEngine: (emulatorId: EmulatorID) =>
-    window.electron.invoke("engine:install-engine", emulatorId) as Promise<IpcResponse>,
+  installEngine: (engineId: EngineID) =>
+    window.electron.invoke("engine:install-engine", engineId) as Promise<IpcResponse>,
 
-  deleteEngine: (emulatorId: EmulatorID) => 
-    window.electron.invoke("engine:delete-engine", emulatorId) as Promise<IpcResponse>,
+  deleteEngine: (engineId: EngineID) => 
+    window.electron.invoke("engine:delete-engine", engineId) as Promise<IpcResponse>,
 
-  isInstalled: (consoleId: ConsoleID) =>
-    window.electron.invoke("engine:is-installed", consoleId) as Promise<boolean>,
+  isInstalled: (engineId: EngineID) =>
+    window.electron.invoke("engine:is-installed", engineId) as Promise<boolean>,
 
   getEngines: () =>
-    window.electron.invoke("engine:get-engines") as Promise<EngineInfo[]>,
+    window.electron.invoke("engine:get") as Promise<EngineInfo[]>,
 
-  repairEngine: async (emulatorId: ConsoleID) => {
-    await window.electron.invoke("engine:delete-engine", emulatorId);
-    return window.electron.invoke("engine:install-engine", emulatorId) as Promise<IpcResponse>
+  repairEngine: async (engineId: ConsoleID) => {
+    await window.electron.invoke("engine:delete-engine", engineId);
+    return window.electron.invoke("engine:install-engine", engineId) as Promise<IpcResponse>
   },
-
-  installBios: (payload: { consoleId: ConsoleID; filePath: string }) =>
-    window.electron.invoke("engine:install-bios", payload) as Promise<IpcResponse & { installed?: string[] }>,
 
   clear: () =>
     window.electron.invoke("engine:clear") as Promise<IpcResponse>,
