@@ -1,5 +1,5 @@
 import type { Game, ConsoleID, Platform } from '..'
-import type { BiosConfig } from '../bios';
+import type { BiosConfig, BiosConfigRuntime } from "../bios"
 
 export type EngineID = 'ares' | 'azahar' |  'dolphin' | 'melonds' | 'mesen' | 'rmg';
 
@@ -40,7 +40,7 @@ export type ConsoleDefinition = {
   consoleId: ConsoleID;
   acceptedExtensions: string[];
   detect: (buffer: Buffer) => boolean;
-  bios?: BiosConfig;
+  bios?: BiosConfigRuntime;
 };
 
 export type EngineDefinition = {

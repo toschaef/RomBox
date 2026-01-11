@@ -29,8 +29,13 @@ export const Extractor = {
       if (sourcePath !== destPath) {
         const destDir = path.dirname(destPath);
         if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
-        
-        fs.copyFileSync(sourcePath, destPath);
+
+        const st = fs.statSync(sourcePath);
+        if (st.isDirectory()) {
+          fs.cpSync(sourcePath, destPath, { recursive: true, force: true });
+        } else {
+          fs.copyFileSync(sourcePath, destPath);
+        }
       }
       return;
     }
@@ -50,7 +55,13 @@ export const Extractor = {
         const extractedPath = path.join(tempDir, zipEntryName);
         if (!fs.existsSync(extractedPath)) throw new Error(`7z Extraction failed: ${zipEntryName} not found`);
 
-        fs.renameSync(extractedPath, destPath);
+        const st = fs.statSync(extractedPath);
+        if (st.isDirectory()) {
+          fs.cpSync(extractedPath, destPath, { recursive: true, force: true });
+          fs.rmSync(extractedPath, { recursive: true, force: true });
+        } else {
+          fs.renameSync(extractedPath, destPath);
+        }
       } finally {
         try { fs.rmSync(tempDir, { recursive: true, force: true }); } catch (err) { void err; }
       }

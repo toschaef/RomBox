@@ -11,6 +11,7 @@ import { detectConsoleFromHeader } from '../utils/identifier';
 import { scanZipEntries } from '../utils/fsUtils';
 import { getEngineIdFromConsoleId } from '../../shared/constants';
 import { BiosService } from './BiosService';
+import AdmZip from 'adm-zip';
 
 export type ScanResult = 
   | { type: 'game'; consoleId: ConsoleID; engineId: EngineID; filePath: string; zipEntryName?: string }
@@ -32,6 +33,32 @@ const BIOS_NAME_TO_CONSOLE: Record<string, ConsoleID> = (() => {
   }
   return out;
 })();
+
+function isAzaharUserRoot(p: string): boolean {
+  return (
+    path.basename(p).toLowerCase() === "user" &&
+    fs.statSync(p).isDirectory() &&
+    (
+      fs.existsSync(path.join(p, "nand")) ||
+      fs.existsSync(path.join(p, "sysdata")) ||
+      fs.existsSync(path.join(p, "sdmc"))
+    )
+  );
+}
+
+function findAzaharUserRootFromDir(inputPath: string): string | null {
+  if (isAzaharUserRoot(inputPath)) return inputPath;
+
+  const base = path.basename(inputPath).toLowerCase();
+  if (base === "user" && isAzaharUserRoot(inputPath)) return inputPath;
+
+  const candidate = path.join(inputPath, "user");
+  if (fs.existsSync(candidate) && fs.statSync(candidate).isDirectory() && isAzaharUserRoot(candidate)) {
+    return candidate;
+  }
+
+  return null;
+}
 
 const identifyConsole = async (
     filename: string, 
@@ -77,6 +104,26 @@ export const ScannerService = {
         if (dirName.startsWith('.') || dirName === '__MACOSX' || dirName === 'node_modules') {
           return [];
         }
+
+        const userRoot = findAzaharUserRootFromDir(inputPath);
+          if (userRoot) {
+            return [{
+              type: "bios",
+              consoleId: "3ds",
+              engineId: getEngineIdFromConsoleId("3ds"),
+              filePath: userRoot,
+            }];
+          }
+
+        if (isAzaharUserRoot(inputPath)) {
+          return [{
+            type: "bios",
+            consoleId: "3ds",
+            engineId: getEngineIdFromConsoleId("3ds"),
+            filePath: inputPath,
+          }];
+        }
+
         let results: ScanResult[] = [];
         const entries = fs.readdirSync(inputPath, { withFileTypes: true });
         for (const entry of entries) {
@@ -86,9 +133,10 @@ export const ScannerService = {
         }
         return results;
       }
+
       return await ScannerService.scanFile(inputPath);
-    } catch (err) {
-      console.warn(`[Scanner] Error accessing path ${inputPath}:`, err.message);
+    } catch (err: any) {
+      console.warn(`[Scanner] Error accessing path ${inputPath}:`, err?.message ?? err);
       return [];
     }
   },
@@ -109,7 +157,22 @@ export const ScannerService = {
     if (['.zip', '.7z'].includes(ext)) {
       try {
         const entries = await getArchiveEntries(filePath);
-        console.log(`[Scanner] Found ${entries.length} entries in archive`);
+        const names = entries.map(e => e.name.replace(/\\/g, "/").toLowerCase());
+
+        const hasUserRoot =
+          names.some(n => n.startsWith("user/nand")) ||
+          names.some(n => n.startsWith("user/sysdata")) ||
+          names.some(n => n.startsWith("user/sdmc"));
+
+        if (hasUserRoot) {
+          return [{
+            type: "bios",
+            consoleId: "3ds",
+            engineId: getEngineIdFromConsoleId("3ds"),
+            filePath,
+            zipEntryName: "user",
+          }];
+        }
 
         for (const entry of entries) {
           const entryName = path.basename(entry.name).toLowerCase();
@@ -224,6 +287,32 @@ export const ScannerService = {
       return BiosService.installBios(scanResult.consoleId, scanResult.filePath);
     }
 
+    if (scanResult.consoleId === "3ds") {
+      const tempRoot = path.join(app.getPath("temp"), `rombox_azahar_${Date.now()}`);
+      fs.mkdirSync(tempRoot, { recursive: true });
+
+      try {
+        const ext = path.extname(scanResult.filePath).toLowerCase();
+        if (ext === ".7z") {
+          await Extractor.extract7z(scanResult.filePath, tempRoot);
+        } else {
+          const zip = new AdmZip(scanResult.filePath);
+          zip.extractAllTo(tempRoot, true);
+        }
+
+        const entry = (scanResult.zipEntryName ?? "").trim();
+        const candidate = entry ? path.join(tempRoot, entry) : tempRoot;
+
+        const userDir = fs.existsSync(path.join(candidate, "user"))
+          ? path.join(candidate, "user")
+          : candidate;
+
+        return await BiosService.installBios("3ds", userDir);
+      } finally {
+        try { fs.rmSync(tempRoot, { recursive: true, force: true }); } catch {}
+      }
+    }
+
     const tempDir = path.join(app.getPath("temp"), "rombox_bios");
     fs.mkdirSync(tempDir, { recursive: true });
 
@@ -237,7 +326,11 @@ export const ScannerService = {
     try {
       return await BiosService.installBios(scanResult.consoleId, tempPath);
     } finally {
-      try { fs.rmSync(tempPath, { force: true }); } catch {}
+      try {
+        fs.rmSync(tempPath, { recursive: true, force: true });
+      } catch (err) {
+        void err;
+      }
     }
   },
 };

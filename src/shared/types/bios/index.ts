@@ -1,4 +1,4 @@
-import type { ConsoleID, IpcResponse } from "..";
+import type { ConsoleID, IpcResponse, Game } from "..";
 import type { EngineID } from "../engines";
 
 export type BiosLevel = "required" | "warning";
@@ -11,13 +11,20 @@ export interface BiosFile {
   gameSpecific?: boolean;
 }
 
-
 export interface BiosConfig {
   files: BiosFile[];
   installDir?: string;
   required?: boolean;
   label?: string;
 }
+
+export type BiosFileRuntime = BiosFile & {
+  appliesToGame?: (game: Game) => boolean;
+};
+
+export type BiosConfigRuntime = Omit<BiosConfig, "files"> & {
+  files: BiosFileRuntime[];
+};
 
 export type BiosStatus = {
   consoleId: ConsoleID;

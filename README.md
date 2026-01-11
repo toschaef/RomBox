@@ -15,16 +15,16 @@ GroupBindingCard doesnt prevent event defaults (page scrolling on arrow key/spac
 
 Azahar doesnt configure controller controls unless controller is connected on launch
 
+azahar has update popup on launch
+
 
 ## todo:
 
 ### soon:
 
-reorganize types
-
-snes bios support
-
 general settings (auto install engine, fullscreen)
+
+multiplayer (local)
 
 ### future
 
@@ -37,8 +37,6 @@ display game cover (aws lambda)
 ui improvement
 
 more consoles
-
-optional bios support (miis/fonts for 3ds)
 
 emulator specific settings
 

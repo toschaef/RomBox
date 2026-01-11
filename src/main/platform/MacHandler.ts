@@ -173,38 +173,28 @@ export class MacHandler implements PlatformHandler {
       case "azahar":
         return path.join(home, "Library", "Application Support", "Azahar", "config");
       default:
-        return path.join(home, "Library", "Application Support", engineId);
+        throw new Error("[Mac] Emulator with ID not found");
     }
   }
 
-  deleteEngine(engineId: EngineID): void {
-    const home = homedir();
-    const rombox: string = path.join(app.getPath("userData"), 'engines', engineId);
-    let engine: string;
+    getEmulatorBasePath(engineId: EngineID): string {
+      const home = homedir();
 
-    switch (engineId.toLowerCase()) {
-      case "dolphin":
-        engine = path.join(home, "Library", "Application Support", "Dolphin", "Config");
-        break;
-      case "mesen":
-        engine = path.join(home, "Library", "Application Support", "Mesen2");
-        break;
-      case "ares":
-        engine = path.join(home, "Library", "Application Support", "ares");
-        break;
-      case "melonds":
-        engine = path.join(home, "Library", "Preferences", "melonDS");
-        break;
-      case "azahar":
-        engine = path.join(home, "Library", "Application Support", "Azahar", "config");
-        break;
-      default:
-        throw new Error('Invalid Emulator ID');
+      switch (engineId) {
+        case "dolphin":
+          return path.join(home, "Library", "Application Support", "Dolphin");
+        case "mesen":
+          return path.join(home, "Library", "Application Support", "Mesen2");
+        case "ares":
+          return path.join(home, "Library", "Application Support", "ares");
+        case "melonds":
+          return path.join(home, "Library", "Preferences", "melonDS");
+        case "azahar":
+          return path.join(home, "Library", "Application Support", "Azahar");
+        default:
+          throw new Error("[Mac] Emulator with ID not found");
+      }
     }
-
-    fs.rmSync(engine, { recursive: true, force: true });
-    fs.rmSync(rombox, { recursive: true, force: true });
-  }
 
   getPlatformId(): "macos" {
     return "macos";

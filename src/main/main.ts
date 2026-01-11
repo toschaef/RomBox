@@ -56,20 +56,37 @@ ipcMain.handle('process-file-drop', async (_, filePath) => {
         const game = await LibraryService.createGame(gameData);
         processedGames.push(game);
       } 
-      else if (result.type === 'bios') {
-        const originalName = result.zipEntryName 
-          ? path.basename(result.zipEntryName) 
+      else if (result.type === "bios") {
+        const st = fs.statSync(result.filePath);
+
+        if (!result.zipEntryName && st.isDirectory()) {
+          await BiosService.installBios(result.consoleId, result.filePath);
+          biosCount++;
+          continue;
+        }
+
+        const originalName = result.zipEntryName
+          ? path.basename(result.zipEntryName)
           : path.basename(result.filePath);
 
-        const tempPath = path.join(app.getPath('temp'), originalName);
-        
+        const tempDir = path.join(
+          app.getPath("temp"),
+          `rombox_drop_${result.consoleId}_${Date.now()}`
+        );
+        fs.mkdirSync(tempDir, { recursive: true });
+
+        const tempPath = path.join(tempDir, originalName);
+
         try {
           await Extractor.extractToFile(result.filePath, tempPath, result.zipEntryName);
-          
           await BiosService.installBios(result.consoleId, tempPath);
           biosCount++;
         } finally {
-          if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+          try {
+            fs.rmSync(tempDir, { recursive: true, force: true });
+          } catch (err) {
+            void err;
+          }
         }
       }
     }

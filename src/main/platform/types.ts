@@ -24,8 +24,8 @@ export interface PlatformHandler {
 
   /** returns directory where the emulator stores its INI/config files */
   getEmulatorConfigPath(engineId: EngineID): string;
-
-  deleteEngine(engineId: EngineID): void;
+  /** returns directory where the os stores the emulator files */
+  getEmulatorBasePath(engineId: EngineID): string
 
   getPlatformId(): "macos" | "windows" | "linux";
   getPlatform(): Platform;

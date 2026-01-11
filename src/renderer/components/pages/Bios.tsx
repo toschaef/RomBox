@@ -4,6 +4,32 @@ import { biosClient } from "../../clients/biosClient";
 import { getConsoleNameFromId } from "../../../shared/constants";
 import { engineClient } from "../../clients/engineClient";
 import type { BiosStatus } from "../../../shared/types/bios";
+import { useOutletContext } from "react-router-dom";
+import type { LayoutContextType } from "../layout";
+
+function dirname(p: string): string {
+  const s = p.replace(/\\/g, "/").replace(/\/+$/g, "");
+  const i = s.lastIndexOf("/");
+  if (i <= 0) return s;
+  return s.slice(0, i);
+}
+
+function basename(p: string): string {
+  const s = p.replace(/\\/g, "/").replace(/\/+$/g, "");
+  const i = s.lastIndexOf("/");
+  return i === -1 ? s : s.slice(i + 1);
+}
+
+function ascendToFolderNamed(startPath: string, wantNameLower: string): string {
+  let p = startPath;
+  for (let i = 0; i < 60; i++) {
+    if (basename(p).toLowerCase() === wantNameLower) return p;
+    const up = dirname(p);
+    if (up === p) break;
+    p = up;
+  }
+  return startPath; // fallback
+}
 
 function clsx(...xs: Array<string | false | null | undefined>) {
   return xs.filter(Boolean).join(" ");
@@ -24,15 +50,26 @@ function statusFor(item: BiosStatus, engineIsInstalled: boolean) {
   if (!item.needsBios) return { label: "No BIOS needed", kind: "neutral" as const };
 
   if (!engineIsInstalled) {
-    return item.cachedFiles.length ? { label: "Saved in cache", kind: "neutral" as const } : { label: "Not set up yet", kind: "warn" as const };
+    return item.cachedFiles.length
+      ? { label: "Saved in cache", kind: "neutral" as const }
+      : { label: "Not set up yet", kind: "warn" as const };
   }
 
   if (item.biosState === "ok") return { label: "BIOS OK", kind: "ok" as const };
-  if (item.biosState === "warning") return { label: "BIOS warning", kind: "warn" as const };
+  if (item.biosState === "warning") return { label: "BIOS optional", kind: "warn" as const };
   if (item.biosState === "missing") return { label: "BIOS missing", kind: "bad" as const };
   return { label: "No BIOS", kind: "neutral" as const };
 }
 
+const AZAHAR_WANT = ["nand", "sysdata", "sdmc"] as const;
+
+function computeInstalledList(b: BiosStatus): string[] {
+  if (b.consoleId === "3ds") {
+    const missing = new Set((b.missingWarningFiles ?? []).map((x) => x.toLowerCase()));
+    return AZAHAR_WANT.filter((x) => !missing.has(x));
+  }
+  return (b.cachedFiles ?? []).slice();
+}
 
 export default function Bios() {
   const [items, setItems] = useState<BiosStatus[] | null>(null);
@@ -40,6 +77,7 @@ export default function Bios() {
   const [action, setAction] = useState<ActionState>({ kind: "idle" });
   const [toast, setToast] = useState<string | null>(null);
   const [engineInstalled, setEngineInstalled] = useState<Record<ConsoleID, boolean>>({} as any);
+  const { lastBiosUpdate } = useOutletContext<LayoutContextType>();
 
   const [menuOpenFor, setMenuOpenFor] = useState<ConsoleID | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -97,43 +135,12 @@ export default function Bios() {
     void refresh();
   }, []);
 
+  useEffect(() => {
+    if (!lastBiosUpdate) return;
+    void refresh();
+  }, [lastBiosUpdate]);
+
   const busy = action.kind === "working" ? action.consoleId : null;
-
-  const doInstall = async (consoleId: ConsoleID) => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".zip,.bin,.rom,.dat,.key,.txt,*/*";
-    input.multiple = false;
-
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return;
-
-      const filePath = (file as any).path as string | undefined;
-      if (!filePath) {
-        setToast("Could not read file path. Make sure you are running in Electron.");
-        return;
-      }
-
-      setAction({ kind: "working", consoleId, action: "install" });
-      setToast(null);
-
-      try {
-        const r = await biosClient.installBios({ consoleId, filePath });
-        if (!r.success) throw new Error(r.message || r.error || "BIOS install failed");
-
-        const installed = r.installed?.length ? ` Installed: ${r.installed.join(", ")}` : "";
-        setToast(`${getConsoleNameFromId(consoleId)} BIOS updated.${installed}`);
-      } catch (err) {
-        setToast((err as Error).message);
-      } finally {
-        setAction({ kind: "idle" });
-        await refresh();
-      }
-    };
-
-    input.click();
-  };
 
   const doDelete = async (consoleId: ConsoleID, fileName: string) => {
     setAction({ kind: "working", consoleId, action: "delete" });
@@ -174,7 +181,7 @@ export default function Bios() {
       <div>
         <h1 className="w-full text-2xl font-bold py-3 text-fg-primary">BIOS</h1>
         <div className="mt-2 text-sm text-fg-muted">
-          Add required system files for consoles that need them. If something is optional, games can still launch.
+          Add required system files for consoles that need them. Optional files improve compatibility, but games can still launch.
         </div>
       </div>
 
@@ -207,33 +214,23 @@ export default function Bios() {
     <div className="relative h-full w-full overflow-y-auto text-sm">
       {pageHeader}
 
-      {/* {toast ? (
-        <div className="px-6 pb-4">
-          <div className="rounded-xl border border-border-subtle bg-bg-secondary p-4 text-sm text-fg-secondary">
-            {toast}
-          </div>
-        </div>
-      ) : null} */}
-
       <div className="px-6 pb-10 space-y-4">
         {sorted.map((b) => {
           const engOk = engineInstalled[b.consoleId] ?? false;
-          const s = statusFor(b, engOk); 
+          const s = statusFor(b, engOk);
           const isBusy = busy === b.consoleId;
-          const required = b.required;
+
           const missingReq = b.missingRequiredFiles ?? [];
           const missingWarn = b.missingWarningFiles ?? [];
+
           const showReq = engOk && missingReq.length > 0;
           const showWarn = engOk && missingReq.length === 0 && missingWarn.length > 0;
-          const cached = b.cachedFiles ?? [];
-          const hasAnyMissing = missingReq.length > 0 || missingWarn.length > 0;
-          const canInstall = true;
-          const installLabel =
-            engOk
-              ? (hasAnyMissing ? "Install" : "Reinstall")
-              : (cached.length ? "Replace" : "Install");
-          const menuFiles: string[] = cached.length ? cached : (missingReq.length ? missingReq : missingWarn);
 
+          const installedList = computeInstalledList(b);
+          const menuFiles: string[] =
+            b.consoleId === "3ds"
+              ? installedList
+              : ((b.cachedFiles?.length ? b.cachedFiles : (missingReq.length ? missingReq : missingWarn)) ?? []);
 
           return (
             <div key={b.consoleId} className="rounded-2xl border border-border-subtle bg-bg-secondary">
@@ -247,7 +244,7 @@ export default function Bios() {
                         "inline-flex items-center px-2.5 py-0.5 rounded-md border text-xs font-semibold",
                         pillClass(s.kind)
                       )}
-                      title={!required? "Optional files improve compatibility but are not required." : undefined}
+                      title={!b.required ? "Optional files improve compatibility but are not required." : undefined}
                     >
                       {s.label}
                     </span>
@@ -281,7 +278,7 @@ export default function Bios() {
                     <div className="mt-2 text-xs text-fg-muted">
                       Installed:{" "}
                       <span className="text-fg-secondary">
-                        {cached.length ? cached.join(", ") : "None"}
+                        {installedList.length ? installedList.join(", ") : "None"}
                       </span>
                     </div>
                   ) : null}
@@ -290,28 +287,13 @@ export default function Bios() {
                 <div className="flex gap-3 shrink-0">
                   {b.needsBios ? (
                     <>
-                      <button
-                        type="button"
-                        onClick={() => void doInstall(b.consoleId)}
-                        disabled={!canInstall || isBusy || action.kind === "working"}
-                        className={clsx(
-                          "px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors",
-                          "bg-accent-secondary text-white hover:bg-accent-primary",
-                          (isBusy || action.kind === "working") && "opacity-60 cursor-not-allowed"
-                        )}
-                      >
-                        {installLabel}
-                      </button>
-
-                      {menuFiles.length ? (
+                      {installedList.length ? (
                         <div className="relative">
                           <button
                             ref={menuButtonRef}
                             type="button"
                             aria-label="More options"
-                            onClick={() =>
-                              setMenuOpenFor((cur) => (cur === b.consoleId ? null : b.consoleId))
-                            }
+                            onClick={() => setMenuOpenFor((cur) => (cur === b.consoleId ? null : b.consoleId))}
                             disabled={isBusy || action.kind === "working"}
                             className={clsx(
                               "h-9 w-9 rounded-lg border flex items-center justify-center transition-colors",
@@ -330,7 +312,7 @@ export default function Bios() {
                               onMouseDown={(e) => e.stopPropagation()}
                             >
                               <div className="px-4 py-2 text-xs text-fg-muted">
-                                Remove a specific BIOS file
+                                {b.consoleId === "3ds" ? "Remove a 3DS system folder (will probably break it)" : "Remove a specific BIOS file"}
                               </div>
 
                               <div className="h-px bg-border-subtle" />
@@ -378,9 +360,7 @@ export default function Bios() {
         })}
 
         {sorted.length === 0 ? (
-          <div className="text-fg-muted p-6">
-            No consoles currently require BIOS.
-          </div>
+          <div className="text-fg-muted p-6">No consoles currently require BIOS.</div>
         ) : null}
       </div>
     </div>

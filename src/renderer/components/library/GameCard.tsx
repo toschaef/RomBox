@@ -16,6 +16,7 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate }: P
   const [showMenu, setShowMenu] = useState(false);
   const [installModalOpen, setInstallModalOpen] = useState(false);
   const [biosModalOpen, setBiosModalOpen] = useState(false);
+  const [biosMissing, setBiosMissing] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // effect to close menu on outside click
@@ -29,7 +30,7 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate }: P
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // hook to close bios modal on upload
+  // effect to close bios modal on upload
   useEffect(() => {
     if (biosModalOpen) {
       setBiosModalOpen(false);
@@ -45,6 +46,7 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate }: P
       } else if (result.code === 'MISSING_ENGINE') {
           setInstallModalOpen(true);
       } else if (result.code === 'MISSING_BIOS') {
+          setBiosMissing(result.message ?? null);
           setBiosModalOpen(true);
       } else {
         console.error("Launch error:", result.message);
@@ -166,7 +168,6 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate }: P
               ⋮
             </button>
 
-            {/* Popup Menu */}
             {showMenu && (
               <div className="
                 absolute 
@@ -223,7 +224,8 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate }: P
       {biosModalOpen && (
         <div onClick={(e) => e.stopPropagation()}>
           <BiosModal 
-            game={game} 
+            game={game}
+            missing={biosMissing}
             onClose={() => setBiosModalOpen(false)}
           />
         </div>

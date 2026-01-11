@@ -15,30 +15,27 @@ export const LaunchService = {
       return { success: false, code: 'MISSING_ENGINE', message: `Emulator for ${game.consoleId} not installed.` };
     }
 
-    const bios = BiosService.getConsoleBiosStatus(game.consoleId);
+    // bios
+    const bios0 = BiosService.getGameBiosStatus(game);
+    console.log("[LaunchService] bios", bios0);
 
-    if (bios.needsBios && bios.biosState !== "ok") {
+    if (bios0.needsBios && bios0.biosState === "missing") {
       BiosService.ensureBiosInstalledFromCache(game.consoleId);
-      const bios2 = BiosService.getConsoleBiosStatus(game.consoleId);
 
-      if (bios2.biosState === "missing") {
+      const bios1 = BiosService.getGameBiosStatus(game);
+      console.log("[LaunchService] bios after cache", bios1);
+
+      if (bios1.biosState === "missing") {
         return {
           success: false,
           code: "MISSING_BIOS",
-          message: `Required BIOS missing for ${game.consoleId}: ${bios2.missingRequiredFiles.join(", ")}`,
+          message: bios1.missingRequiredFiles.join(", "),
         };
       }
     }
 
-    if (bios.needsBios && bios.biosState === "missing") {
-      const missing = bios.missingRequiredFiles.join(", ");
-      return {
-        success: false,
-        code: "MISSING_BIOS",
-        message: missing
-          ? `Required BIOS missing for ${game.consoleId}: ${missing}`
-          : `Required BIOS missing for ${game.consoleId}`,
-      };
+    if (bios0.needsBios && bios0.biosState === "warning") {
+      // todo: optional bios message
     }
 
     // configuration

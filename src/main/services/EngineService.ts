@@ -212,8 +212,11 @@ export const EngineService = {
     try {
       const cfg = ENGINES[engineId];
       if (!cfg) return { success: false, err: "Invalid engineId" };
+      const rombox = path.join(app.getPath("userData"), 'engines', engineId);
+      const engine = osHandler.getEmulatorBasePath(engineId);
 
-      osHandler.deleteEngine(engineId);
+      fs.rmSync(engine, { recursive: true, force: true });
+      fs.rmSync(rombox, { recursive: true, force: true });
 
       return { success: true };
     } catch (err) {
@@ -289,6 +292,12 @@ export const EngineService = {
       if (engineId === "azahar") {
         const r = installAzaharSdlProbe();
         if (!r.ok) console.warn("[EngineService][azahar] sdlprobe not installed:", r.reason);
+
+        try {
+        BiosService.ensureBiosInstalledFromCache("3ds");
+        } catch (err) {
+          console.warn("[Azahar] cache restore failed:", err.message ?? err);
+        }
       }
 
       return { success: true };
