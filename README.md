@@ -1,6 +1,12 @@
 ![Version](https://img.shields.io/github/package-json/v/toschaef/RomBox)
 ![RomBox CI](https://github.com/toschaef/RomBox/actions/workflows/ci.yaml/badge.svg)
 
+# setup:
+
+clone this repo and run the command
+
+`npm ci; npm start`
+
 ## known issues:
 
 the install modal persists on install error
