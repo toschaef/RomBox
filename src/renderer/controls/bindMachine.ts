@@ -7,7 +7,7 @@ export type InputEvent =
   | { kind: "gp_axis"; stick: "left" | "right"; axis: "x" | "y"; value: number; at: number };
 
 export type BindPlan =
-  | { kind: "digital"; path: "face.primary" | "face.secondary" | "face.tertiary" | "face.quaternary" | "shoulders.bumperL" | "shoulders.bumperR" | "shoulders.triggerL" | "shoulders.triggerR" | "system.start" | "system.select" }
+  | { kind: "digital"; path: "face.primary" | "face.secondary" | "face.tertiary" | "face.quaternary" | "shoulders.bumperL" | "shoulders.bumperR" | "shoulders.triggerL" | "shoulders.triggerR" | "sticks.l3" | "sticks.r3" | "system.start" | "system.select" }
   | { kind: "dpad"; group: "move" | "dpad" | "look" }
   | { kind: "stick"; group: "move" | "look"; stick: "left" | "right" };
 
@@ -60,7 +60,7 @@ export function bindLabel(state: BindState): string {
   if (!state.active) return "";
   const { plan, step } = state;
   if (plan.kind === "digital") return plan.path;
-  if (plan.kind === "dpad") return `${plan.group.toUpperCase()} ${["UP","DOWN","LEFT","RIGHT"][step] ?? ""}`.trim();
+  if (plan.kind === "dpad") return `${plan.group.toUpperCase()} ${["UP", "DOWN", "LEFT", "RIGHT"][step] ?? ""}`.trim();
   if (plan.kind === "stick") return `${plan.group.toUpperCase()} STICK ${step === 0 ? "X" : "Y"}`;
   return "";
 }

@@ -30,6 +30,8 @@ export type ConsoleControlItem =
     | "shoulders.bumperR"
     | "shoulders.triggerL"
     | "shoulders.triggerR"
+    | "sticks.l3"
+    | "sticks.r3"
     | "system.start"
     | "system.select"
     | "z"
@@ -231,6 +233,8 @@ export const CONSOLE_LAYOUTS: Partial<Record<ConsoleID, ConsoleControlItem[]>> =
     { kind: "digital", id: "shoulders.bumperR", label: "R1", icon: btnR, section: "shoulders" },
     { kind: "digital", id: "shoulders.triggerL", label: "L2", icon: btnZL, section: "shoulders" },
     { kind: "digital", id: "shoulders.triggerR", label: "R2", icon: btnZR, section: "shoulders" },
+    { kind: "digital", id: "sticks.l3", label: "L3", icon: "", section: "special" },
+    { kind: "digital", id: "sticks.r3", label: "R3", icon: "", section: "special" },
 
     { kind: "digital", id: "system.start", label: "Start", icon: btnStart, section: "system" },
     { kind: "digital", id: "system.select", label: "Select", icon: btnSelect, section: "system" },
@@ -250,7 +254,9 @@ const FALLBACK_COMMON: ConsoleControlItem[] = [
   { kind: "digital", id: "shoulders.bumperL", label: "L1", icon: btnL, section: "shoulders" },
   { kind: "digital", id: "shoulders.bumperR", label: "R1", icon: btnR, section: "shoulders" },
   { kind: "digital", id: "shoulders.triggerL", label: "L2", icon: btnZL, section: "shoulders" },
-  { kind: "digital", id: "shoulders.triggerL", label: "R2", icon: btnZR, section: "shoulders" },
+  { kind: "digital", id: "shoulders.triggerR", label: "R2", icon: btnZR, section: "shoulders" },
+  { kind: "digital", id: "sticks.l3", label: "L3", icon: "", section: "special" },
+  { kind: "digital", id: "sticks.r3", label: "R3", icon: "", section: "special" },
 
   { kind: "digital", id: "system.start", label: "Start", icon: btnStart, section: "system" },
   { kind: "digital", id: "system.select", label: "Select", icon: btnSelect, section: "system" },

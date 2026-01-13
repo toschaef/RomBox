@@ -83,12 +83,8 @@ export class PCSX2Translator implements IEmulatorTranslator {
     writeBinding("RLeft", getDirFromLook(profile, "left"));
     writeBinding("RRight", getDirFromLook(profile, "right"));
 
-    if (profile.player1.special && (profile.player1.special as any).l3) {
-      writeBinding("L3", (profile.player1.special as any).l3);
-    }
-    if (profile.player1.special && (profile.player1.special as any).r3) {
-      writeBinding("R3", (profile.player1.special as any).r3);
-    }
+    writeBinding("L3", profile.player1.sticks?.l3);
+    writeBinding("R3", profile.player1.sticks?.r3);
 
     return patches;
   }

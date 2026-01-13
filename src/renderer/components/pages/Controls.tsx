@@ -39,20 +39,22 @@ type DigitalPath =
   | "shoulders.bumperR"
   | "shoulders.triggerL"
   | "shoulders.triggerR"
+  | "sticks.l3"
+  | "sticks.r3"
   | "system.start"
   | "system.select";
 
 function getDigital(p: ControlsProfile, path: DigitalPath): DigitalBinding | undefined {
-  const [group, key] = path.split(".") as ["face" | "shoulders" | "system", string];
+  const [group, key] = path.split(".") as ["face" | "shoulders" | "system" | "sticks", string];
   // @ts-expect-error dynamic keying
-  return p.player1[group][key];
+  return p.player1[group]?.[key];
 }
 
 function clearDigital(p: ControlsProfile, path: DigitalPath): ControlsProfile {
   const next = structuredClone(p);
-  const [group, key] = path.split(".") as ["face" | "shoulders" | "system", string];
+  const [group, key] = path.split(".") as ["face" | "shoulders" | "system" | "sticks", string];
   // @ts-expect-error dynamic keying
-  delete next.player1[group][key];
+  if (next.player1[group]) delete next.player1[group][key];
   return next;
 }
 
@@ -461,20 +463,20 @@ export default function Controls() {
   const mode =
     layoutApi.isConsoleMode && layoutApi.consoleLayout
       ? ({
-          kind: "console" as const,
-          layout: layoutApi.consoleLayout,
-          onChange: (l: AnyConsoleLayout): void => {
-            void layoutApi.saveConsoleLayout(l);
-          },
-        })
+        kind: "console" as const,
+        layout: layoutApi.consoleLayout,
+        onChange: (l: AnyConsoleLayout): void => {
+          void layoutApi.saveConsoleLayout(l);
+        },
+      })
       : profile
         ? ({
-            kind: "standard" as const,
-            profile,
-            onChange: (p: ControlsProfile): void => {
-              void saveProfile(p);
-            },
-          })
+          kind: "standard" as const,
+          profile,
+          onChange: (p: ControlsProfile): void => {
+            void saveProfile(p);
+          },
+        })
         : null;
 
   const fallbackMode = useMemo(() => {
@@ -552,11 +554,10 @@ export default function Controls() {
                 cancelBind();
                 layoutApi.setStandard();
               }}
-              className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${
-                layoutApi.isConsoleMode
+              className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${layoutApi.isConsoleMode
                   ? "text-fg-secondary hover:text-accent-secondary hover:bg-bg-muted"
                   : "bg-accent-secondary text-white"
-              }`}
+                }`}
             >
               Standard
             </button>
@@ -568,11 +569,10 @@ export default function Controls() {
                 const first = CONSOLE_OPTIONS[0]?.id ?? ("nes" as ConsoleID);
                 layoutApi.setConsole(layoutApi.consoleId ?? first);
               }}
-              className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${
-                layoutApi.isConsoleMode
+              className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${layoutApi.isConsoleMode
                   ? "bg-accent-secondary text-white"
                   : "text-fg-secondary hover:text-accent-secondary hover:bg-bg-muted"
-              }`}
+                }`}
             >
               Console
             </button>

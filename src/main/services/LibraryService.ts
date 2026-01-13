@@ -20,7 +20,7 @@ export const LibraryService = {
       throw err;
     }
   },
-  
+
   createGamesFromFiles: async (file: { name: string; path: string }) => {
     try {
       const results = await ScannerService.scanPath(file.path);
@@ -35,7 +35,7 @@ export const LibraryService = {
         if (result.type === 'game') {
           const gameData = await ScannerService.importGame(result);
           const gameEntry = await LibraryService.createGame(gameData);
-          createdGames.push(gameEntry.game); 
+          createdGames.push(gameEntry.game);
         }
         else if (result.type === 'bios') {
           await ScannerService.importBios(result);
@@ -55,13 +55,23 @@ export const LibraryService = {
 
   getGames: () => {
     try {
-      return { success: true, games: getDB().prepare("select * from games").all() };
+      const rows = getDB().prepare("select * from games").all() as any[];
+      const games = rows.map(row => ({
+        ...row,
+        playtimeSeconds: row.playtime_seconds ?? 0,
+      }));
+      return { success: true, games };
     } catch (err) { return { success: false, message: err.message }; }
   },
 
   getGame: (id: string) => {
     try {
-      return { success: true, game: getDB().prepare("select * from games where id = @id").get({ id }) };
+      const row = getDB().prepare("select * from games where id = @id").get({ id }) as any;
+      if (!row) return { success: false, message: "Game not found" };
+      return {
+        success: true,
+        game: { ...row, playtimeSeconds: row.playtime_seconds ?? 0 }
+      };
     } catch (err) { return { success: false, message: err.message }; }
   },
 
@@ -95,5 +105,19 @@ export const LibraryService = {
       fs.mkdirSync(romsDir);
     }
     return { success: true };
+  },
+
+  addPlaytime: (gameId: string, seconds: number) => {
+    try {
+      const db = getDB();
+      const stmt = db.prepare(`
+        UPDATE games SET playtime_seconds = playtime_seconds + ? WHERE id = ?
+      `);
+      const result = stmt.run(Math.floor(seconds), gameId);
+      return { success: result.changes > 0 };
+    } catch (err: any) {
+      console.error("Failed to update playtime:", err);
+      return { success: false, message: err.message };
+    }
   },
 };

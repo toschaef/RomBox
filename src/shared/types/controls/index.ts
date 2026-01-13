@@ -42,12 +42,12 @@ export type DigitalBinding =
   | { type: "key"; code: string }
   | { type: "gp_button"; token: GamepadToken }
   | {
-      type: "gp_axis_digital";
-      stick: "left" | "right";
-      axis: "x" | "y";
-      dir: "neg" | "pos";
-      threshold: number;
-    };
+    type: "gp_axis_digital";
+    stick: "left" | "right";
+    axis: "x" | "y";
+    dir: "neg" | "pos";
+    threshold: number;
+  };
 
 export type StickBinding = {
   type: "stick";
@@ -87,6 +87,12 @@ export type SystemBinding = {
   select?: DigitalBinding;
 };
 
+export type SticksBinding = {
+  type: "sticks";
+  l3?: DigitalBinding;
+  r3?: DigitalBinding;
+};
+
 export type PlayerBindings = {
   move: StickBinding | DpadBinding;
   dpad: DpadBinding;
@@ -94,6 +100,7 @@ export type PlayerBindings = {
   face: FaceBinding;
   shoulders: ShoulderBinding;
   system: SystemBinding;
+  sticks?: SticksBinding;
 
   c?: DpadBinding;
   z?: DigitalBinding;

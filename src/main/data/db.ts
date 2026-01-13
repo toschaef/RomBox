@@ -17,7 +17,8 @@ export function initDB() {
       filePath TEXT NOT NULL,
       consoleId TEXT NOT NULL,
       engineId TEXT NOT NULL,
-      coverImage TEXT
+      coverImage TEXT,
+      playtime_seconds INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS controller_profiles (

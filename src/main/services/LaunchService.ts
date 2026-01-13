@@ -1,5 +1,7 @@
+import { BrowserWindow } from 'electron';
 import { EngineService } from './EngineService';
 import { BiosService } from './BiosService'
+import { LibraryService } from './LibraryService';
 import { ENGINES } from '../config/engines';
 import { osHandler } from '../platform';
 import { getConfigurator } from '../utils/configurators';
@@ -50,7 +52,7 @@ export const LaunchService = {
     }
 
     const engineConfig = ENGINES[game.engineId];
-    const fullCommand = engineConfig.getLaunchCommand 
+    const fullCommand = engineConfig.getLaunchCommand
       ? engineConfig.getLaunchCommand(game, enginePath)
       : [enginePath, game.filePath];
 
@@ -59,14 +61,26 @@ export const LaunchService = {
 
     // execution
     try {
+      const startTime = Date.now();
       const child = osHandler.launchProcess(binary, args);
 
       // child.stdout?.on('data', (d) => console.log(`[Emulator]: ${d}`));
       // child.stderr?.on('data', (d) => console.error(`[Emulator Err]: ${d}`));
-      
+
       child.on('error', (err) => console.error("[LaunchService] Failed to spawn:", err));
       child.on('close', (code) => {
         if (code !== 0) console.log(`[LaunchService] Exited with code ${code}`);
+
+        // save playtime
+        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+        if (elapsedSeconds > 0) {
+          LibraryService.addPlaytime(game.id, elapsedSeconds);
+          console.log(`[LaunchService] Added ${elapsedSeconds}s playtime for ${game.title}`);
+        }
+
+        for (const win of BrowserWindow.getAllWindows()) {
+          win.webContents.send('game-exited', { gameId: game.id, code });
+        }
       });
 
       child.unref();

@@ -91,6 +91,7 @@ export class PCSX2Configurator extends BaseConfigurator {
       },
       Graphics: {
         DefaultToFullscreen: "false",
+        DoubleClickToFullscreen: "false",
       },
       AutoUpdater: {
         CheckAtStartup: "false",

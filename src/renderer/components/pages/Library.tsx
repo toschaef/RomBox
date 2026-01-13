@@ -27,15 +27,26 @@ export default function Library() {
     fetchGames();
   }, []);
 
-  // listen for refresh
+  // listen for refresh trigger
   useEffect(() => {
     if (refreshLibraryTrigger > 0) {
       fetchGames();
     }
   }, [refreshLibraryTrigger]);
 
+  // listen for game exit to refresh playtime
+  useEffect(() => {
+    const unsubscribe = (window as any).electron?.on?.('game-exited', () => {
+      fetchGames();
+    });
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, []);
+
   return (
-    <div 
+    <div
       className="
         flex flex-col items-center min-h-screen p-8 transition-colors duration-200
         bg-bg-primary text-fg-primary

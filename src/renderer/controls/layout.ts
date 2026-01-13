@@ -19,7 +19,7 @@ export const SECTION_ORDER = [
 
 export type ControlItem =
   | { kind: "group"; id: "move" | "dpad" | "look"; label: string; icon?: string; section: "leftStick" | "dpad" | "rightStick" }
-  | { kind: "digital"; id: "face.primary" | "face.secondary" | "face.tertiary" | "face.quaternary" | "shoulders.bumperL" | "shoulders.bumperR" | "shoulders.triggerL" | "shoulders.triggerR" | "system.start" | "system.select"; label: string; icon: string; section: SectionKey };
+  | { kind: "digital"; id: "face.primary" | "face.secondary" | "face.tertiary" | "face.quaternary" | "shoulders.bumperL" | "shoulders.bumperR" | "shoulders.triggerL" | "shoulders.triggerR" | "sticks.l3" | "sticks.r3" | "system.start" | "system.select"; label: string; icon: string; section: SectionKey };
 
 import dpadUp from "../assets/buttons/alt/T_S_Dpad_Up_Alt.png";
 import dpadDown from "../assets/buttons/alt/T_S_Dpad_Down_Alt.png";
@@ -55,6 +55,9 @@ export const STANDARD_LAYOUT: ControlItem[] = [
   { kind: "digital", id: "shoulders.bumperR", label: "R1", icon: btnR, section: "shoulders" },
   { kind: "digital", id: "shoulders.triggerL", label: "L2", icon: btnZL, section: "shoulders" },
   { kind: "digital", id: "shoulders.triggerR", label: "R2", icon: btnZR, section: "shoulders" },
+
+  { kind: "digital", id: "sticks.l3", label: "L3", icon: "", section: "special" },
+  { kind: "digital", id: "sticks.r3", label: "R3", icon: "", section: "special" },
 
   { kind: "digital", id: "system.start", label: "Start", icon: btnStart, section: "system" },
   { kind: "digital", id: "system.select", label: "Select", icon: btnSelect, section: "system" },

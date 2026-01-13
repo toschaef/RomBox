@@ -5,6 +5,15 @@ import BiosModal from '../inputs/BiosModal';
 import { gameClient } from '../../clients/gameClient';
 import { IpcResponse } from '../../../shared/types';
 
+function formatPlaytime(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+}
+
 interface Props {
   game: Game;
   lastBiosUpdate: string;
@@ -36,18 +45,18 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate }: P
       setBiosModalOpen(false);
     }
   }, [lastBiosUpdate]);
-  
+
   const handlePlay = async () => {
     try {
       const result: IpcResponse = await gameClient.launch(game);
-      
+
       if (result.success) {
         console.log("Game launched without electron error");
       } else if (result.code === 'MISSING_ENGINE') {
-          setInstallModalOpen(true);
+        setInstallModalOpen(true);
       } else if (result.code === 'MISSING_BIOS') {
-          setBiosMissing(result.message ?? null);
-          setBiosModalOpen(true);
+        setBiosMissing(result.message ?? null);
+        setBiosModalOpen(true);
       } else {
         console.error("Launch error:", result.message);
       }
@@ -65,12 +74,12 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate }: P
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (confirm(`Delete game ${game.title}?`)) {
-        try {
-            await window.electron.invoke('game:delete', game.id);
-            onDelete();
-        } catch(err) {
-            console.error(err);
-        }
+      try {
+        await window.electron.invoke('game:delete', game.id);
+        onDelete();
+      } catch (err) {
+        console.error(err);
+      }
     }
     setShowMenu(false);
   };
@@ -81,7 +90,7 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate }: P
   };
 
   return (
-    <div 
+    <div
       onClick={handlePlay}
       className="
         group
@@ -134,7 +143,7 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate }: P
         ">
           {game.title}
         </h3>
-        
+
         <div className="flex justify-between items-center relative">
           <span className="
             text-[10px] 
@@ -174,7 +183,7 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate }: P
                 bottom-full 
                 right-0 
                 mb-1 
-                w-24 
+                w-32 
                 bg-bg-primary 
                 border border-border-muted 
                 rounded-md 
@@ -183,7 +192,15 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate }: P
                 overflow-hidden
                 animate-in fade-in zoom-in-95 duration-100
               ">
-                <button 
+                {/* playtime */}
+                <div className="
+                  px-3 py-2 text-xs text-fg-muted
+                  border-b border-border-subtle
+                ">
+                  <span className="font-semibold">Playtime:</span>{' '}
+                  {formatPlaytime(game.playtimeSeconds ?? 0)}
+                </div>
+                <button
                   onClick={handleUpdate}
                   className="
                     w-full text-left px-3 py-2 text-xs font-semibold 
@@ -191,10 +208,10 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate }: P
                     transition-colors
                   "
                 >
-                  Update
+                  Rename
                 </button>
                 <div className="h-px bg-border-subtle mx-1"></div>
-                <button 
+                <button
                   onClick={handleDelete}
                   className="
                     w-full text-left px-3 py-2 text-xs font-semibold 
@@ -211,8 +228,8 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate }: P
       </div>
       {installModalOpen && (
         <div onClick={(e) => e.stopPropagation()}>
-          <InstallModal 
-            game={game} 
+          <InstallModal
+            game={game}
             onClose={() => setInstallModalOpen(false)}
             onSuccess={() => {
               setInstallModalOpen(false);
@@ -223,7 +240,7 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate }: P
       )}
       {biosModalOpen && (
         <div onClick={(e) => e.stopPropagation()}>
-          <BiosModal 
+          <BiosModal
             game={game}
             missing={biosMissing}
             onClose={() => setBiosModalOpen(false)}
