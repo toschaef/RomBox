@@ -85,13 +85,13 @@ export class PCSX2Configurator extends BaseConfigurator {
         ConfirmShutdown: "false",
         HideCursorOnIdle: "true",
         SettingsVersion: "1",
+        DoubleClickTogglesFullscreen: "false",
       },
       EmuCore: {
         EnableFastBoot: "true",
       },
       Graphics: {
         DefaultToFullscreen: "false",
-        DoubleClickToFullscreen: "false",
       },
       AutoUpdater: {
         CheckAtStartup: "false",
