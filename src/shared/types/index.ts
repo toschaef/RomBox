@@ -3,13 +3,12 @@ import type { EngineID } from "./engines";
 export type ConsoleID =
   'nes' | 'snes' |
   'gb' | 'gba' |
-  'gg' | // game gear
-  'sms' | // sega master system
+  'gg' | 'sms' |
   'pce' | // pc engine
   'n64' |
   'ds' | '3ds' |
   'gc' | 'wii' |
-  'ps2';
+  'ps1' | 'ps2';
 
 export type Platform = 'win32' | 'darwin' | 'linux';
 

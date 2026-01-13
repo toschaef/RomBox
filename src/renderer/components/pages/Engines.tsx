@@ -49,6 +49,7 @@ const PRIMARY_CONSOLE_FOR_EMULATOR: Record<EngineID, ConsoleID> = {
   ares: "n64",
   rmg: "n64",
   mesen: "snes",
+  duckstation: "ps1",
   pcsx2: "ps2",
 };
 

@@ -1,7 +1,7 @@
 import type { Game, ConsoleID, Platform } from '..'
 import type { BiosConfig, BiosConfigRuntime } from "../bios"
 
-export type EngineID = 'ares' | 'azahar' | 'dolphin' | 'melonds' | 'mesen' | 'pcsx2' | 'rmg';
+export type EngineID = 'ares' | 'azahar' | 'dolphin' | 'duckstation' | 'melonds' | 'mesen' | 'pcsx2' | 'rmg';
 
 export interface EngineConfig {
   id: ConsoleID;

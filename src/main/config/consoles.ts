@@ -118,6 +118,29 @@ export const CONSOLES: Record<ConsoleID, ConsoleDefinition> = {
     detect: (buffer) => buffer.length >= 0x20 && buffer.readUInt32BE(0x18) === 0x5d1c9ea3,
   },
 
+  ps1: {
+    consoleId: "ps1",
+    acceptedExtensions: [".bin", ".cue", ".iso", ".chd", ".img", ".pbp"],
+    detect: (buffer) => {
+      if (buffer.length < 0x8013) return false;
+      const marker = buffer.slice(0x8008, 0x8013).toString('ascii');
+      return marker === 'PLAYSTATION';
+    },
+    bios: {
+      required: true,
+      label: "PS1 BIOS (required for emulation)",
+      installDir: path.join(osHandler.getEmulatorBasePath('duckstation'), "bios"),
+      files: [
+        { filename: "scph1001.bin", description: "PS1 BIOS (USA)", level: "required" },
+        { filename: "scph5500.bin", description: "PS1 BIOS (Japan)", level: "warning" },
+        { filename: "scph5501.bin", description: "PS1 BIOS (USA v3.0)", level: "warning" },
+        { filename: "scph5502.bin", description: "PS1 BIOS (Europe)", level: "warning" },
+        { filename: "scph7502.bin", description: "PS1 BIOS (Europe v4.1)", level: "warning" },
+        { filename: "ps1_bios.bin", description: "PS1 BIOS (generic)", level: "warning" },
+      ],
+    },
+  },
+
   ps2: {
     consoleId: "ps2",
     acceptedExtensions: [".iso", ".bin", ".chd"],

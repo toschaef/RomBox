@@ -126,6 +126,7 @@ export class MacHandler implements PlatformHandler {
       path.join(home, "Library", "Application Support", "azahar"),
       path.join(home, "Library", "Preferences", "melonDS"),
       path.join(home, "Library", "Application Support", "PCSX2"),
+      path.join(home, "Library", "Application Support", "DuckStation"),
     ];
 
     for (const p of pathsToDelete) {
@@ -179,6 +180,8 @@ export class MacHandler implements PlatformHandler {
         return path.join(home, "Library", "Application Support", "Azahar", "config");
       case "pcsx2":
         return path.join(home, "Library", "Application Support", "PCSX2", "inis");
+      case "duckstation":
+        return path.join(home, "Library", "Application Support", "DuckStation");
       default:
         throw new Error(`[Mac] Emulator config path not found for: ${engineId}`);
     }
@@ -200,6 +203,8 @@ export class MacHandler implements PlatformHandler {
         return path.join(home, "Library", "Application Support", "Azahar");
       case "pcsx2":
         return path.join(home, "Library", "Application Support", "PCSX2");
+      case "duckstation":
+        return path.join(home, "Library", "Application Support", "DuckStation");
       default:
         throw new Error(`[Mac] Emulator base path not found for: ${engineId}`);
     }

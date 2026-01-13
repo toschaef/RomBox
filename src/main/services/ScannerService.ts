@@ -13,7 +13,7 @@ import { getEngineIdFromConsoleId } from '../../shared/constants';
 import { BiosService } from './BiosService';
 import AdmZip from 'adm-zip';
 
-export type ScanResult = 
+export type ScanResult =
   | { type: 'game'; consoleId: ConsoleID; engineId: EngineID; filePath: string; zipEntryName?: string }
   | { type: 'bios'; consoleId: ConsoleID; engineId: EngineID; filePath: string; zipEntryName?: string };
 
@@ -60,11 +60,25 @@ function findAzaharUserRootFromDir(inputPath: string): string | null {
   return null;
 }
 
+function isPS1GameDirectory(dirPath: string): { found: boolean; cueFile?: string } {
+  try {
+    const files = fs.readdirSync(dirPath);
+    const cueFile = files.find(f => f.toLowerCase().endsWith('.cue'));
+
+    if (cueFile) {
+      return { found: true, cueFile };
+    }
+  } catch (err) {
+    void err;
+  }
+  return { found: false };
+}
+
 const identifyConsole = async (
-    filename: string, 
-    fileSize: number, 
-    filePathForHeader?: string
-  ): Promise<string | undefined> => {
+  filename: string,
+  fileSize: number,
+  filePathForHeader?: string
+): Promise<string | undefined> => {
   const ext = path.extname(filename).toLowerCase();
   const id = getConsoleIdFromExtension(ext);
 
@@ -74,7 +88,7 @@ const identifyConsole = async (
   }
 
   if (ext === '.rvz') {
-    const WII_THRESHOLD = 1.5 * 1024 * 1024 * 1024; 
+    const WII_THRESHOLD = 1.5 * 1024 * 1024 * 1024;
     if (fileSize > WII_THRESHOLD) return 'wii';
     return 'gc';
   }
@@ -86,7 +100,7 @@ const getArchiveEntries = async (filePath: string): Promise<NormalizedEntry[]> =
   const ext = path.extname(filePath).toLowerCase();
   if (ext === '.7z') {
     const entries = await Extractor.list7z(filePath);
-    return entries.map(e => ({ name: e.file, size: Number(e.size) || 0 })); 
+    return entries.map(e => ({ name: e.file, size: Number(e.size) || 0 }));
   }
   if (ext === '.zip') {
     const entries = await scanZipEntries(filePath);
@@ -106,20 +120,30 @@ export const ScannerService = {
         }
 
         const userRoot = findAzaharUserRootFromDir(inputPath);
-          if (userRoot) {
-            return [{
-              type: "bios",
-              consoleId: "3ds",
-              engineId: getEngineIdFromConsoleId("3ds"),
-              filePath: userRoot,
-            }];
-          }
+        if (userRoot) {
+          return [{
+            type: "bios",
+            consoleId: "3ds",
+            engineId: getEngineIdFromConsoleId("3ds"),
+            filePath: userRoot,
+          }];
+        }
 
         if (isAzaharUserRoot(inputPath)) {
           return [{
             type: "bios",
             consoleId: "3ds",
             engineId: getEngineIdFromConsoleId("3ds"),
+            filePath: inputPath,
+          }];
+        }
+
+        const ps1Check = isPS1GameDirectory(inputPath);
+        if (ps1Check.found && ps1Check.cueFile) {
+          return [{
+            type: "game",
+            consoleId: "ps1",
+            engineId: getEngineIdFromConsoleId("ps1"),
             filePath: inputPath,
           }];
         }
@@ -191,19 +215,19 @@ export const ScannerService = {
           }
 
           if (['.zip', '.7z'].includes(entryExt)) {
-             console.log(`[Scanner] Found nested archive: ${entry.name}`);
-             
-             const tempNestedZip = path.join(app.getPath('temp'), `rombox_nested_${Date.now()}_${path.basename(entry.name)}`);
-             
-             try {
-               await Extractor.extractToFile(filePath, tempNestedZip, entry.name);
-               
-               const nestedResults = await ScannerService.scanFile(tempNestedZip);
-               results.push(...nestedResults);
-             } catch (nestedErr) {
-               console.warn(`[Scanner] Failed to process nested archive ${entry.name}:`, nestedErr.message);
-             }
-             continue;
+            console.log(`[Scanner] Found nested archive: ${entry.name}`);
+
+            const tempNestedZip = path.join(app.getPath('temp'), `rombox_nested_${Date.now()}_${path.basename(entry.name)}`);
+
+            try {
+              await Extractor.extractToFile(filePath, tempNestedZip, entry.name);
+
+              const nestedResults = await ScannerService.scanFile(tempNestedZip);
+              results.push(...nestedResults);
+            } catch (nestedErr) {
+              console.warn(`[Scanner] Failed to process nested archive ${entry.name}:`, nestedErr.message);
+            }
+            continue;
           }
 
           {
@@ -221,7 +245,7 @@ export const ScannerService = {
             }
           }
         }
-  
+
         return results;
       } catch (err) {
         console.warn(`[Scanner] Failed to inspect archive ${ext}:`, err.message);
@@ -239,25 +263,64 @@ export const ScannerService = {
     } catch (err) {
       console.warn("[Scanner] Error checking raw file:", err.message);
     }
-    
+
     return [];
   },
 
   importGame: async (scanResult: ScanResult & { type: 'game' }): Promise<Game> => {
     console.log('[Import] Starting import');
     const sourceName = scanResult.zipEntryName ? path.basename(scanResult.zipEntryName) : path.basename(scanResult.filePath);
-    
+
     const title = sourceName
-      .replace(/\.[^/.]+$/, "") 
-      .replace(/\s*\(.*?\)/g, '') 
-      .replace(/\s*\[.*?\]/g, '') 
-      .replace(/_/g, ' ')         
-      .replace(/[#]/g, '')        
+      .replace(/\.[^/.]+$/, "")
+      .replace(/\s*\(.*?\)/g, '')
+      .replace(/\s*\[.*?\]/g, '')
+      .replace(/_/g, ' ')
+      .replace(/[#]/g, '')
       .trim();
 
     const userDataPath = app.getPath('userData');
     const romsDir = path.join(userDataPath, 'roms', scanResult.consoleId);
-    
+
+    // handle ps1 import
+    const isDirectory = fs.existsSync(scanResult.filePath) && fs.statSync(scanResult.filePath).isDirectory();
+    if (scanResult.consoleId === 'ps1' && isDirectory) {
+      const dirName = path.basename(scanResult.filePath);
+      let destDir = path.join(romsDir, dirName);
+
+      if (fs.existsSync(destDir)) {
+        destDir = path.join(romsDir, `${dirName}_${Date.now()}`);
+      }
+
+      try {
+        fs.mkdirSync(destDir, { recursive: true });
+
+        // Copy all files from source directory
+        const files = fs.readdirSync(scanResult.filePath);
+        for (const file of files) {
+          const srcFile = path.join(scanResult.filePath, file);
+          const destFile = path.join(destDir, file);
+
+          if (fs.statSync(srcFile).isFile()) {
+            fs.copyFileSync(srcFile, destFile);
+          }
+        }
+
+        console.log(`[Import] Copied PS1 game directory: ${destDir}`);
+      } catch (err: any) {
+        console.error("[Import] Failed to copy PS1 directory:", err?.message ?? err);
+        throw new Error("Could not import PS1 game directory.");
+      }
+
+      return {
+        id: crypto.randomUUID(),
+        title,
+        filePath: destDir,
+        consoleId: scanResult.consoleId,
+        engineId: getEngineIdFromConsoleId(scanResult.consoleId),
+      };
+    }
+
     let destFilename = sourceName;
     let newFilePath = path.join(romsDir, destFilename);
 
@@ -269,14 +332,14 @@ export const ScannerService = {
 
     try {
       await Extractor.extractToFile(scanResult.filePath, newFilePath, scanResult.zipEntryName);
-    } catch (err) {
-      console.error("[Import] Failed to import ROM:", err.message);
+    } catch (err: any) {
+      console.error("[Import] Failed to import ROM:", err?.message ?? err);
       throw new Error("Could not import file into library.");
     }
 
     return {
       id: crypto.randomUUID(),
-      title, 
+      title,
       filePath: newFilePath,
       consoleId: scanResult.consoleId,
       engineId: getEngineIdFromConsoleId(scanResult.consoleId),
@@ -309,7 +372,14 @@ export const ScannerService = {
 
         return await BiosService.installBios("3ds", userDir);
       } finally {
-        try { fs.rmSync(tempRoot, { recursive: true, force: true }); } catch {}
+        try {
+          fs.rmSync(tempRoot, {
+            recursive: true,
+            force: true
+          });
+        } catch (err) {
+          void err;
+        }
       }
     }
 

@@ -20,6 +20,7 @@ export const CONSOLEID_ENGLISH_MAP: Record<ConsoleID, string> = {
   '3ds': '3DS',
   'gc': 'GameCube',
   'wii': 'Wii',
+  'ps1': 'PS1',
   'ps2': 'PS2',
 }
 
@@ -38,6 +39,7 @@ export const CONSOLEID_ENGINEID_MAP: Record<ConsoleID, EngineID> = {
   '3ds': 'azahar',
   'gc': 'dolphin',
   'wii': 'dolphin',
+  'ps1': 'duckstation',
   'ps2': 'pcsx2',
 }
 
@@ -50,6 +52,7 @@ export const ENGINEID_CONSOLEID_MAP: Record<EngineID, ConsoleID> = {
   'melonds': 'ds',
   'azahar': '3ds',
   'dolphin': 'gc',
+  'duckstation': 'ps1',
   'pcsx2': 'ps2',
 }
 export const getConsoleIdFromEngineId = (id: EngineID) => ENGINEID_CONSOLEID_MAP[id];
@@ -109,12 +112,18 @@ export const BIOS_FILENAMES: Record<string, ConsoleID> = {
   'bios9.bin': 'ds',
   'firmware.bin': 'ds',
 
+  'scph1001.bin': 'ps1',
+  'scph5500.bin': 'ps1',
+  'scph5501.bin': 'ps1',
+  'scph5502.bin': 'ps1',
+  'scph7502.bin': 'ps1',
+  'ps1_bios.bin': 'ps1',
+
   'scph10000.bin': 'ps2',
   'scph39001.bin': 'ps2',
   'scph70012.bin': 'ps2',
   'scph77001.bin': 'ps2',
   'scph39004.bin': 'ps2',
-  'bios.bin': 'ps2',
   'ps2_bios.bin': 'ps2',
 };
 
@@ -138,6 +147,7 @@ export const ENGINE_MAP: Record<ConsoleID, string> = {
   'gc': 'Dolphin',
   'wii': 'Dolphin',
 
+  'ps1': 'DuckStation',
   'ps2': 'PCSX2',
 };
 

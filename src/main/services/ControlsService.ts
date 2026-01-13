@@ -50,6 +50,7 @@ const ALL_CONSOLE_IDS: ConsoleID[] = [
   "3ds",
   "gc",
   "wii",
+  "ps1",
   "ps2",
 ];
 

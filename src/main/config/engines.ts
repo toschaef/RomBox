@@ -1,5 +1,7 @@
 import type { EngineDefinition } from "../../shared/types/engines";
 import type { Game } from "../../shared/types";
+import fs from "fs";
+import path from "path";
 
 export const MESEN_VERSION = '2.1.1';
 export const RMG_VERSION = '0.6.5';
@@ -120,6 +122,39 @@ export const ENGINES: Record<string, EngineDefinition> = {
     getLaunchCommand: (game, binPath) => [binPath, "--nogui", game.filePath],
   },
 
+  duckstation: {
+    engineId: "duckstation",
+    name: "DuckStation",
+    consoles: ["ps1"],
+    downloads: {
+      win32: "https://github.com/stenzek/duckstation/releases/latest/download/duckstation-windows-x64-release.zip",
+      darwin: "https://github.com/stenzek/duckstation/releases/latest/download/duckstation-mac-release.zip",
+      linux: "https://github.com/stenzek/duckstation/releases/latest/download/DuckStation-x64.AppImage",
+    },
+    binaries: {
+      win32: "duckstation-qt-x64-ReleaseLTCG.exe",
+      darwin: "DuckStation.app/Contents/MacOS/DuckStation",
+      linux: "DuckStation-x64.AppImage",
+    },
+    getLaunchCommand: (game, binPath) => {
+      let gamePath = game.filePath;
+
+      if (fs.existsSync(gamePath) && fs.statSync(gamePath).isDirectory()) {
+        const files = fs.readdirSync(gamePath);
+        const cueFile = files.find(f => f.toLowerCase().endsWith('.cue'));
+        if (cueFile) {
+          gamePath = path.join(gamePath, cueFile);
+        }
+      }
+
+      return [
+        binPath,
+        "--",
+        gamePath,
+      ];
+    },
+  },
+
   pcsx2: {
     engineId: "pcsx2",
     name: "PCSX2",
@@ -136,7 +171,6 @@ export const ENGINES: Record<string, EngineDefinition> = {
     },
     getLaunchCommand: (game, binPath) => [
       binPath,
-      // "-fullscreen",
       "-nogui",
       "--",
       game.filePath,
