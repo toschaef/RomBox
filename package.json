@@ -1,7 +1,7 @@
 {
   "name": "rombox",
   "productName": "rombox",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "description": "My Electron application description",
   "main": ".webpack/main",
   "config": {
