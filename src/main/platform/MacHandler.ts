@@ -33,7 +33,7 @@ export class MacHandler implements PlatformHandler {
       return;
     }
 
-    if ([".7z", ".tar", ".gz", ".rar"].includes(ext)) {
+    if ([".7z", ".tar", ".gz", ".xz", ".rar"].includes(ext)) {
       console.log(`[Mac] 7z extract: ${path.basename(filePath)} -> ${destDir}`);
       await Extractor.extract7z(filePath, destDir);
       return;
@@ -125,6 +125,7 @@ export class MacHandler implements PlatformHandler {
       path.join(home, "Library", "Application Support", "Dolphin"),
       path.join(home, "Library", "Application Support", "azahar"),
       path.join(home, "Library", "Preferences", "melonDS"),
+      path.join(home, "Library", "Application Support", "PCSX2"),
     ];
 
     for (const p of pathsToDelete) {
@@ -145,14 +146,18 @@ export class MacHandler implements PlatformHandler {
     };
 
     if (binaryPath.includes(".app")) {
-      const appPath = this.getAppBundlePath(binaryPath);
-      if (!appPath) throw new Error(`Could not find app bundle in path: ${binaryPath}`);
+      let executablePath = binaryPath;
 
-      const bundleName = path.basename(appPath, ".app");
-      const wrapperPath = path.join(appPath, "Contents", "MacOS", bundleName);
+      if (!fs.existsSync(binaryPath)) {
+        const appPath = this.getAppBundlePath(binaryPath);
+        if (!appPath) throw new Error(`Could not find app bundle in path: ${binaryPath}`);
 
-      console.log(`[Mac] Launch app executable: ${wrapperPath}`);
-      return spawn(wrapperPath, args, { detached: true, stdio: ["ignore", "pipe", "pipe"], env });
+        const bundleName = path.basename(appPath, ".app");
+        executablePath = path.join(appPath, "Contents", "MacOS", bundleName);
+      }
+
+      console.log(`[Mac] Launch app executable: ${executablePath}`);
+      return spawn(executablePath, args, { detached: true, stdio: ["ignore", "pipe", "pipe"], env });
     }
 
     return spawn(binaryPath, args, { detached: true, stdio: ["ignore", "pipe", "pipe"], env });
@@ -172,29 +177,33 @@ export class MacHandler implements PlatformHandler {
         return path.join(home, "Library", "Preferences", "melonDS");
       case "azahar":
         return path.join(home, "Library", "Application Support", "Azahar", "config");
+      case "pcsx2":
+        return path.join(home, "Library", "Application Support", "PCSX2", "inis");
       default:
-        throw new Error("[Mac] Emulator with ID not found");
+        throw new Error(`[Mac] Emulator config path not found for: ${engineId}`);
     }
   }
 
-    getEmulatorBasePath(engineId: EngineID): string {
-      const home = homedir();
+  getEmulatorBasePath(engineId: EngineID): string {
+    const home = homedir();
 
-      switch (engineId) {
-        case "dolphin":
-          return path.join(home, "Library", "Application Support", "Dolphin");
-        case "mesen":
-          return path.join(home, "Library", "Application Support", "Mesen2");
-        case "ares":
-          return path.join(home, "Library", "Application Support", "ares");
-        case "melonds":
-          return path.join(home, "Library", "Preferences", "melonDS");
-        case "azahar":
-          return path.join(home, "Library", "Application Support", "Azahar");
-        default:
-          throw new Error("[Mac] Emulator with ID not found");
-      }
+    switch (engineId) {
+      case "dolphin":
+        return path.join(home, "Library", "Application Support", "Dolphin");
+      case "mesen":
+        return path.join(home, "Library", "Application Support", "Mesen2");
+      case "ares":
+        return path.join(home, "Library", "Application Support", "ares");
+      case "melonds":
+        return path.join(home, "Library", "Preferences", "melonDS");
+      case "azahar":
+        return path.join(home, "Library", "Application Support", "Azahar");
+      case "pcsx2":
+        return path.join(home, "Library", "Application Support", "PCSX2");
+      default:
+        throw new Error(`[Mac] Emulator base path not found for: ${engineId}`);
     }
+  }
 
   getPlatformId(): "macos" {
     return "macos";

@@ -7,6 +7,7 @@ export const ARES_VERSION = '146';
 export const MELON_VERSION = '1.1';
 export const AZAHAR_VERSION = '2123.3';
 export const DOLPHIN_VERSION = '2407';
+export const PCSX2_VERSION = 'v2.6.2';
 
 export const ENGINES: Record<string, EngineDefinition> = {
   mesen: {
@@ -117,5 +118,28 @@ export const ENGINES: Record<string, EngineDefinition> = {
       linux: `RMG-Portable-Linux64-v${RMG_VERSION}.AppImage`,
     },
     getLaunchCommand: (game, binPath) => [binPath, "--nogui", game.filePath],
+  },
+
+  pcsx2: {
+    engineId: "pcsx2",
+    name: "PCSX2",
+    consoles: ["ps2"],
+    downloads: {
+      win32: `https://github.com/PCSX2/pcsx2/releases/download/${PCSX2_VERSION}/pcsx2-${PCSX2_VERSION}-windows-x64-Qt.7z`,
+      darwin: `https://github.com/PCSX2/pcsx2/releases/download/${PCSX2_VERSION}/pcsx2-${PCSX2_VERSION}-macos-Qt.tar.xz`,
+      linux: `https://github.com/PCSX2/pcsx2/releases/download/${PCSX2_VERSION}/pcsx2-${PCSX2_VERSION}-linux-appimage-x64-Qt.AppImage`,
+    },
+    binaries: {
+      win32: "pcsx2-qt.exe",
+      darwin: "PCSX2-v2.6.2.app/Contents/MacOS/PCSX2",
+      linux: `pcsx2-${PCSX2_VERSION}-linux-appimage-x64-Qt.AppImage`,
+    },
+    getLaunchCommand: (game, binPath) => [
+      binPath,
+      // "-fullscreen",
+      "-nogui",
+      "--",
+      game.filePath,
+    ],
   },
 };

@@ -5,6 +5,7 @@ import { AresConfigurator } from './AresConfigurator';
 import { MesenConfigurator } from './MesenConfigurator';
 import { MelonDSConfigurator } from './MelonDSConfigurator';
 import { AzaharConfigurator } from './AzaharConfigurator';
+import { PCSX2Configurator } from './PCSX2Configurator';
 import type { Game } from '../../../shared/types';
 
 export const getConfigurator = (game: Game): EmulatorConfigurator | null => {
@@ -32,8 +33,11 @@ export const getConfigurator = (game: Game): EmulatorConfigurator | null => {
       if (IS_MAC) {
         return new AresConfigurator();
       } else {
-        return null; 
+        return null;
       }
+
+    case 'ps2':
+      return new PCSX2Configurator();
 
     default:
       return null;

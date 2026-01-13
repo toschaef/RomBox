@@ -49,6 +49,7 @@ const PRIMARY_CONSOLE_FOR_EMULATOR: Record<EngineID, ConsoleID> = {
   ares: "n64",
   rmg: "n64",
   mesen: "snes",
+  pcsx2: "ps2",
 };
 
 export default function Engines() {
@@ -390,7 +391,7 @@ export default function Engines() {
                               void doRepair(row);
                             }}
                             disabled={isBusy || action.kind === "working"}
-                            className={clsx( "w-full text-left px-4 py-3 text-base font-bold transition-colors", "text-fg-primary hover:bg-bg-muted", (isBusy || action.kind === "working") && "opacity-60 cursor-not-allowed" )}
+                            className={clsx("w-full text-left px-4 py-3 text-base font-bold transition-colors", "text-fg-primary hover:bg-bg-muted", (isBusy || action.kind === "working") && "opacity-60 cursor-not-allowed")}
                           >
                             Repair
                           </button>
@@ -403,14 +404,14 @@ export default function Engines() {
                               setMenuOpenFor(null);
                               void doDelete(row);
                             }}
-                           disabled={isBusy || action.kind === "working"}
-                           className={clsx("w-full text-left px-4 py-3 text-base font-bold transition-colors", "text-fg-primary hover:bg-bg-muted", (isBusy || action.kind === "working") && "opacity-60 cursor-not-allowed")}
+                            disabled={isBusy || action.kind === "working"}
+                            className={clsx("w-full text-left px-4 py-3 text-base font-bold transition-colors", "text-fg-primary hover:bg-bg-muted", (isBusy || action.kind === "working") && "opacity-60 cursor-not-allowed")}
                           >
                             Uninstall
                           </button>
                         </div>
                       ) : null}
-                      </div>
+                    </div>
                   ) : null}
 
                   {row.status === "unsupported" ? (

@@ -86,7 +86,9 @@ function writeCachedLearned(cachePath: string, learned: AzaharLearnedSDL): void 
   try {
     fs.mkdirSync(path.dirname(cachePath), { recursive: true });
     fs.writeFileSync(cachePath, JSON.stringify(learned, null, 2), "utf-8");
-  } catch {}
+  } catch (err) {
+    void err;
+  }
 }
 
 const REQUIRED_BUTTON_KEYS = [
@@ -210,7 +212,7 @@ export class AzaharConfigurator implements EmulatorConfigurator {
     patches.push({ kind: "ini-set", section: AZAHAR.sections.ui, key: "Paths\\language\\default", value: "false" });
 
     patches.push({ kind: "ini-set", section: "Miscellaneous", key: "check_for_update_on_start", value: "false" });
-    patches.push({ kind: "ini-set", section: "Miscellaneous", key: "check_for_update_on_start\\default", value: "false" }); 
+    patches.push({ kind: "ini-set", section: "Miscellaneous", key: "check_for_update_on_start\\default", value: "false" });
 
     patches.push({ kind: "ini-set", section: "UI", key: "showStatusBar", value: "false" });
     patches.push({ kind: "ini-set", section: "UI", key: "showStatusBar\\default", value: "false" });
@@ -222,11 +224,13 @@ export class AzaharConfigurator implements EmulatorConfigurator {
     const updates = patchesToIniUpdates(patches);
     const rawControls = updates[AZAHAR.sections.controls] ?? {};
     const uiUpdates = updates[AZAHAR.sections.ui] ?? {};
+    const miscUpdates = updates["Miscellaneous"] ?? {};
 
     const controls = buildControlsSection({ rawControls, preKV });
 
     IniEditor.overwriteSection(qtIniPath, "Controls", controls, { format: "compact" });
     IniEditor.updateIni(qtIniPath, { UI: uiUpdates }, { format: "compact" });
+    IniEditor.updateIni(qtIniPath, { Miscellaneous: miscUpdates }, { format: "compact" });
 
     const postText = readTextIfExists(qtIniPath);
     const postControlsText = extractIniSection(postText, "Controls");

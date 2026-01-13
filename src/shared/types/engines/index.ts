@@ -1,7 +1,7 @@
 import type { Game, ConsoleID, Platform } from '..'
 import type { BiosConfig, BiosConfigRuntime } from "../bios"
 
-export type EngineID = 'ares' | 'azahar' |  'dolphin' | 'melonds' | 'mesen' | 'rmg';
+export type EngineID = 'ares' | 'azahar' | 'dolphin' | 'melonds' | 'mesen' | 'pcsx2' | 'rmg';
 
 export interface EngineConfig {
   id: ConsoleID;
@@ -24,7 +24,7 @@ export interface EngineConfig {
   dependencies?: EngineDependency[];
 
   // runtime
-  detect: (buffer: Buffer) => boolean; 
+  detect: (buffer: Buffer) => boolean;
   getLaunchCommand: (game: Game, emulatorPath: string) => string[];
   postLaunch?: () => void;
 }

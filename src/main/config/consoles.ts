@@ -23,11 +23,11 @@ export const CONSOLES: Record<ConsoleID, ConsoleDefinition> = {
       required: false,
       installDir: path.join(osHandler.getEmulatorBasePath('mesen'), "Firmware"),
       files: [
-        { filename: "dsp1.rom",  description: "DSP1 firmware",  level: "required", gameSpecific: true },
+        { filename: "dsp1.rom", description: "DSP1 firmware", level: "required", gameSpecific: true },
         { filename: "dsp1b.rom", description: "DSP1B firmware", level: "required", gameSpecific: true },
-        { filename: "dsp2.rom",  description: "DSP2 firmware",  level: "required", gameSpecific: true },
-        { filename: "dsp3.rom",  description: "DSP3 firmware",  level: "required", gameSpecific: true },
-        { filename: "dsp4.rom",  description: "DSP4 firmware",  level: "required", gameSpecific: true },
+        { filename: "dsp2.rom", description: "DSP2 firmware", level: "required", gameSpecific: true },
+        { filename: "dsp3.rom", description: "DSP3 firmware", level: "required", gameSpecific: true },
+        { filename: "dsp4.rom", description: "DSP4 firmware", level: "required", gameSpecific: true },
         { filename: "st010.rom", description: "ST010 firmware", level: "required", gameSpecific: true },
         { filename: "st011.rom", description: "ST011 firmware", level: "required", gameSpecific: true },
       ],
@@ -116,5 +116,31 @@ export const CONSOLES: Record<ConsoleID, ConsoleDefinition> = {
     consoleId: "wii",
     acceptedExtensions: [".iso", ".wbfs", ".rvz"],
     detect: (buffer) => buffer.length >= 0x20 && buffer.readUInt32BE(0x18) === 0x5d1c9ea3,
+  },
+
+  ps2: {
+    consoleId: "ps2",
+    acceptedExtensions: [".iso", ".bin", ".chd"],
+    detect: (buffer) => {
+      if (buffer.length < 0x8010) return false;
+      const marker = buffer.slice(0x8008, 0x8013).toString('ascii');
+      return marker === 'PLAYSTATION';
+    },
+    bios: {
+      required: true,
+      label: "PS2 BIOS (required for emulation)",
+      installDir: path.join(osHandler.getEmulatorBasePath('pcsx2'), "bios"),
+      files: [
+        { filename: "scph10000.bin", description: "PS2 BIOS (Japan v1.0)", level: "warning" },
+        { filename: "scph30001.bin", description: "PS2 BIOS (USA v1.2)", level: "warning" },
+        { filename: "scph30004.bin", description: "PS2 BIOS (Europe v1.2)", level: "warning" },
+        { filename: "scph39001.bin", description: "PS2 BIOS (USA v1.6)", level: "warning" },
+        { filename: "scph39004.bin", description: "PS2 BIOS (Europe v1.6)", level: "warning" },
+        { filename: "scph70012.bin", description: "PS2 BIOS (USA v2.0)", level: "warning" },
+        { filename: "scph77001.bin", description: "PS2 BIOS (USA v2.2)", level: "warning" },
+        { filename: "bios.bin", description: "PS2 BIOS (generic)", level: "warning" },
+        { filename: "ps2_bios.bin", description: "PS2 BIOS (generic)", level: "warning" },
+      ],
+    },
   },
 };

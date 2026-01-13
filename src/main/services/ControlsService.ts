@@ -3,7 +3,7 @@ import { getDB } from "../data/db";
 import { JsonEditor } from "../utils/editors/json";
 import type { ControlsProfile, ConsoleLayout, ControllerProfileMeta, PlayerBindings } from "../../shared/types/controls";
 import type { ConsoleID } from "../../shared/types";
-import { createDefaultProfileShape , makeDefaultConsoleBindings } from "../../shared/controls/layoutDefaults";
+import { createDefaultProfileShape, makeDefaultConsoleBindings } from "../../shared/controls/layoutDefaults";
 
 type RawProfileRow = {
   id: string;
@@ -50,6 +50,7 @@ const ALL_CONSOLE_IDS: ConsoleID[] = [
   "3ds",
   "gc",
   "wii",
+  "ps2",
 ];
 
 function assertConsoleID(x: string): asserts x is ConsoleID {
@@ -170,9 +171,9 @@ export class ControlsService {
 
     const basePayload = payload.copyFromId
       ? (() => {
-          const src = this.getProfile(payload.copyFromId);
-          return { preferredDevice: src.preferredDevice, player1: src.player1 };
-        })()
+        const src = this.getProfile(payload.copyFromId);
+        return { preferredDevice: src.preferredDevice, player1: src.player1 };
+      })()
       : createDefaultProfileShape();
 
     db.transaction(() => {

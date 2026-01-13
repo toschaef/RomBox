@@ -18,31 +18,31 @@ export type ConsoleControlItem =
     id: "move" | "look" | "dpad" | "c" | "special";
     label: string;
     section: "leftStick" | "dpad" | "rightStick" | "special";
-    }
+  }
   | {
-      kind: "digital";
-      id:
-        | "face.primary"
-        | "face.secondary"
-        | "face.tertiary"
-        | "face.quaternary"
-        | "shoulders.bumperL"
-        | "shoulders.bumperR"
-        | "shoulders.triggerL"
-        | "shoulders.triggerR"
-        | "system.start"
-        | "system.select"
-        | "z"
-        | "1"
-        | "2"
-        | "special.c"
-        | "special.z"
-        | "special.nunchuckZ"
-        | "special.nunchuckC";
-      label: string;
-      icon: string;
-      section: SectionKey;
-    };
+    kind: "digital";
+    id:
+    | "face.primary"
+    | "face.secondary"
+    | "face.tertiary"
+    | "face.quaternary"
+    | "shoulders.bumperL"
+    | "shoulders.bumperR"
+    | "shoulders.triggerL"
+    | "shoulders.triggerR"
+    | "system.start"
+    | "system.select"
+    | "z"
+    | "1"
+    | "2"
+    | "special.c"
+    | "special.z"
+    | "special.nunchuckZ"
+    | "special.nunchuckC";
+    label: string;
+    icon: string;
+    section: SectionKey;
+  };
 
 export const CONSOLE_LAYOUTS: Partial<Record<ConsoleID, ConsoleControlItem[]>> = {
   nes: [
@@ -217,6 +217,25 @@ export const CONSOLE_LAYOUTS: Partial<Record<ConsoleID, ConsoleControlItem[]>> =
     { kind: "digital", id: "special.nunchuckZ", label: "Nunchuck Z", icon: btnZL, section: "special" },
   ],
 
+  ps2: [
+    { kind: "group", id: "move", label: "Left Stick", section: "leftStick" },
+    { kind: "group", id: "c", label: "Right Stick", section: "rightStick" },
+    { kind: "group", id: "dpad", label: "D-Pad", section: "dpad" },
+
+    { kind: "digital", id: "face.primary", label: "Cross", icon: btnA, section: "face" },
+    { kind: "digital", id: "face.secondary", label: "Circle", icon: btnB, section: "face" },
+    { kind: "digital", id: "face.tertiary", label: "Square", icon: btnX, section: "face" },
+    { kind: "digital", id: "face.quaternary", label: "Triangle", icon: btnY, section: "face" },
+
+    { kind: "digital", id: "shoulders.bumperL", label: "L1", icon: btnL, section: "shoulders" },
+    { kind: "digital", id: "shoulders.bumperR", label: "R1", icon: btnR, section: "shoulders" },
+    { kind: "digital", id: "shoulders.triggerL", label: "L2", icon: btnZL, section: "shoulders" },
+    { kind: "digital", id: "shoulders.triggerR", label: "R2", icon: btnZR, section: "shoulders" },
+
+    { kind: "digital", id: "system.start", label: "Start", icon: btnStart, section: "system" },
+    { kind: "digital", id: "system.select", label: "Select", icon: btnSelect, section: "system" },
+  ],
+
 };
 
 const FALLBACK_COMMON: ConsoleControlItem[] = [
@@ -254,4 +273,5 @@ export const CONSOLE_OPTIONS: { id: ConsoleID; name: string }[] = [
   { id: "3ds", name: "Nintendo 3DS" },
   { id: "gc", name: "GameCube" },
   { id: "wii", name: "Wii" },
+  { id: "ps2", name: "PlayStation 2" },
 ];
