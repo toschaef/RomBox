@@ -14,7 +14,7 @@ import { BiosService } from './BiosService';
 import AdmZip from 'adm-zip';
 
 export type ScanResult =
-  | { type: 'game'; consoleId: ConsoleID; engineId: EngineID; filePath: string; zipEntryName?: string }
+  | { type: 'game'; consoleId: ConsoleID; engineId: EngineID; filePath: string; zipEntryName?: string; isMultiFile?: boolean }
   | { type: 'bios'; consoleId: ConsoleID; engineId: EngineID; filePath: string; zipEntryName?: string };
 
 interface NormalizedEntry {
@@ -109,6 +109,20 @@ const getArchiveEntries = async (filePath: string): Promise<NormalizedEntry[]> =
   return [];
 };
 
+const identifyMultiFileGame = async (entries: NormalizedEntry[]): Promise<ConsoleID | undefined> => {
+  const binEntries = entries.filter(e => e.name.toLowerCase().endsWith('.bin'));
+  if (binEntries.length === 0) return undefined;
+
+  const totalBinSize = binEntries.reduce((sum, e) => sum + e.size, 0);
+
+  const PS2_THRESHOLD = 800 * 1024 * 1024;
+
+  if (totalBinSize > PS2_THRESHOLD) {
+    return 'ps2';
+  }
+  return 'ps1';
+};
+
 export const ScannerService = {
   scanPath: async (inputPath: string): Promise<ScanResult[]> => {
     try {
@@ -198,6 +212,25 @@ export const ScannerService = {
           }];
         }
 
+        const cueEntry = entries.find(e => e.name.toLowerCase().endsWith('.cue'));
+        const binEntries = entries.filter(e => e.name.toLowerCase().endsWith('.bin'));
+
+        if (cueEntry && binEntries.length > 0) {
+          console.log(`[Scanner] Detected multi-file game (cue/bin) in archive: ${cueEntry.name}`);
+          const consoleId = await identifyMultiFileGame(entries) as ConsoleID;
+          if (consoleId) {
+            const engineId = getEngineIdFromConsoleId(consoleId);
+            return [{
+              type: 'game',
+              consoleId,
+              engineId,
+              filePath,
+              zipEntryName: cueEntry.name,
+              isMultiFile: true,
+            }];
+          }
+        }
+
         for (const entry of entries) {
           const entryName = path.basename(entry.name).toLowerCase();
           const entryExt = path.extname(entry.name).toLowerCase();
@@ -227,6 +260,11 @@ export const ScannerService = {
             } catch (nestedErr) {
               console.warn(`[Scanner] Failed to process nested archive ${entry.name}:`, nestedErr.message);
             }
+            continue;
+          }
+
+          // Skip .bin files if they're part of a cue/bin pair (already handled above)
+          if (entryExt === '.bin' && cueEntry) {
             continue;
           }
 
@@ -282,9 +320,63 @@ export const ScannerService = {
     const userDataPath = app.getPath('userData');
     const romsDir = path.join(userDataPath, 'roms', scanResult.consoleId);
 
-    // handle ps1 import
+    if (scanResult.isMultiFile && scanResult.zipEntryName) {
+      console.log('[Import] Importing multi-file game from archive');
+      const archiveBasename = path.basename(scanResult.filePath, path.extname(scanResult.filePath));
+      let destDir = path.join(romsDir, archiveBasename);
+
+      if (fs.existsSync(destDir)) {
+        destDir = path.join(romsDir, `${archiveBasename}_${Date.now()}`);
+      }
+
+      try {
+        fs.mkdirSync(destDir, { recursive: true });
+
+        const ext = path.extname(scanResult.filePath).toLowerCase();
+        if (ext === '.7z') {
+          await Extractor.extract7z(scanResult.filePath, destDir);
+        } else {
+          const zip = new AdmZip(scanResult.filePath);
+          zip.extractAllTo(destDir, true);
+        }
+
+        const findCueFile = (dir: string): string | null => {
+          const files = fs.readdirSync(dir, { withFileTypes: true });
+          for (const f of files) {
+            const fullPath = path.join(dir, f.name);
+            if (f.isDirectory()) {
+              const found = findCueFile(fullPath);
+              if (found) return found;
+            } else if (f.name.toLowerCase().endsWith('.cue')) {
+              return fullPath;
+            }
+          }
+          return null;
+        };
+
+        const cueFilePath = findCueFile(destDir);
+        if (!cueFilePath) {
+          throw new Error('Could not find .cue file in extracted archive');
+        }
+
+        console.log(`[Import] Extracted multi-file game to: ${destDir}, cue: ${cueFilePath}`);
+
+        return {
+          id: crypto.randomUUID(),
+          title,
+          filePath: cueFilePath,
+          consoleId: scanResult.consoleId,
+          engineId: getEngineIdFromConsoleId(scanResult.consoleId),
+        };
+      } catch (err: any) {
+        console.error("[Import] Failed to import multi-file game:", err?.message ?? err);
+        throw new Error("Could not import multi-file game from archive.");
+      }
+    }
+
+    // handle ps1/ps2 directory import (loose files)
     const isDirectory = fs.existsSync(scanResult.filePath) && fs.statSync(scanResult.filePath).isDirectory();
-    if (scanResult.consoleId === 'ps1' && isDirectory) {
+    if ((scanResult.consoleId === 'ps1' || scanResult.consoleId === 'ps2') && isDirectory) {
       const dirName = path.basename(scanResult.filePath);
       let destDir = path.join(romsDir, dirName);
 
@@ -295,7 +387,7 @@ export const ScannerService = {
       try {
         fs.mkdirSync(destDir, { recursive: true });
 
-        // Copy all files from source directory
+        //cCopy all files from source directory
         const files = fs.readdirSync(scanResult.filePath);
         for (const file of files) {
           const srcFile = path.join(scanResult.filePath, file);
@@ -306,10 +398,10 @@ export const ScannerService = {
           }
         }
 
-        console.log(`[Import] Copied PS1 game directory: ${destDir}`);
-      } catch (err: any) {
-        console.error("[Import] Failed to copy PS1 directory:", err?.message ?? err);
-        throw new Error("Could not import PS1 game directory.");
+        console.log(`[Import] Copied game directory: ${destDir}`);
+      } catch (err) {
+        console.error("[Import] Failed to copy game directory:", err?.message ?? err);
+        throw new Error("Could not import game directory.");
       }
 
       return {

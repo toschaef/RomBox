@@ -48,10 +48,10 @@ export const Extractor = {
     if (ext === '.7z') {
       const tempDir = path.join(app.getPath('temp'), 'rombox_7z_' + crypto.randomUUID());
       if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
-      
+
       try {
         await Extractor.extract7z(sourcePath, tempDir, zipEntryName);
-        
+
         const extractedPath = path.join(tempDir, zipEntryName);
         if (!fs.existsSync(extractedPath)) throw new Error(`7z Extraction failed: ${zipEntryName} not found`);
 
@@ -65,7 +65,7 @@ export const Extractor = {
       } finally {
         try { fs.rmSync(tempDir, { recursive: true, force: true }); } catch (err) { void err; }
       }
-    } 
+    }
     else {
       await extractZipEntry(sourcePath, zipEntryName, destPath);
     }
@@ -79,12 +79,33 @@ export const Extractor = {
       console.log(`[Extractor] Spawning 7z: ${args.join(' ')}`);
       const child = spawn(pathTo7zip, args);
 
-      child.on('close', (code) => {
-        if (code === 0) resolve();
-        else reject(new Error(`7-Zip exited with code ${code}`));
+      let stdout = '';
+      let stderr = '';
+
+      child.stdout.on('data', (data) => {
+        stdout += data.toString();
       });
-      
-      child.on('error', (err) => reject(err));
+
+      child.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      child.on('close', (code) => {
+        if (code === 0) {
+          console.log(`[Extractor] 7z extraction completed successfully`);
+          resolve();
+        } else {
+          console.error(`[Extractor] 7z extraction failed with code ${code}`);
+          console.error(`[Extractor] stdout: ${stdout}`);
+          console.error(`[Extractor] stderr: ${stderr}`);
+          reject(new Error(`7-Zip exited with code ${code}: ${stderr || stdout}`));
+        }
+      });
+
+      child.on('error', (err) => {
+        console.error(`[Extractor] 7z spawn error:`, err);
+        reject(err);
+      });
     });
   },
 
@@ -99,7 +120,10 @@ export const Extractor = {
 
         const entries: SevenZipEntry[] = [];
         const blocks = stdout.split(/(\r\n|\r|\n){2}/);
-        
+        const archiveBasename = path.basename(filePath);
+
+        console.log(`[Extractor] list7z: Found ${blocks.length} blocks in archive listing`);
+
         for (const block of blocks) {
           const rawEntry: Record<string, string> = {};
 
@@ -110,14 +134,23 @@ export const Extractor = {
             }
           });
 
-          if (rawEntry.Path) {
-            entries.push({ 
-              file: rawEntry.Path, 
+          if (rawEntry.Path && rawEntry.Size !== undefined && rawEntry.Size !== '') {
+            const entryBasename = path.basename(rawEntry.Path);
+
+            if (entryBasename === archiveBasename && rawEntry.Path.includes('/')) {
+              continue;
+            }
+
+            console.log(`[Extractor] list7z entry: ${rawEntry.Path} (${rawEntry.Size} bytes)`);
+            entries.push({
+              file: rawEntry.Path,
               attr: rawEntry.Attributes,
               size: rawEntry.Size,
             });
           }
         }
+
+        console.log(`[Extractor] list7z: Total entries found: ${entries.length}`);
         resolve(entries);
       });
     });

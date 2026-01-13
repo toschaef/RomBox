@@ -87,6 +87,7 @@ export class DuckStationConfigurator extends BaseConfigurator {
 
     const iniConfig: Record<string, Record<string, string>> = {
       Main: {
+        SetupWizardIncomplete: "false",
         SettingsVersion: "3",
         EmulationSpeed: "1.0",
         FastForwardSpeed: "0.0",
