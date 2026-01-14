@@ -40,7 +40,6 @@ export const Extractor = {
       return;
     }
 
-    console.log(`[Extractor] Extracting ${zipEntryName}...`);
     const ext = path.extname(sourcePath).toLowerCase();
     const destDir = path.dirname(destPath);
     if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
@@ -76,7 +75,6 @@ export const Extractor = {
       const args = ['x', archivePath, `-o${outputDir}`, '-y'];
       if (fileToExtract) args.push(fileToExtract);
 
-      console.log(`[Extractor] Spawning 7z: ${args.join(' ')}`);
       const child = spawn(pathTo7zip, args);
 
       let stdout = '';
@@ -92,7 +90,6 @@ export const Extractor = {
 
       child.on('close', (code) => {
         if (code === 0) {
-          console.log(`[Extractor] 7z extraction completed successfully`);
           resolve();
         } else {
           console.error(`[Extractor] 7z extraction failed with code ${code}`);
@@ -122,8 +119,6 @@ export const Extractor = {
         const blocks = stdout.split(/(\r\n|\r|\n){2}/);
         const archiveBasename = path.basename(filePath);
 
-        console.log(`[Extractor] list7z: Found ${blocks.length} blocks in archive listing`);
-
         for (const block of blocks) {
           const rawEntry: Record<string, string> = {};
 
@@ -141,7 +136,6 @@ export const Extractor = {
               continue;
             }
 
-            console.log(`[Extractor] list7z entry: ${rawEntry.Path} (${rawEntry.Size} bytes)`);
             entries.push({
               file: rawEntry.Path,
               attr: rawEntry.Attributes,
@@ -150,7 +144,6 @@ export const Extractor = {
           }
         }
 
-        console.log(`[Extractor] list7z: Total entries found: ${entries.length}`);
         resolve(entries);
       });
     });

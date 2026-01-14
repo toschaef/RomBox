@@ -11,7 +11,10 @@ import { detectConsoleFromHeader } from '../utils/identifier';
 import { scanZipEntries } from '../utils/fsUtils';
 import { getEngineIdFromConsoleId } from '../../shared/constants';
 import { BiosService } from './BiosService';
+import { Logger } from '../utils/logger';
 import AdmZip from 'adm-zip';
+
+const log = Logger.create('ScannerService');
 
 export type ScanResult =
   | { type: 'game'; consoleId: ConsoleID; engineId: EngineID; filePath: string; zipEntryName?: string; isMultiFile?: boolean }
@@ -174,13 +177,13 @@ export const ScannerService = {
 
       return await ScannerService.scanFile(inputPath);
     } catch (err: any) {
-      console.warn(`[Scanner] Error accessing path ${inputPath}:`, err?.message ?? err);
+      log.warn('Error accessing path', { path: inputPath, error: err?.message ?? err });
       return [];
     }
   },
 
   scanFile: async (filePath: string): Promise<ScanResult[]> => {
-    console.log(`[Scanner] Scanning file: ${filePath}`);
+    log.debug('Scanning file', { filePath });
     const ext = path.extname(filePath).toLowerCase();
     const filename = path.basename(filePath);
     const results: ScanResult[] = [];
@@ -216,7 +219,7 @@ export const ScannerService = {
         const binEntries = entries.filter(e => e.name.toLowerCase().endsWith('.bin'));
 
         if (cueEntry && binEntries.length > 0) {
-          console.log(`[Scanner] Detected multi-file game (cue/bin) in archive: ${cueEntry.name}`);
+          log.info('Detected multi-file game (cue/bin) in archive', { cueEntry: cueEntry.name });
           const consoleId = await identifyMultiFileGame(entries) as ConsoleID;
           if (consoleId) {
             const engineId = getEngineIdFromConsoleId(consoleId);
@@ -248,7 +251,7 @@ export const ScannerService = {
           }
 
           if (['.zip', '.7z'].includes(entryExt)) {
-            console.log(`[Scanner] Found nested archive: ${entry.name}`);
+            log.debug('Found nested archive', { entry: entry.name });
 
             const tempNestedZip = path.join(app.getPath('temp'), `rombox_nested_${Date.now()}_${path.basename(entry.name)}`);
 
@@ -257,13 +260,12 @@ export const ScannerService = {
 
               const nestedResults = await ScannerService.scanFile(tempNestedZip);
               results.push(...nestedResults);
-            } catch (nestedErr) {
-              console.warn(`[Scanner] Failed to process nested archive ${entry.name}:`, nestedErr.message);
+            } catch (nestedErr: any) {
+              log.warn('Failed to process nested archive', { entry: entry.name, error: nestedErr?.message });
             }
             continue;
           }
 
-          // Skip .bin files if they're part of a cue/bin pair (already handled above)
           if (entryExt === '.bin' && cueEntry) {
             continue;
           }
@@ -285,8 +287,8 @@ export const ScannerService = {
         }
 
         return results;
-      } catch (err) {
-        console.warn(`[Scanner] Failed to inspect archive ${ext}:`, err.message);
+      } catch (err: any) {
+        log.warn('Failed to inspect archive', { ext, error: err?.message });
         return [];
       }
     }
@@ -298,15 +300,15 @@ export const ScannerService = {
         const engineId = getEngineIdFromConsoleId(consoleId)
         return [{ type: 'game', consoleId, engineId, filePath }];
       }
-    } catch (err) {
-      console.warn("[Scanner] Error checking raw file:", err.message);
+    } catch (err: any) {
+      log.warn('Error checking raw file', { error: err?.message });
     }
 
     return [];
   },
 
   importGame: async (scanResult: ScanResult & { type: 'game' }): Promise<Game> => {
-    console.log('[Import] Starting import');
+    log.info('Importing game', { consoleId: scanResult.consoleId, filePath: scanResult.filePath });
     const sourceName = scanResult.zipEntryName ? path.basename(scanResult.zipEntryName) : path.basename(scanResult.filePath);
 
     const title = sourceName
@@ -321,7 +323,7 @@ export const ScannerService = {
     const romsDir = path.join(userDataPath, 'roms', scanResult.consoleId);
 
     if (scanResult.isMultiFile && scanResult.zipEntryName) {
-      console.log('[Import] Importing multi-file game from archive');
+      log.info('Importing multi-file game from archive');
       const archiveBasename = path.basename(scanResult.filePath, path.extname(scanResult.filePath));
       let destDir = path.join(romsDir, archiveBasename);
 
@@ -359,7 +361,7 @@ export const ScannerService = {
           throw new Error('Could not find .cue file in extracted archive');
         }
 
-        console.log(`[Import] Extracted multi-file game to: ${destDir}, cue: ${cueFilePath}`);
+        log.info('Extracted multi-file game', { destDir, cueFilePath });
 
         return {
           id: crypto.randomUUID(),
@@ -369,12 +371,11 @@ export const ScannerService = {
           engineId: getEngineIdFromConsoleId(scanResult.consoleId),
         };
       } catch (err: any) {
-        console.error("[Import] Failed to import multi-file game:", err?.message ?? err);
+        log.error('Failed to import multi-file game', err);
         throw new Error("Could not import multi-file game from archive.");
       }
     }
 
-    // handle ps1/ps2 directory import (loose files)
     const isDirectory = fs.existsSync(scanResult.filePath) && fs.statSync(scanResult.filePath).isDirectory();
     if ((scanResult.consoleId === 'ps1' || scanResult.consoleId === 'ps2') && isDirectory) {
       const dirName = path.basename(scanResult.filePath);
@@ -387,7 +388,6 @@ export const ScannerService = {
       try {
         fs.mkdirSync(destDir, { recursive: true });
 
-        //cCopy all files from source directory
         const files = fs.readdirSync(scanResult.filePath);
         for (const file of files) {
           const srcFile = path.join(scanResult.filePath, file);
@@ -398,9 +398,9 @@ export const ScannerService = {
           }
         }
 
-        console.log(`[Import] Copied game directory: ${destDir}`);
-      } catch (err) {
-        console.error("[Import] Failed to copy game directory:", err?.message ?? err);
+        log.info('Copied game directory', { destDir });
+      } catch (err: any) {
+        log.error('Failed to copy game directory', err);
         throw new Error("Could not import game directory.");
       }
 
@@ -425,7 +425,7 @@ export const ScannerService = {
     try {
       await Extractor.extractToFile(scanResult.filePath, newFilePath, scanResult.zipEntryName);
     } catch (err: any) {
-      console.error("[Import] Failed to import ROM:", err?.message ?? err);
+      log.error('Failed to import ROM', err);
       throw new Error("Could not import file into library.");
     }
 

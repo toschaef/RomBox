@@ -37,8 +37,6 @@ export const TomlEditor = {
     }
 
     fs.writeFileSync(filePath, out.join("\n"));
-
-    console.log(`[TomlKVEditor] root replaced=${replaced} appended=${missing.length} file=${filePath}`);
   },
 
   updateTomlTableKV(filePath: string, table: string, updates: Record<string, string>) {
@@ -106,9 +104,5 @@ export const TomlEditor = {
     }
 
     fs.writeFileSync(filePath, out.join("\n"));
-
-    console.log(
-      `[TomlKVEditor] table=[${table}] replaced=${replaced} appended=${appendedInside} file=${filePath}`
-    );
   },
 };

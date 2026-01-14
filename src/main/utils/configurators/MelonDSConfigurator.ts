@@ -17,8 +17,6 @@ function readMelonJoystickID(filePath: string): number | null {
 
 export class MelonDSConfigurator extends BaseConfigurator {
   async configure(): Promise<void> {
-    console.log("[melonds][config] configure() entered");
-
     const svc = new ControlsService();
     const profile = svc.getDefaultProfile();
 
@@ -42,7 +40,6 @@ export class MelonDSConfigurator extends BaseConfigurator {
     }
 
     if (!hasToml && !hasIni) {
-      console.log("[melonds][config] no config found; creating melonDS.toml scaffold");
       fs.mkdirSync(configDir, { recursive: true });
 
       const scaffold = [
@@ -67,15 +64,12 @@ export class MelonDSConfigurator extends BaseConfigurator {
     const joystickId = profile.melonJoystickId ?? 0;
     const patches = new MelonDSTranslator().translateFromPlayer(p1, ctx, joystickId);
 
-    console.log(`[melonds][config] translated patches=${patches.length}`);
     if (!patches.length) {
       console.warn("[melonds][config] no patches produced; aborting");
       return;
     }
 
     const updatesBySection = patchesToIniUpdates(patches);
-
-    const before = fs.existsSync(targetPath) ? fs.readFileSync(targetPath, "utf-8") : "";
 
     if (targetKind === "toml") {
       for (const [section, kv] of Object.entries(updatesBySection)) {
@@ -87,10 +81,6 @@ export class MelonDSConfigurator extends BaseConfigurator {
     } else {
       IniEditor.updateIni(targetPath, updatesBySection);
     }
-
-    const after = fs.readFileSync(targetPath, "utf-8");
-    console.log(`[melonds][config] wrote=${before !== after} path=${targetPath}`);
-    console.log("[melonds][config] done");
   }
 }
 

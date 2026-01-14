@@ -7,8 +7,11 @@ import type { EngineID, EngineInfo, EngineStatus } from "../../shared/types/engi
 
 import { osHandler } from "../platform";
 import { Downloader } from "../utils/downloader";
+import { Logger } from "../utils/logger";
 import { BiosService } from "./BiosService";
 import { ENGINES } from "../config/engines";
+
+const log = Logger.create('EngineService');
 
 const USERDATA = app.getPath("userData");
 const ENGINES_PATH = path.join(USERDATA, "engines");
@@ -37,7 +40,7 @@ function resolveNativeHelperPath(helperName: string): string | null {
   ];
 
   for (const p of candidates) if (fs.existsSync(p)) return p;
-  console.warn("[EngineService] native helper not found. Tried:\n" + candidates.join("\n"));
+  log.warn('Native helper not found', { helperName, candidates });
   return null;
 }
 
@@ -93,7 +96,9 @@ export const EngineService = {
     const installDirAbs = path.join(ENGINES_PATH, engineId);
 
     try {
-      return await osHandler.resolveBinaryPath(installDirAbs, binaryConfigPath);
+      const resolvedPath = await osHandler.resolveBinaryPath(installDirAbs, binaryConfigPath);
+      log.debug('Engine path resolved', { engineId, resolvedPath });
+      return resolvedPath;
     } catch {
       return null;
     }
@@ -209,22 +214,31 @@ export const EngineService = {
   },
 
   deleteEngine: (engineId: EngineID) => {
+    log.info('Deleting engine', { engineId });
     try {
       const cfg = ENGINES[engineId];
-      if (!cfg) return { success: false, err: "Invalid engineId" };
+      if (!cfg) {
+        log.warn('Invalid engineId for deletion', { engineId });
+        return { success: false, err: "Invalid engineId" };
+      }
       const rombox = path.join(app.getPath("userData"), 'engines', engineId);
       const engine = osHandler.getEmulatorBasePath(engineId);
 
       fs.rmSync(engine, { recursive: true, force: true });
       fs.rmSync(rombox, { recursive: true, force: true });
 
+      log.info('Engine deleted successfully', { engineId });
       return { success: true };
     } catch (err) {
+      log.error('Failed to delete engine', err);
       return { success: false, err: (err as Error).message };
     }
   },
 
   installEngine: async (engineId: EngineID, onProgress: (s: string) => void) => {
+    const installLog = log.child({ engineId });
+    installLog.info('Starting engine installation');
+    
     const cfg = ENGINES[engineId];
     if (!cfg) throw new Error("Invalid Engine");
 
@@ -233,14 +247,17 @@ export const EngineService = {
     if (!url) throw new Error(`Engine not supported on ${platform}`);
 
     const installDirAbs = path.join(ENGINES_PATH, engineId);
+    installLog.info('Installation directory', { installDirAbs });
 
     if (fs.existsSync(installDirAbs)) fs.rmSync(installDirAbs, { recursive: true, force: true });
     fs.mkdirSync(installDirAbs, { recursive: true });
 
     try {
+      installLog.info('Downloading engine', { url });
       onProgress("Downloading");
       const downloadedFilePath = await Downloader.download(url, installDirAbs, { onProgress });
 
+      installLog.info('Extracting archive');
       onProgress("Extracting");
       const stats = fs.statSync(downloadedFilePath);
       if (stats.size < 1024 * 1024) throw new Error("Downloaded file is too small (invalid).");
@@ -254,6 +271,7 @@ export const EngineService = {
       );
 
       if (nestedArchive) {
+        installLog.info('Extracting nested archive', { nestedArchive });
         const nestedPath = path.join(installDirAbs, nestedArchive);
         await osHandler.extractArchive(nestedPath, installDirAbs);
         fs.unlinkSync(nestedPath);
@@ -272,14 +290,15 @@ export const EngineService = {
       }
 
       // install bios from cache
+      installLog.info('Checking BIOS cache for consoles', { consoles: cfg.consoles });
       for (const cid of cfg.consoles) {
         const status = BiosService.getConsoleBiosStatus(cid);
         if (!status.needsBios) continue;
 
         const r = BiosService.ensureBiosInstalledFromCache(cid);
 
-        if (r.copied.length) console.log(`[BIOS] Restored for ${cid}: ${r.copied.join(", ")}`);
-        if (r.missing.length) console.warn(`[BIOS] Missing for ${cid}: ${r.missing.join(", ")}`);
+        if (r.copied.length) installLog.info('BIOS restored from cache', { consoleId: cid, files: r.copied });
+        if (r.missing.length) installLog.warn('BIOS files missing', { consoleId: cid, files: r.missing });
       }
 
       // finalize
@@ -291,14 +310,16 @@ export const EngineService = {
 
       if (engineId === "azahar") {
         const r = installAzaharSdlProbe();
-        if (!r.ok) console.warn("[EngineService][azahar] sdlprobe not installed:", r.reason);
+        if (!r.ok) installLog.warn('SDL probe not installed', { reason: r.reason });
 
         try {
-        BiosService.ensureBiosInstalledFromCache("3ds");
-        } catch (err) {
-          console.warn("[Azahar] cache restore failed:", err.message ?? err);
+          BiosService.ensureBiosInstalledFromCache("3ds");
+        } catch (err: any) {
+          installLog.warn('Azahar cache restore failed', err);
         }
       }
+
+      installLog.info('Engine installation complete');
 
       return { success: true };
     } catch (err) {
@@ -307,15 +328,17 @@ export const EngineService = {
   },
 
   clearEngines: () => {
+    log.info('Clearing all engines');
     try {
       if (fs.existsSync(ENGINES_PATH)) {
         fs.rmSync(ENGINES_PATH, { recursive: true, force: true });
         fs.mkdirSync(ENGINES_PATH);
       }
       osHandler.clearPlatformData();
+      log.info('All engines cleared successfully');
       return { success: true };
     } catch (err) {
-      console.error("Failed to clear engines:", err);
+      log.error('Failed to clear engines', err);
       throw err;
     }
   },

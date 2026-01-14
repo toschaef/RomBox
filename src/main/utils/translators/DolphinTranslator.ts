@@ -57,8 +57,8 @@ function detectDeviceKindFromProfile(profile: ControlsProfile): DeviceKind {
 
   const special = (p1 as any).special;
   if (special && special.type === "wii") {
-    push(special.nunchuckC);
-    push(special.nunchuckZ);
+    // push(special.nunchuckC);
+    // push(special.nunchuckZ);
     push(special.home);
   }
 

@@ -145,7 +145,6 @@ export const BmlEditor = {
     }
 
     const missing = Object.entries(updates).filter(([k]) => !present.has(k));
-    console.log(`[BmlEditor] section=${section} replaced=${replaced} missing=${missing.length} file=${filePath}`);
     if (missing.length) {
       const insertAt = sec2.end;
       const baseIndent = 2;

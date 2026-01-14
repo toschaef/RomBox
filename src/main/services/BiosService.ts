@@ -9,6 +9,9 @@ import { CONSOLES } from "../config/consoles";
 import { getEngineIdFromConsoleId } from "../../shared/constants";
 import { BiosStatus } from "../../shared/types/bios";
 import { getRequiredSnesFirmware } from "../utils/mesen/snesFirmware";
+import { Logger } from "../utils/logger";
+
+const log = Logger.create('BiosService');
 
 const USERDATA = app.getPath("userData");
 
@@ -275,6 +278,7 @@ export const BiosService = {
   },
 
   ensureBiosInstalledFromCache(consoleId: ConsoleID): { copied: string[]; missing: string[] } {
+    log.debug('Ensuring BIOS installed from cache', { consoleId });
     const c = CONSOLES[consoleId];
     if (!c?.bios) return { copied: [], missing: [] };
 
@@ -313,7 +317,7 @@ export const BiosService = {
           copied.push(name);
         } catch (e: any) {
           missing.push(name);
-          console.warn(`[BiosService] Failed to restore 3ds ${name} from cache`, e?.message ?? e);
+          log.warn('Failed to restore 3ds BIOS from cache', { name, error: e?.message ?? e });
         }
       }
 
@@ -323,7 +327,6 @@ export const BiosService = {
     for (const f of c.bios.files) {
       const dest = path.join(firmwareDir, f.filename);
 
-      // Already installed (file or folder)
       if (fs.existsSync(dest)) continue;
 
       const cached = path.join(cacheDir, f.filename);
@@ -332,12 +335,10 @@ export const BiosService = {
         continue;
       }
 
-      // Copy file or directory from cache to firmwareDir
       const st = fs.statSync(cached);
 
       try {
         if (st.isDirectory()) {
-          // ensure parent exists
           ensureDir(path.dirname(dest));
           fs.cpSync(cached, dest, { recursive: true, force: true });
         } else {
@@ -346,9 +347,8 @@ export const BiosService = {
         }
         copied.push(f.filename);
       } catch (err: any) {
-        // treat copy failures as "missing" for purposes of UX
         missing.push(f.filename);
-        console.warn(`[BiosService] Failed to restore from cache: ${f.filename}`, err?.message ?? err);
+        log.warn('Failed to restore BIOS from cache', { filename: f.filename, error: err?.message ?? err });
       }
     }
 
@@ -356,6 +356,7 @@ export const BiosService = {
   },
 
   async installBios(consoleId: ConsoleID, sourcePath: string) {
+    log.info('Installing BIOS', { consoleId, sourcePath });
     const c = CONSOLES[consoleId];
     if (!c?.bios) throw new Error("This console does not require a BIOS.");
 
@@ -385,11 +386,9 @@ export const BiosService = {
         const src = path.join(sourcePath, name);
         if (!fs.existsSync(src)) continue;
 
-        // install into Azahar root (NOT into Azahar/user)
         const destA = path.join(firmwareDir, name);
         const destC = path.join(cacheDir, name);
 
-        // IMPORTANT: use merge, not overwrite (prevents crashes)
         mergeDirNoOverwrite(src, destA);
         mergeDirNoOverwrite(src, destC);
 
@@ -436,6 +435,8 @@ export const BiosService = {
 
     const status = BiosService.getConsoleBiosStatus(consoleId);
 
+    log.info('BIOS installation complete', { consoleId, installedFiles, biosState: status.biosState });
+
     return {
       success: true,
       consoleId,
@@ -447,11 +448,15 @@ export const BiosService = {
   },
 
   async deleteBios(consoleId: ConsoleID, fileName: string) {
+    log.info('Deleting BIOS file', { consoleId, fileName });
     const c = CONSOLES[consoleId];
     if (!c?.bios) throw new Error("This console does not require a BIOS.");
 
     const allowed = c.bios.files.some((f) => f.filename.toLowerCase() === fileName.toLowerCase());
-    if (!allowed) throw new Error(`'${fileName}' is not a known BIOS file for ${consoleId}.`);
+    if (!allowed) {
+      log.warn('Attempted to delete unknown BIOS file', { consoleId, fileName });
+      throw new Error(`'${fileName}' is not a known BIOS file for ${consoleId}.`);
+    }
 
     const target = path.join(c.bios.installDir, fileName);
     if (fs.existsSync(target)) fs.rmSync(target, { recursive: true, force: true });

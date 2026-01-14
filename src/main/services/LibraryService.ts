@@ -3,10 +3,14 @@ import path from "path";
 import { getDB } from "../data/db";
 import type { Game } from "../../shared/types";
 import { ScannerService } from "./ScannerService";
+import { Logger } from "../utils/logger";
 import { app } from "electron";
+
+const log = Logger.create('LibraryService');
 
 export const LibraryService = {
   createGame: (gameData: Game) => {
+    log.info('Creating game', { id: gameData.id, title: gameData.title, consoleId: gameData.consoleId });
     try {
       const db = getDB();
       const stmt = db.prepare(`
@@ -14,16 +18,19 @@ export const LibraryService = {
         values (@id, @title, @filePath, @consoleId, @engineId)
       `);
       stmt.run(gameData);
+      log.info('Game created successfully', { id: gameData.id });
       return { success: true, game: gameData };
     } catch (err) {
-      console.error("Database Insert Failed:", err);
+      log.error('Database insert failed', err);
       throw err;
     }
   },
 
   createGamesFromFiles: async (file: { name: string; path: string }) => {
+    log.info('Creating games from files', { name: file.name, path: file.path });
     try {
       const results = await ScannerService.scanPath(file.path);
+      log.info('Scan complete', { resultCount: results.length });
 
       if (results.length === 0) {
         throw new Error("No identifiable games found in this location.");
@@ -43,25 +50,32 @@ export const LibraryService = {
       }
 
       if (createdGames.length === 0) {
+        log.warn('No games found, only system files detected');
         return { success: false, message: "No games found (only system files detected)." };
       }
 
+      log.info('Games created from files', { count: createdGames.length });
       return { success: true, games: createdGames };
-    } catch (err) {
-      console.error("Create Game Failed:", err);
+    } catch (err: any) {
+      log.error('Create games from files failed', err);
       return { success: false, message: err.message };
     }
   },
 
   getGames: () => {
+    log.debug('Getting all games');
     try {
       const rows = getDB().prepare("select * from games").all() as any[];
       const games = rows.map(row => ({
         ...row,
         playtimeSeconds: row.playtime_seconds ?? 0,
       }));
+      log.debug('Games retrieved', { count: games.length });
       return { success: true, games };
-    } catch (err) { return { success: false, message: err.message }; }
+    } catch (err: any) { 
+      log.error('Failed to get games', err);
+      return { success: false, message: err.message }; 
+    }
   },
 
   getGame: (id: string) => {
@@ -85,29 +99,40 @@ export const LibraryService = {
   },
 
   deleteGame: (gameId: string) => {
+    log.info('Deleting game', { gameId });
     try {
       const db = getDB();
       const game = db.prepare('SELECT * FROM games WHERE id = ?').get(gameId) as Game | undefined;
-      if (!game) return { success: false, message: "Game not found" };
+      if (!game) {
+        log.warn('Game not found for deletion', { gameId });
+        return { success: false, message: "Game not found" };
+      }
 
       db.prepare('delete from games where id = ?').run(gameId);
       if (game.filePath && fs.existsSync(game.filePath)) fs.unlinkSync(game.filePath);
 
+      log.info('Game deleted successfully', { gameId, title: game.title });
       return { success: true };
-    } catch (err) { return { success: false, message: err.message }; }
+    } catch (err: any) { 
+      log.error('Failed to delete game', err);
+      return { success: false, message: err.message }; 
+    }
   },
 
   clearLibrary: () => {
+    log.info('Clearing entire library');
     getDB().prepare('DELETE FROM games').run();
     const romsDir = path.join(app.getPath('userData'), 'roms');
     if (fs.existsSync(romsDir)) {
       fs.rmSync(romsDir, { recursive: true, force: true });
       fs.mkdirSync(romsDir);
     }
+    log.info('Library cleared successfully');
     return { success: true };
   },
 
   addPlaytime: (gameId: string, seconds: number) => {
+    log.debug('Adding playtime', { gameId, seconds });
     try {
       const db = getDB();
       const stmt = db.prepare(`
@@ -116,7 +141,7 @@ export const LibraryService = {
       const result = stmt.run(Math.floor(seconds), gameId);
       return { success: result.changes > 0 };
     } catch (err: any) {
-      console.error("Failed to update playtime:", err);
+      log.error('Failed to update playtime', err);
       return { success: false, message: err.message };
     }
   },

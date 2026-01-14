@@ -3,6 +3,7 @@ import type { Game } from '../../../shared/types';
 import InstallModal from '../inputs/InstallModal';
 import BiosModal from '../inputs/BiosModal';
 import { gameClient } from '../../clients/gameClient';
+import { saveClient } from '../../clients/saveClient';
 import { IpcResponse } from '../../../shared/types';
 
 function formatPlaytime(seconds: number): string {
@@ -82,6 +83,26 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate }: P
       }
     }
     setShowMenu(false);
+  };
+
+  const handleExportSave = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    
+    try {
+      console.log(`[GameCard] Exporting save for "${game.title}"...`);
+      const result = await saveClient.export(game.id);
+      
+      if (result.success && result.exportedTo) {
+        console.log(`[GameCard] Save exported to: ${result.exportedTo}`);
+      } else if (result.error === 'Export cancelled') {
+        console.log('[GameCard] Export cancelled by user');
+      } else {
+        console.warn(`[GameCard] Export failed: ${result.error}`);
+      }
+    } catch (err) {
+      console.error('[GameCard] Export error:', err);
+    }
   };
 
   const toggleMenu = (e: React.MouseEvent) => {
@@ -209,6 +230,16 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate }: P
                   "
                 >
                   Rename
+                </button>
+                <button
+                  onClick={handleExportSave}
+                  className="
+                    w-full text-left px-3 py-2 text-xs font-semibold 
+                    text-fg-secondary hover:text-fg-primary hover:bg-bg-muted
+                    transition-colors
+                  "
+                >
+                  Export Save
                 </button>
                 <div className="h-px bg-border-subtle mx-1"></div>
                 <button

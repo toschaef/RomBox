@@ -4,6 +4,9 @@ import {
   type SettingKey,
   type SettingsShape,
 } from "../../shared/settings";
+import { Logger } from "../utils/logger";
+
+const log = Logger.create('SettingsService');
 
 function validate<K extends SettingKey>(key: K, value: unknown): value is SettingsShape[K] {
   switch (key) {
@@ -49,10 +52,12 @@ export class SettingsService {
   }
 
   set<K extends SettingKey>(key: K, value: SettingsShape[K]) {
+    log.debug('Setting value', { key, value });
     const db = getDB();
     this.ensureDefaults();
 
     if (!validate(key, value)) {
+      log.warn('Invalid value for setting', { key, value });
       throw new Error(`Invalid value for setting "${key}"`);
     }
 
@@ -74,6 +79,7 @@ export class SettingsService {
   }
 
   setMany(values: Partial<SettingsShape>) {
+    log.debug('Setting multiple values', { keys: Object.keys(values) });
     this.ensureDefaults();
 
     const db = getDB();
@@ -82,7 +88,10 @@ export class SettingsService {
       for (const [k, v] of Object.entries(values)) {
         const key = k as SettingKey;
         if (v === undefined) continue;
-        if (!validate(key, v)) throw new Error(`Invalid value for setting "${key}"`);
+        if (!validate(key, v)) {
+          log.warn('Invalid value in setMany', { key, value: v });
+          throw new Error(`Invalid value for setting "${key}"`);
+        }
         stmt.run(key, JSON.stringify(v));
       }
     });
@@ -92,6 +101,7 @@ export class SettingsService {
   }
 
   reset(key?: SettingKey) {
+    log.info('Resetting settings', { key: key ?? 'all' });
     this.ensureDefaults();
     const db = getDB();
 
@@ -108,6 +118,7 @@ export class SettingsService {
       }
     });
     tx();
+    log.info('All settings reset to defaults');
 
     return { success: true };
   }

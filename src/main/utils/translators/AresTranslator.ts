@@ -7,7 +7,7 @@ const KEYBOARD_DEVICE_ID = 0x1;
 function encodeKeyboard(domCode: string): string | null {
   const idx = resolveQuartzKeyboardKeyIndex(domCode);
   const tok = idx == null ? null : `0x${KEYBOARD_DEVICE_ID.toString(16)}/0/${idx};;`;
-  console.log("[ares][kbd]", { domCode, idx, tok });
+
   return tok;
 }
 

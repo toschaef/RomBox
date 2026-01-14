@@ -6,9 +6,8 @@ import { homedir } from "os";
 import type { PlatformHandler } from "./types";
 import { findFile } from "../utils/fsUtils";
 import { Extractor } from "../utils/extractor";
-import type { Platform } from "../../shared/types";
+import type { Platform, Game } from "../../shared/types";
 import type { EngineID } from "../../shared/types/engines";
-import { app } from 'electron';
 
 type FinalizeOptions = {
   resetMesenSupportDir?: boolean;
@@ -207,6 +206,33 @@ export class MacHandler implements PlatformHandler {
         return path.join(home, "Library", "Application Support", "DuckStation");
       default:
         throw new Error(`[Mac] Emulator base path not found for: ${engineId}`);
+    }
+  }
+
+  getSavePath(game: Game) {
+    const home = homedir();
+    switch (game.engineId) {
+      case "mesen":
+        return path.join(home, "Library", "Application Support", "Mesen2", "Saves");
+      case "melonds":
+        return path.dirname(game.filePath);
+      case "dolphin":
+        if (game.consoleId === "wii") {
+          return path.join(home, "Library", "Application Support", "Dolphin", "Wii");
+        }
+        return path.join(home, "Library", "Application Support", "Dolphin", "GC");
+      case "azahar":
+        return path.join(home, "Library", "Application Support", "Azahar", "sdmc");
+      case "ares":
+        return path.join(home, "Library", "Application Support", "ares", "Saves");
+      case "rmg":
+        return path.join(home, "Library", "Application Support", "RMG", "Save");
+      case "duckstation":
+        return path.join(home, "Library", "Application Support", "DuckStation", "memcards");
+      case "pcsx2":
+        return path.join(home, "Library", "Application Support", "PCSX2", "memcards");
+      default:
+        throw new Error(`[SaveService] Unknown engine: ${game.engineId}`);
     }
   }
 

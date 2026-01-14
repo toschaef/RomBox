@@ -2,30 +2,40 @@ import { BrowserWindow } from 'electron';
 import { EngineService } from './EngineService';
 import { BiosService } from './BiosService'
 import { LibraryService } from './LibraryService';
+import { SaveService } from './SaveService';
 import { ENGINES } from '../config/engines';
 import { osHandler } from '../platform';
 import { getConfigurator } from '../utils/configurators';
+import { Logger } from '../utils/logger';
 import type { Game } from '../../shared/types';
+
+const log = Logger.create('LaunchService');
 
 export const LaunchService = {
   launch: async (game: Game) => {
-    console.log(`[LaunchService] Requesting launch for: ${game.title}`);
+    const gameLog = log.child({ gameId: game.id, title: game.title });
+    gameLog.info('Requesting launch');
 
     // validation
+    gameLog.info('Checking engine path', { engineId: game.engineId });
     const enginePath = await EngineService.getEnginePath(game.engineId);
     if (!enginePath) {
+      gameLog.warn('Engine not installed', { consoleId: game.consoleId });
       return { success: false, code: 'MISSING_ENGINE', message: `Emulator for ${game.consoleId} not installed.` };
     }
+    gameLog.info('Engine found', { enginePath });
 
     // bios
+    gameLog.info('Checking BIOS status');
     const bios0 = BiosService.getGameBiosStatus(game);
-    console.log("[LaunchService] bios", bios0);
+    gameLog.debug('BIOS status', bios0);
 
     if (bios0.needsBios && bios0.biosState === "missing") {
+      gameLog.info('BIOS missing, checking cache');
       BiosService.ensureBiosInstalledFromCache(game.consoleId);
 
       const bios1 = BiosService.getGameBiosStatus(game);
-      console.log("[LaunchService] bios after cache", bios1);
+      gameLog.debug('BIOS status after cache check', bios1);
 
       if (bios1.biosState === "missing") {
         return {
@@ -40,14 +50,28 @@ export const LaunchService = {
       // todo: optional bios message
     }
 
+    // restore saves
+    gameLog.info('Restoring cached saves');
+    try {
+      const restoreResult = SaveService.restoreSave(game);
+      if (restoreResult.restoredFiles.length > 0) {
+        gameLog.info('Saves restored', { count: restoreResult.restoredFiles.length, files: restoreResult.restoredFiles });
+      } else {
+        gameLog.debug('No cached saves to restore');
+      }
+    } catch (err) {
+      gameLog.warn('Save restore failed', err);
+    }
+
     // configuration
+    gameLog.info('Applying emulator configuration');
     const configurator = getConfigurator(game);
     if (configurator) {
       try {
         await configurator.configure();
-      } catch (err: any) {
-        console.warn(`[LaunchService] Config warning:`, err?.message ?? err);
-        if (err?.stack) console.warn(err.stack);
+        gameLog.info('Configuration applied');
+      } catch (err) {
+        gameLog.warn('Configuration warning', err);
       }
     }
 
@@ -60,6 +84,7 @@ export const LaunchService = {
     const args = fullCommand.slice(1);
 
     // execution
+    gameLog.info('Launching emulator', { binary, args });
     try {
       const startTime = Date.now();
       const child = osHandler.launchProcess(binary, args);
@@ -69,13 +94,23 @@ export const LaunchService = {
 
       child.on('error', (err) => console.error("[LaunchService] Failed to spawn:", err));
       child.on('close', (code) => {
-        if (code !== 0) console.log(`[LaunchService] Exited with code ${code}`);
+        if (code !== 0) gameLog.warn('Emulator exited with non-zero code', { code });
 
         // save playtime
         const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
         if (elapsedSeconds > 0) {
           LibraryService.addPlaytime(game.id, elapsedSeconds);
-          console.log(`[LaunchService] Added ${elapsedSeconds}s playtime for ${game.title}`);
+          gameLog.info('Playtime recorded', { elapsedSeconds });
+        }
+
+        // backup saves
+        try {
+          const backupResult = SaveService.backupSave(game);
+          if (backupResult.backedUpFiles.length > 0) {
+            gameLog.info('Save files backed up', { count: backupResult.backedUpFiles.length });
+          }
+        } catch (err) {
+          gameLog.error('Save backup failed', err);
         }
 
         for (const win of BrowserWindow.getAllWindows()) {
@@ -88,7 +123,7 @@ export const LaunchService = {
       return { success: true };
 
     } catch (err) {
-      console.error("[LaunchService] Launch Failed:", err);
+      gameLog.error('Launch failed', err);
       return { success: false, message: err.message };
     }
   }

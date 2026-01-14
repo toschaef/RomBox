@@ -1,5 +1,5 @@
 import { ChildProcess } from "child_process";
-import { Platform } from "../../shared/types";
+import { Platform, Game } from "../../shared/types";
 import type { EngineID } from "../../shared/types/engines";
 
 export interface PlatformHandler {
@@ -26,6 +26,8 @@ export interface PlatformHandler {
   getEmulatorConfigPath(engineId: EngineID): string;
   /** returns directory where the os stores the emulator files */
   getEmulatorBasePath(engineId: EngineID): string
+  /** returns directory where game save is stored */
+  getSavePath(game: Game): string;
 
   getPlatformId(): "macos" | "windows" | "linux";
   getPlatform(): Platform;
