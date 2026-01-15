@@ -22,3 +22,26 @@
 body {
   overflow: hidden;
 }
+
+select {
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+}
+
+select:focus {
+  outline: none;
+}
+
+select::selection,
+select option::selection {
+  background: var(--color-accent-secondary);
+  color: white;
+}
+
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--color-bg-secondary) inset;
+  -webkit-text-fill-color: var(--color-fg-primary);
+}

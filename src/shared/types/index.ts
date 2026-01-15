@@ -20,6 +20,7 @@ export interface Game {
   engineId: EngineID;
   coverImage?: string;
   playtimeSeconds?: number;
+  lastPlayedAt?: number;
 };
 
 export interface IpcResponse {

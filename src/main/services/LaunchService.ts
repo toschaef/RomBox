@@ -85,6 +85,7 @@ export const LaunchService = {
 
     // execution
     gameLog.info('Launching emulator', { binary, args });
+    LibraryService.updateLastPlayed(game.id);
     try {
       const startTime = Date.now();
       const child = osHandler.launchProcess(binary, args);

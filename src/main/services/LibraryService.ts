@@ -69,6 +69,7 @@ export const LibraryService = {
       const games = rows.map(row => ({
         ...row,
         playtimeSeconds: row.playtime_seconds ?? 0,
+        lastPlayedAt: row.last_played_at ?? null,
       }));
       log.debug('Games retrieved', { count: games.length });
       return { success: true, games };
@@ -84,7 +85,11 @@ export const LibraryService = {
       if (!row) return { success: false, message: "Game not found" };
       return {
         success: true,
-        game: { ...row, playtimeSeconds: row.playtime_seconds ?? 0 }
+        game: { 
+          ...row, 
+          playtimeSeconds: row.playtime_seconds ?? 0,
+          lastPlayedAt: row.last_played_at ?? null,
+        }
       };
     } catch (err) { return { success: false, message: err.message }; }
   },
@@ -142,6 +147,21 @@ export const LibraryService = {
       return { success: result.changes > 0 };
     } catch (err: any) {
       log.error('Failed to update playtime', err);
+      return { success: false, message: err.message };
+    }
+  },
+
+  updateLastPlayed: (gameId: string) => {
+    log.debug('Updating last played time', { gameId });
+    try {
+      const db = getDB();
+      const stmt = db.prepare(`
+        UPDATE games SET last_played_at = ? WHERE id = ?
+      `);
+      const result = stmt.run(Date.now(), gameId);
+      return { success: result.changes > 0 };
+    } catch (err: any) {
+      log.error('Failed to update last played time', err);
       return { success: false, message: err.message };
     }
   },

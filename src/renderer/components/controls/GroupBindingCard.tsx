@@ -30,7 +30,7 @@ function DpadGrid({ d }: { d: DpadBinding }) {
   };
 
   return (
-    <div className="mt-2 grid grid-cols-2 gap-2">
+    <div className="mt-2 grid grid-cols-2 gap-2 pointer-events-none">
       <Cell label="Up" value={d.up} />
       <Cell label="Right" value={d.right} />
       <Cell label="Left" value={d.left} />

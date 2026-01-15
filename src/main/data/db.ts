@@ -18,7 +18,8 @@ export function initDB() {
       consoleId TEXT NOT NULL,
       engineId TEXT NOT NULL,
       coverImage TEXT,
-      playtime_seconds INTEGER NOT NULL DEFAULT 0
+      playtime_seconds INTEGER NOT NULL DEFAULT 0,
+      last_played_at INTEGER
     );
 
     CREATE TABLE IF NOT EXISTS controller_profiles (
@@ -54,6 +55,14 @@ export function initDB() {
   `;
 
   db.exec(schema);
+
+  // v0.9.3 migrations
+  const columns = db.prepare("PRAGMA table_info(games)").all() as { name: string }[];
+  const hasLastPlayedAt = columns.some(c => c.name === 'last_played_at');
+  if (!hasLastPlayedAt) {
+    db.exec("ALTER TABLE games ADD COLUMN last_played_at INTEGER");
+  }
+
   console.log("Database initialized");
 }
 
