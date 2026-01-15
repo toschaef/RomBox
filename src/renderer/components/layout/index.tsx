@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useDragAndDrop } from '../../hooks/useDragAndDrop';
 import { ScanResponse } from '../../../shared/types';
+import { settingsClient } from '../../clients/settingsClient';
 
 export interface LayoutContextType {
   lastBiosUpdate: string | null;
@@ -21,8 +22,24 @@ export default function Layout() {
   const [refreshLibraryTrigger, setRefreshLibraryTrigger] = useState(0);
   const [loadingFile, setLoadingFile] = useState<boolean>(false);
   const [loadingMessage, setLoadingMessage] = useState<string>("Processing...");
+  const [videoId, setVideoId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Refresh video ID from settings whenever layout mounts/remounts or could poll, 
+    // but for now mount is fine or when drop happens.
+    // Actually, let's fetch it when a drop starts to be sure we have the latest.
+  }, []);
+
+  const getYoutubeId = (url: string) => {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
 
   const onFilesDropped = async (files: FileList) => {
+    setVideoId(getYoutubeId('https://youtu.be/J9dvPQuHz-I?si=Bk27fudKq90eZtee'));
+    
     setLoadingFile(true);
     setLoadingMessage("Installing...");
 
@@ -73,14 +90,30 @@ export default function Layout() {
 
       {/* loading modal */}
       {loadingFile && (
-        <div className="absolute inset-0 z-110 flex flex-col items-center justify-center bg-bg-primary/80 backdrop-blur-md cursor-wait">
-          <svg className="animate-spin h-12 w-12 text-accent-primary mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
+        <div className="absolute inset-0 z-110 flex flex-col items-center justify-center bg-bg-primary/80 backdrop-blur-md cursor-wait overflow-hidden">
+          {videoId ? (
+             <div className="absolute inset-0 z-0 opacity-40 pointer-events-none">
+                <iframe 
+                  width="100%" 
+                  height="100%" 
+                  src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&showinfo=0&rel=0&loop=1&playlist=${videoId}`} 
+                  title="YouTube video player" 
+                  frameBorder="0" 
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                ></iframe>
+             </div>
+          ) : (
+            <svg className="animate-spin h-12 w-12 text-accent-primary mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          )}
           
-          <h2 className="text-2xl font-bold text-fg-primary">{loadingMessage}</h2>
-          <p className="text-sm text-fg-muted mt-2">Large files may take a while to unzip.</p>
+          <div className="z-10 flex flex-col items-center">
+             {!videoId && <div className="h-4"></div> /* Spacer if no video, spinner handles margin */}
+             <h2 className="text-3xl font-black text-transparent bg-clip-text bg-linear-to-r from-accent-primary to-accent-secondary animate-pulse drop-shadow-md">{loadingMessage}</h2>
+             <p className="text-sm text-fg-primary mt-2 font-bold drop-shadow-md">Large files may take a while to unzip.</p>
+          </div>
         </div>
       )}
 

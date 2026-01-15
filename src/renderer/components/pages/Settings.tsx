@@ -1,7 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { settingsClient } from '../../clients/settingsClient';
+import type { SettingsShape, SettingKey } from '../../../shared/settings';
 
 export default function Settings() {
   const [loading, setLoading] = useState('');
+  const [settings, setSettings] = useState<Partial<SettingsShape>>({});
+
+  useEffect(() => {
+    settingsClient.getMany(["setup.autoInstallEngines"]).then(setSettings);
+  }, []);
+
+  const updateSetting = async <K extends SettingKey>(key: K, value: SettingsShape[K]) => {
+    await settingsClient.set(key, value);
+    setSettings(prev => ({ ...prev, [key]: value }));
+  };
 
   const handleAction = async (action: string, endpoint: string, confirmMsg: string) => {
     if (!confirm(confirmMsg)) return;
@@ -22,9 +34,27 @@ export default function Settings() {
         <h1 className="text-3xl font-bold text-fg-primary">Settings</h1>
       </header>
 
-
         <section className="bg-bg-secondary border border-bg-muted rounded-xl overflow-hidden">
           <div className="p-6 space-y-6">
+
+            <div>
+              <div className="flex justify-between items-center">
+                <div>
+                   <h3 className="font-bold text-fg-primary">Auto-Install Engines</h3>
+                   <p className="text-sm text-fg-muted">Automatically install required emulators when installing games/bios</p>
+                </div>
+              
+                <input
+                  id="autoInstallEngines"
+                  type="checkbox"
+                  checked={settings["setup.autoInstallEngines"] ?? true}
+                  onChange={(e) => updateSetting("setup.autoInstallEngines", e.target.checked)}
+                  className="w-5 h-5 accent-accent-primary"
+                />
+              </div>
+            </div>
+            <div className="h-px bg-border-subtle" />
+
             <div className="flex justify-between items-center">
               <div>
                 <h3 className="font-bold text-fg-primary">Clear Library</h3>

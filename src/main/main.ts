@@ -9,6 +9,8 @@ import registerSaveHandlers from './ipc/saveHandler';
 import { ScannerService } from './services/ScannerService';
 import { LibraryService } from './services/LibraryService';
 import { BiosService } from './services/BiosService';
+import { EngineService } from './services/EngineService';
+import { SettingsService } from './services/SettingsService';
 import { Extractor } from './utils/extractor';
 import { Logger } from './utils/logger';
 import path from 'path';
@@ -39,7 +41,7 @@ const createWindow = (): void => {
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          "default-src 'self' 'unsafe-inline' data:; img-src 'self' 'unsafe-inline' data: cover: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
+          "default-src 'self' 'unsafe-inline' data:; img-src 'self' 'unsafe-inline' data: cover: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; frame-src 'self' https://www.youtube.com https://youtube.com;"
         ]
       }
     });
@@ -100,6 +102,9 @@ ipcMain.handle('process-file-drop', async (_, filePath) => {
     const processedGames = [];
     let biosCount = 0;
 
+    const settingsService = new SettingsService();
+    const shouldAutoInstall = settingsService.get("setup.autoInstallEngines");
+    
     for (const result of results) {
       if (result.type === 'game') {
         dropLog.info('Processing game', { consoleId: result.consoleId });
@@ -107,6 +112,15 @@ ipcMain.handle('process-file-drop', async (_, filePath) => {
         const createResult = await LibraryService.createGame(gameData);
         processedGames.push(createResult.game);
         dropLog.info('Game imported successfully', { gameId: createResult.game.id, title: createResult.game.title });
+
+        if (shouldAutoInstall) {
+           dropLog.info('Auto-installing engine for game', { engineId: gameData.engineId });
+           EngineService.installEngine(gameData.engineId, (status) => {
+             dropLog.info(`Engine install status: ${status}`, { engineId: gameData.engineId });
+           }).catch(err => {
+             dropLog.error('Failed to auto-install engine', { engineId: gameData.engineId, error: err.message });
+           });
+        }
       }
       else if (result.type === "bios") {
         dropLog.info('Processing BIOS file', { consoleId: result.consoleId });
@@ -116,6 +130,16 @@ ipcMain.handle('process-file-drop', async (_, filePath) => {
           dropLog.info('Installing BIOS from directory');
           await BiosService.installBios(result.consoleId, result.filePath);
           biosCount++;
+          
+          if (shouldAutoInstall) {
+             const engineId = result.engineId;
+             dropLog.info('Auto-installing engine for BIOS', { engineId });
+             EngineService.installEngine(engineId, (status) => {
+               dropLog.info(`Engine install status: ${status}`, { engineId });
+             }).catch(err => {
+                dropLog.error('Failed to auto-install engine', { engineId, error: err.message });
+             });
+          }
           continue;
         }
 
@@ -138,6 +162,16 @@ ipcMain.handle('process-file-drop', async (_, filePath) => {
           await BiosService.installBios(result.consoleId, tempPath);
           biosCount++;
           dropLog.info('BIOS installed successfully', { consoleId: result.consoleId });
+
+          if (shouldAutoInstall) {
+             const engineId = result.engineId;
+             dropLog.info('Auto-installing engine for BIOS', { engineId });
+             EngineService.installEngine(engineId, (status) => {
+               dropLog.info(`Engine install status: ${status}`, { engineId });
+             }).catch(err => {
+                dropLog.error('Failed to auto-install engine', { engineId, error: err.message });
+             });
+          }
         } finally {
           try {
             fs.rmSync(tempDir, { recursive: true, force: true });

@@ -12,6 +12,7 @@ function validate<K extends SettingKey>(key: K, value: unknown): value is Settin
   switch (key) {
     case "ui.fullscreen":
     case "launch.closeOnExit":
+    case "setup.autoInstallEngines":
       return typeof value === "boolean";
     case "controls.activeProfileId":
       return typeof value === "string";
