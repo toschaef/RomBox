@@ -6,14 +6,16 @@ interface Props {
   lastBiosUpdate: string;
   onRefresh: () => void;
   onUpdate: (game: Game) => void;
-  gridSize?: number; // 1=large, 2=medium, 3=default, 4=small
+  gridSize?: number;
 }
 
-const GRID_CLASSES: Record<number, string> = {
-  1: 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
-  2: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5',
-  3: 'grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6',
-  4: 'grid-cols-4 sm:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8',
+const GRID_COLS_CLASSES: Record<number, string> = {
+  1: 'grid-cols-[repeat(auto-fill,16rem)]',
+  2: 'grid-cols-[repeat(auto-fill,13rem)]',
+  3: 'grid-cols-[repeat(auto-fill,11rem)]',
+  4: 'grid-cols-[repeat(auto-fill,8rem)]',
+  5: 'grid-cols-[repeat(auto-fill,6rem)]',
+  6: 'grid-cols-[repeat(auto-fill,4rem)]',
 };
 
 export default function GameGrid({ 
@@ -27,27 +29,29 @@ export default function GameGrid({
     return null;
   }
 
-  const gridCols = GRID_CLASSES[gridSize] || GRID_CLASSES[3];
+  const gridColsClass = GRID_COLS_CLASSES[gridSize] || GRID_COLS_CLASSES[3];
 
   return (
     <div className={`
-      grid 
-      ${gridCols}
-      gap-6 
+      grid
+      gap-4
       w-full 
       animate-in fade-in
       transition-all duration-300 ease-out
+      items-center justify-center
+      ${gridColsClass}
     `}>
       {games.map((game) => (
         <div 
           key={game.id}
-          className="transition-all duration-300 ease-out"
+          className="w-full transition-all duration-300 ease-out"
         >
           <GameCard
             game={game}
             lastBiosUpdate={lastBiosUpdate}
             onDelete={onRefresh}
             onUpdate={onUpdate}
+            gridSize={gridSize}
           />
         </div>
       ))}

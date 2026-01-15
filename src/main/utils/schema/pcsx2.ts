@@ -78,9 +78,8 @@ export function pcsx2ExprForGamepadToken(tok: GamepadToken): string | null {
     case "GP_LS_DOWN": return "SDL-0/-LeftY";
     case "GP_RS_LEFT": return "SDL-0/-RightX";
     case "GP_RS_RIGHT": return "SDL-0/+RightX";
-    // Y is swapped to compensate for getDirFromMove
-    case "GP_RS_UP": return "SDL-0/+RightY";
-    case "GP_RS_DOWN": return "SDL-0/-RightY";
+    case "GP_RS_UP": return "SDL-0/-RightY";
+    case "GP_RS_DOWN": return "SDL-0/+RightY";
   }
   return null;
 }

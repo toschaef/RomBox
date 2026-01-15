@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, protocol, net } from 'electron';
 import { initDB } from './data/db';
 import registerGameHandlers from './ipc/gameHandlers';
 import registerEngineHandlers from './ipc/engineHandlers';
@@ -13,6 +13,7 @@ import { Extractor } from './utils/extractor';
 import { Logger } from './utils/logger';
 import path from 'path';
 import fs from 'fs';
+import { pathToFileURL } from 'url';
 
 const log = Logger.create('Main');
 
@@ -33,11 +34,47 @@ const createWindow = (): void => {
     },
   });
 
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self' 'unsafe-inline' data:; img-src 'self' 'unsafe-inline' data: cover: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
+        ]
+      }
+    });
+  });
+
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
-  // mainWindow.webContents.openDevTools();
+  mainWindow.webContents.openDevTools();
 };
 
+function registerCoverProtocol() {
+  protocol.handle('cover', (request) => {
+    const rawPath = request.url.replace(/^cover:\/\/+/, '');
+    const decodedPath = decodeURIComponent(rawPath);
+    
+    const filePath = path.resolve('/', decodedPath);
+    
+    const coversDir = path.join(app.getPath('userData'), 'covers');
+    const normalizedPath = path.normalize(filePath);
+    const isChild = normalizedPath.toLowerCase().startsWith(coversDir.toLowerCase());
+
+    if (!isChild) {
+      return new Response('Access denied', { status: 403 });
+    }
+    
+    return net.fetch(pathToFileURL(normalizedPath).toString());
+  });
+}
+
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'cover', privileges: { secure: true, standard: true, supportFetchAPI: true, corsEnabled: true, bypassCSP: true } }
+]);
+
 app.on('ready', () => {
+  registerCoverProtocol();
+  
   initDB();
 
   registerGameHandlers();

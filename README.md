@@ -15,8 +15,6 @@ version tag doesnt work because repo is private
 
 the ci tag doesnt work because the tests are untracked
 
-GroupBindingCard doesnt start listening for an input if you don't click the edge
-
 GroupBindingCard doesnt prevent event defaults (page scrolling on arrow key/space binds)
 
 Azahar doesnt configure controller controls unless controller is connected on launch
@@ -28,11 +26,13 @@ azahar has update popup on launch
 
 ### soon:
 
-general settings (auto install engine, fullscreen)
+general settings (auto install engine, fullscreen, resolution)
 
 multiplayer (local)
 
 ### future
+
+save caching for 3ds, wii, n64
 
 controller support on gc/wii, N64
 

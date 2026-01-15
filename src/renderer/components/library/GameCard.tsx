@@ -20,14 +20,86 @@ interface Props {
   lastBiosUpdate: string;
   onDelete: () => void;
   onUpdate: (game: Game) => void;
+  gridSize?: number;
 }
 
-export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate }: Props) {
+export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gridSize = 3 }: Props) {
   const [showMenu, setShowMenu] = useState(false);
   const [installModalOpen, setInstallModalOpen] = useState(false);
   const [biosModalOpen, setBiosModalOpen] = useState(false);
   const [biosMissing, setBiosMissing] = useState<string | null>(null);
+  const [coverPath, setCoverPath] = useState<string | null>(null);
+  const [coverLoading, setCoverLoading] = useState(false);
+  const [coverError, setCoverError] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const getButtonStyle = () => {
+    if (gridSize >= 6) {
+      return `
+        text-[10px]
+        p-0.5
+        h-4 w-4
+        flex items-center justify-center
+      `;
+    }
+    if (gridSize >= 4) {
+      return `
+        text-xs
+        p-1
+        h-5 w-5
+        flex items-center justify-center
+      `;
+    }
+    return `
+      text-base
+      font-bold
+      p-1.5
+      h-7 w-7
+      flex items-center justify-center
+    `;
+  };
+
+  const buttonClass = `
+    text-fg-primary
+    bg-bg-secondary
+    hover:bg-bg-highlight
+    border border-border-subtle
+    shadow-md
+    transition-all
+    leading-none
+    rounded-md
+    ${getButtonStyle()}
+  `;
+  
+  const getFallbackButtonStyle = () => {
+    if (gridSize >= 6) {
+      return `
+        text-[10px]
+        px-0.5 py-0
+      `;
+    }
+    if (gridSize >= 4) {
+      return `
+        text-xs
+        px-1 py-0.5
+      `;
+    }
+    return `
+      text-lg
+      font-bold
+      px-1.5 py-0.5
+    `;
+  };
+
+  const fallbackButtonClass = `
+    text-white/70
+    hover:text-white 
+    hover:bg-white/10
+    transition-colors 
+    leading-none
+    rounded
+    ${getFallbackButtonStyle()}
+  `;
 
   // effect to close menu on outside click
   useEffect(() => {
@@ -46,6 +118,44 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate }: P
       setBiosModalOpen(false);
     }
   }, [lastBiosUpdate]);
+
+  // effect to fetch cover art
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchCover = async () => {
+      setCoverLoading(true);
+      try {
+        const getResult = await gameClient.getCover(game);
+        if (getResult.success && getResult.coverPath) {
+          if (!cancelled) {
+            setCoverPath(getResult.coverPath);
+            setCoverLoading(false);
+          }
+          return;
+        }
+
+        const fetchResult = await gameClient.fetchCover(game);
+        if (!cancelled) {
+          if (fetchResult.success && fetchResult.coverPath) {
+            setCoverPath(fetchResult.coverPath);
+          }
+          setCoverLoading(false);
+        }
+      } catch (err) {
+        console.error('Failed to fetch cover:', err);
+        if (!cancelled) {
+          setCoverLoading(false);
+        }
+      }
+    };
+
+    fetchCover();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [game.id, game.title]);
 
   const handlePlay = async () => {
     try {
@@ -110,153 +220,220 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate }: P
     setShowMenu(!showMenu);
   };
 
+  const hasCover = coverPath && !coverError;
+
   return (
     <div
       onClick={handlePlay}
-      className="
+      className={`
         group
         relative
         flex flex-col
-        w-full
+        ${hasCover ? 'w-full h-auto' : 'w-full aspect-square'}
         bg-bg-secondary
-        border border-border-subtle
-        hover:border-border-highlight
-        rounded-md
-        p-3
+        ${hasCover ? 'border-none' : 'border border-border-subtle hover:border-border-highlight'}
+        rounded-xs
+        overflow-hidden
         transition-all duration-300 ease-out
         cursor-pointer
-        hover:shadow-[0_0_20px_rgba(139,92,246,0.2)]
-      "
+      `}
     >
-      {/* box */}
-      <div className="
-        aspect-4/3
-        bg-bg-muted
-        rounded-lg
-        mb-3 
-        flex items-center justify-center
-        overflow-hidden
-        border border-transparent
-        group-hover:border-border-muted/50
-        transition-colors
-      ">
-        <span className="
-          text-fg-muted
-          font-mono
-          text-sm
-          group-hover:text-fg-primary
-          group-hover:scale-110
-          transition-all duration-300
-        ">
-          {game.consoleId.toUpperCase()}
-        </span>
-      </div>
-
-      {/* metadata */}
-      <div className="flex flex-col gap-1">
-        <h3 className="
-          text-fg-primary 
-          font-bold 
-          text-sm 
-          truncate 
-          group-hover:text-accent-secondary 
-          transition-colors
-        ">
-          {game.title}
-        </h3>
-
-        <div className="flex justify-between items-center relative">
-          <span className="
-            text-[10px] 
-            uppercase 
-            tracking-wider 
-            font-semibold 
-            text-fg-muted 
-            bg-bg-primary/50 
-            px-2 py-0.5 
-            rounded
-          ">
-            {game.consoleId}
-          </span>
-
+      {hasCover ? (
+        <div className="relative h-full w-auto group">
+          <img
+            src={`cover://${coverPath}`}
+            alt={game.title}
+            className="w-full h-auto object-contain transition-transform duration-300 group-hover:scale-101"
+            draggable={false}
+            onError={(e) => {
+              console.error('[GameCard] Image load error:', game.title, coverPath, e);
+              setCoverError(true);
+            }}
+          />
           {/* menu button */}
-          <div className="relative" ref={menuRef}>
-            <button
-              onClick={toggleMenu}
-              className="
-                text-fg-muted
-                hover:text-accent-primary 
-                transition-colors 
-                text-lg
-                font-bold
-                px-2
-                leading-none
-                rounded
-                hover:bg-bg-muted
-              "
-            >
-              ⋮
-            </button>
+          <div className="absolute bottom-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={toggleMenu}
+                className={buttonClass}
+              >
+                ⋮
+              </button>
 
-            {showMenu && (
-              <div className="
-                absolute 
-                bottom-full 
-                right-0 
-                mb-1 
-                w-32 
-                bg-bg-primary 
-                border border-border-muted 
-                rounded-md 
-                shadow-xl 
-                z-20 
-                overflow-hidden
-                animate-in fade-in zoom-in-95 duration-100
-              ">
-                {/* playtime */}
+              {showMenu && (
                 <div className="
-                  px-3 py-2 text-xs text-fg-muted
-                  border-b border-border-subtle
+                  absolute 
+                  bottom-full 
+                  right-0 
+                  mb-1 
+                  w-32 
+                  bg-bg-primary 
+                  border border-border-muted 
+                  rounded-md 
+                  shadow-xl 
+                  z-20 
+                  overflow-hidden
+                  animate-in fade-in zoom-in-95 duration-100
                 ">
-                  <span className="font-semibold">Playtime:</span>{' '}
-                  {formatPlaytime(game.playtimeSeconds ?? 0)}
+                  <div className="
+                    px-3 py-2 text-xs text-fg-muted
+                    border-b border-border-subtle
+                  ">
+                    <span className="font-semibold">Playtime:</span>{' '}
+                    {formatPlaytime(game.playtimeSeconds ?? 0)}
+                  </div>
+                  <button
+                    onClick={handleUpdate}
+                    className="
+                      w-full text-left px-3 py-2 text-xs font-semibold 
+                      text-fg-secondary hover:text-fg-primary hover:bg-bg-muted
+                      transition-colors
+                    "
+                  >
+                    Rename
+                  </button>
+                  <button
+                    onClick={handleExportSave}
+                    className="
+                      w-full text-left px-3 py-2 text-xs font-semibold 
+                      text-fg-secondary hover:text-fg-primary hover:bg-bg-muted
+                      transition-colors
+                    "
+                  >
+                    Export Save
+                  </button>
+                  <div className="h-px bg-border-subtle mx-1"></div>
+                  <button
+                    onClick={handleDelete}
+                    className="
+                      w-full text-left px-3 py-2 text-xs font-semibold 
+                      text-red-400 hover:text-red-300 hover:bg-red-500/10
+                      transition-colors
+                    "
+                  >
+                    Delete
+                  </button>
                 </div>
-                <button
-                  onClick={handleUpdate}
-                  className="
-                    w-full text-left px-3 py-2 text-xs font-semibold 
-                    text-fg-secondary hover:text-fg-primary hover:bg-bg-muted
-                    transition-colors
-                  "
-                >
-                  Rename
-                </button>
-                <button
-                  onClick={handleExportSave}
-                  className="
-                    w-full text-left px-3 py-2 text-xs font-semibold 
-                    text-fg-secondary hover:text-fg-primary hover:bg-bg-muted
-                    transition-colors
-                  "
-                >
-                  Export Save
-                </button>
-                <div className="h-px bg-border-subtle mx-1"></div>
-                <button
-                  onClick={handleDelete}
-                  className="
-                    w-full text-left px-3 py-2 text-xs font-semibold 
-                    text-red-400 hover:text-red-300 hover:bg-red-500/10
-                    transition-colors
-                  "
-                >
-                  Delete
-                </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="relative w-full h-full bg-bg-muted flex flex-col">
+           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <span className="
+                text-fg-muted/20
+                font-black
+                text-3xl
+                select-none
+                group-hover:text-fg-muted/30
+                group-hover:scale-110
+                transition-all duration-300
+              ">
+                {game.consoleId.toUpperCase()}
+              </span>
+           </div>
+
+           <div className="flex-1"></div>
+           
+           <div className="
+             relative z-10 
+             bg-linear-to-t
+             p-3 pt-6
+             flex items-end justify-between
+           ">
+              <div className="flex-1 min-w-0 mr-2">
+                 <h3 className="
+                    text-white/90 
+                    font-bold 
+                    text-xs 
+                    truncate 
+                    drop-shadow-md
+                    group-hover:text-white
+                 ">
+                   {game.title}
+                 </h3>
+                 <span className="
+                    text-[10px] 
+                    uppercase 
+                    tracking-wider 
+                    font-semibold 
+                    text-white/60
+                 ">
+                   {game.consoleId}
+                 </span>
+              </div>
+
+              {/* menu button */}
+              <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
+                <div className="relative" ref={menuRef}>
+                  <button
+                    onClick={toggleMenu}
+                    className={fallbackButtonClass}
+                  >
+                    ⋮
+                  </button>
+                   {showMenu && (
+                    <div className="
+                      absolute 
+                      bottom-full 
+                      right-0 
+                      mb-1 
+                      w-32 
+                      bg-bg-primary 
+                      border border-border-muted 
+                      rounded-md 
+                      shadow-xl 
+                      z-20 
+                      overflow-hidden
+                      animate-in fade-in zoom-in-95 duration-100
+                    ">
+                      <div className="
+                        px-3 py-2 text-xs text-fg-muted
+                        border-b border-border-subtle
+                      ">
+                        <span className="font-semibold text-fg-primary">Playtime:</span>{' '}
+                        {formatPlaytime(game.playtimeSeconds ?? 0)}
+                      </div>
+                      <button
+                        onClick={handleUpdate}
+                        className="
+                          w-full text-left px-3 py-2 text-xs font-semibold 
+                          text-fg-secondary hover:text-fg-primary hover:bg-bg-muted
+                          transition-colors
+                        "
+                      >
+                        Rename
+                      </button>
+                      <button
+                        onClick={handleExportSave}
+                        className="
+                          w-full text-left px-3 py-2 text-xs font-semibold 
+                          text-fg-secondary hover:text-fg-primary hover:bg-bg-muted
+                          transition-colors
+                        "
+                      >
+                        Export Save
+                      </button>
+                      <div className="h-px bg-border-subtle mx-1"></div>
+                      <button
+                        onClick={handleDelete}
+                        className="
+                          w-full text-left px-3 py-2 text-xs font-semibold 
+                          text-red-400 hover:text-red-300 hover:bg-red-500/10
+                          transition-colors
+                        "
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+           </div>
+        </div>
+      )}
+
       {installModalOpen && (
         <div onClick={(e) => e.stopPropagation()}>
           <InstallModal

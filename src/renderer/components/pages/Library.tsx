@@ -256,8 +256,8 @@ export default function Library() {
               +
             </button>
             <button
-              onClick={() => setGridSize(s => Math.min(4, s + 1))}
-              disabled={gridSize >= 4}
+              onClick={() => setGridSize(s => Math.min(6, s + 1))}
+              disabled={gridSize >= 7}
               className="
                 w-7 h-7 flex items-center justify-center
                 bg-bg-secondary text-fg-primary text-sm font-bold
@@ -275,7 +275,7 @@ export default function Library() {
 
       {/* groups */}
       {Object.entries(groupedGames).map(([groupName, groupGames]) => (
-        <div key={groupName} className="w-full mb-8">
+        <div key={groupName} className="w-full mb-8 items-center">
           {groupBy !== 'none' && (
             <h2 className={`
               font-semibold text-fg-secondary mb-4 
