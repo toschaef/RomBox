@@ -26,7 +26,7 @@ azahar has update popup on launch
 
 ### soon:
 
-general settings (auto install engine, fullscreen, resolution)
+general settings (fullscreen, resolution)
 
 multiplayer (local)
 
@@ -37,8 +37,6 @@ save caching for 3ds, wii, n64
 controller support on gc/wii, N64
 
 keyboard support on N64
-
-display game cover (aws lambda)
 
 ui improvement
 
