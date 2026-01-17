@@ -16,7 +16,7 @@ import {
   azTouchMapDefaultKey,
   azTouchMapEntriesSizeKey,
 } from "../schema/azahar";
-import type { TranslateContext } from "../translators/ITranslator";
+import type { EmulatorPatch, TranslateContext } from "../translators/ITranslator";
 import { AzaharTranslator } from "../translators/AzaharTranslator";
 import type { AzaharLearnedSDL } from "../azahar/sdlprobe";
 import { runAzaharSdlProbe } from "../azahar/sdlprobe";
@@ -40,7 +40,7 @@ function extractIniSection(text: string, section: string): string {
   for (const line of lines) {
     const m = line.match(/^\s*\[([^\]]+)\]\s*$/);
     if (m) {
-      const name = m[1]!.trim();
+      const name = m[1].trim();
       if (inSec) break;
       inSec = name === section;
       if (inSec) out.push(line);
@@ -56,17 +56,17 @@ function parseIniSectionKV(sectionText: string): Record<string, string> {
   for (const line of sectionText.split(/\r?\n/)) {
     const kv = line.match(/^\s*([^=]+?)\s*=\s*(.*?)\s*$/);
     if (!kv) continue;
-    out[kv[1]!.trim()] = kv[2]!.trim();
+    out[kv[1].trim()] = kv[2].trim();
   }
   return out;
 }
 
-function patchesToIniUpdates(patches: any[]): Record<string, Record<string, string>> {
+function patchesToIniUpdates(patches: EmulatorPatch[]): Record<string, Record<string, string>> {
   const updates: Record<string, Record<string, string>> = {};
   for (const p of patches) {
     if (p.kind !== "ini-set") continue;
     updates[p.section] ??= {};
-    updates[p.section]![p.key] = p.value;
+    updates[p.section][p.key] = p.value;
   }
   return updates;
 }
@@ -231,8 +231,5 @@ export class AzaharConfigurator implements EmulatorConfigurator {
     IniEditor.overwriteSection(qtIniPath, "Controls", controls, { format: "compact" });
     IniEditor.updateIni(qtIniPath, { UI: uiUpdates }, { format: "compact" });
     IniEditor.updateIni(qtIniPath, { Miscellaneous: miscUpdates }, { format: "compact" });
-
-    const postText = readTextIfExists(qtIniPath);
-    const postControlsText = extractIniSection(postText, "Controls");
   }
 }

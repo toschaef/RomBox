@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import type { ConsoleID } from "../../../shared/types";
-import type { EngineID } from "../../../shared/types/engines";
-import type { EngineInfo, EngineStatus } from "../../../shared/types/engines";
+import type { EngineID, EngineInfo, EngineStatus } from "../../../shared/types/engines";
 import { engineClient } from "../../clients/engineClient";
-import { getConsoleNameFromId, getEngineIdFromConsoleId, ENGINE_MAP } from "../../../shared/constants";
+import { getConsoleNameFromId, ENGINE_MAP } from "../../../shared/constants";
 
 function clsx(...xs: Array<string | false | null | undefined>) {
   return xs.filter(Boolean).join(" ");
@@ -214,10 +213,10 @@ export default function Engines() {
         <h1 className="w-full text-3xl font-bold py-4 px-2 text-fg-primary">Engines</h1>
 
         {/* {installStatus ? (
-          <div className="mt-3 text-base text-fg-secondary">
-            <span className="uppercase tracking-widest font-bold text-fg-muted mr-2">Install</span>
-            {installStatus}
-          </div>
+            <div className="mt-3 text-base text-fg-secondary">
+              <span className="uppercase tracking-widest font-bold text-fg-muted mr-2">Install</span>
+              {installStatus}
+            </div>
         ) : null} */}
       </div>
 

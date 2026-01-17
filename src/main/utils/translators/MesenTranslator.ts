@@ -2,7 +2,6 @@ import type { PlayerBindings, DigitalBinding } from "../../../shared/types/contr
 import { GP_FIXED_TO_INDEX, type GamepadToken } from "../../../shared/controls/gamepadTokens";
 import { BASE_GAMEPAD, MESEN_KEYCODE_MAP_128, APPLE_KEYCODE_BY_CODE } from "../schema/mesen";
 import { digitalToGamepadToken, type Dir } from "../profileRead";
-import type { ConsoleID } from "../../../shared/types";
 
 type Device = "keyboard" | "gamepad";
 type DirSource = "dpad" | "move";
@@ -79,7 +78,6 @@ export class MesenTranslator {
     player = 1,
     device: Device | null,
     dirSource: DirSource,
-    consoleId: ConsoleID,
   ): Record<string, number> {
     const mapping: Record<string, number> = {};
 

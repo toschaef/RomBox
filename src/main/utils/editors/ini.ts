@@ -68,14 +68,13 @@ export const IniEditor = {
     const findSectionStart = (section: string) => {
       for (let i = 0; i < out.length; i++) {
         const m = out[i].match(sectionHeaderRe);
-        if (m && m[1]!.trim() === section) return i;
+        if (m && m[1].trim() === section) return i;
       }
       return -1;
     };
 
     const findSectionEndIndex = (section: string) => {
       if (section === ROOT) return out.length;
-      const header = `[${section}]`;
 
       const start = findSectionStart(section);
       if (start === -1) return -1;
@@ -171,7 +170,7 @@ export const IniEditor = {
     const findSectionStart = (lines: string[], sec: string) => {
       for (let i = 0; i < lines.length; i++) {
         const m = lines[i].match(sectionHeaderRe);
-        if (m && m[1]!.trim() === sec) return i;
+        if (m && m[1].trim() === sec) return i;
       }
       return -1;
     };
@@ -185,7 +184,7 @@ export const IniEditor = {
 
     const start = findSectionStart(existing, section);
     const keys = Object.keys(updates).sort();
-    const newLines = keys.map((k) => formatLine(k, updates[k]!, format));
+    const newLines = keys.map((k) => formatLine(k, updates[k], format));
 
     if (start === -1) {
       out.push(...existing);
@@ -195,7 +194,7 @@ export const IniEditor = {
     } else {
       const end = findSectionEnd(existing, start);
       out.push(...existing.slice(0, start));
-      out.push(existing[start]!);
+      out.push(existing[start]);
       out.push(...newLines);
       out.push(...existing.slice(end));
     }

@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Game } from '../../../shared/types';
-import { getConsoleNameFromId } from '../../../shared/constants';
+import { getConsoleNameFromId, getEngineIdFromConsoleId } from '../../../shared/constants';
 import { engineClient } from '../../clients/engineClient';
-import { getEngineIdFromConsoleId } from '../../../shared/constants';
 
 interface Props {
   game: Game;

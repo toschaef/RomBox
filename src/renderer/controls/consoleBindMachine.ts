@@ -93,8 +93,8 @@ export function applyBindEventConsole(
     const d = digitalFromEvent(e);
     if (!d) return null;
 
-    const current: DpadBinding = ((layout.bindings as any)[plan.group]?.type === "dpad"
-      ? (layout.bindings as any)[plan.group]
+    const current: DpadBinding = ((layout.bindings)[plan.group]?.type === "dpad"
+      ? (layout.bindings)[plan.group]
       : { type: "dpad" }) as DpadBinding;
 
     const next: DpadBinding = structuredClone(current);

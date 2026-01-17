@@ -78,10 +78,10 @@ export class MesenConfigurator extends BaseConfigurator {
     };
 
     const slotMaps = {
-      Mapping1: this.translator.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping1.device, slotPlan.Mapping1.dirSource, this.consoleId),
-      Mapping2: this.translator.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping2.device, slotPlan.Mapping2.dirSource, this.consoleId),
-      Mapping3: this.translator.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping3.device, slotPlan.Mapping3.dirSource, this.consoleId),
-      Mapping4: this.translator.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping4.device, slotPlan.Mapping4.dirSource, this.consoleId),
+      Mapping1: this.translator.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping1.device, slotPlan.Mapping1.dirSource),
+      Mapping2: this.translator.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping2.device, slotPlan.Mapping2.dirSource),
+      Mapping3: this.translator.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping3.device, slotPlan.Mapping3.dirSource),
+      Mapping4: this.translator.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping4.device, slotPlan.Mapping4.dirSource),
     } satisfies Record<MappingSlot, Record<string, number>>;
 
     osHandler.updateJson<unknown>(

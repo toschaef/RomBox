@@ -21,19 +21,19 @@ export interface Game {
   coverImage?: string;
   playtimeSeconds?: number;
   lastPlayedAt?: number;
-};
+}
 
 export interface IpcResponse {
   success: boolean;
   message?: string;
   error?: string;
   code?: string;
-};
+}
 
 export interface ScanResponse extends IpcResponse {
   type?: 'game' | 'bios';
-};
+}
 
 export interface LibraryResponse extends IpcResponse {
   games: Game[];
-};
+}

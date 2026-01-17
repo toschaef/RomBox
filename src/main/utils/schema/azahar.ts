@@ -87,8 +87,8 @@ export function azTouchMapEntriesSizeKey(logicalMapIndex: number) {
 }
 
 export function qtKeycodeFromDomCode(code: string): number | null {
-  if (code.startsWith("Key") && code.length === 4) return code[3]!.toUpperCase().charCodeAt(0);
-  if (code.startsWith("Digit") && code.length === 6) return code[5]!.charCodeAt(0);
+  if (code.startsWith("Key") && code.length === 4) return code[3].toUpperCase().charCodeAt(0);
+  if (code.startsWith("Digit") && code.length === 6) return code[5].charCodeAt(0);
 
   switch (code) {
     case "ArrowUp": return 16777235;

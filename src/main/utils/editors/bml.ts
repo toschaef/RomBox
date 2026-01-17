@@ -72,7 +72,6 @@ function ensureTopSection(lines: Line[], name: string) {
     lines.push({ raw: "", indent: 0, text: "" });
   }
 
-  const headerIndex = lines.length;
   lines.push({ raw: name, indent: 0, text: name });
 
   const reparsed = parseLines(lines.map((l) => l.raw).join("\n"));
@@ -94,7 +93,6 @@ export const BmlEditor = {
     const sec = ensureTopSection(lines, section);
 
     const seen = new Set<string>();
-    let replaced = 0;
 
     for (let i = sec.start; i < sec.end; i++) {
       const ln = lines[i];
@@ -107,7 +105,6 @@ export const BmlEditor = {
       if (next === undefined) continue;
 
       lines[i] = { ...ln, raw: setKV(ln, next) };
-      replaced++;
     }
 
     const toRemove: number[] = [];

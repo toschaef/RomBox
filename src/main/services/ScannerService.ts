@@ -4,12 +4,11 @@ import fs from 'fs';
 import { app } from 'electron';
 import { Extractor } from '../utils/extractor';
 import { CONSOLES } from '../config/consoles'
-import { getConsoleIdFromExtension } from '../../shared/constants';
+import { getConsoleIdFromExtension, getEngineIdFromConsoleId } from '../../shared/constants';
 import type { Game, ConsoleID } from '../../shared/types';
 import type { EngineID } from '../../shared/types/engines';
 import { detectConsoleFromHeader } from '../utils/identifier';
 import { scanZipEntries } from '../utils/fsUtils';
-import { getEngineIdFromConsoleId } from '../../shared/constants';
 import { BiosService } from './BiosService';
 import { Logger } from '../utils/logger';
 import AdmZip from 'adm-zip';

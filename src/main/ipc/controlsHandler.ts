@@ -1,6 +1,6 @@
 import { ipcMain } from "electron";
 import { ControlsService } from "../services/ControlsService";
-import type { ControlsProfile } from "../../shared/types/controls";
+import type { ControlsProfile, PlayerBindings } from "../../shared/types/controls";
 import { ConsoleID } from "../../shared/types";
 
 const svc = new ControlsService();
@@ -34,7 +34,7 @@ export default function registerControlsHandlers() {
       svc.saveConsoleLayout({
         consoleId: payload.consoleId,
         profileId: payload.profileId,
-        bindings: payload.bindings as any,
+        bindings: payload.bindings as PlayerBindings,
       })
   );
 

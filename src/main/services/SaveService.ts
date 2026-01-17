@@ -9,6 +9,8 @@ import { getEngineIdFromConsoleId } from "../../shared/constants";
 import { osHandler } from "../platform";
 import { Logger } from "../utils/logger";
 
+import AdmZip from "adm-zip";
+
 const log = Logger.create('SaveService');
 
 const USERDATA = app.getPath("userData");
@@ -357,7 +359,6 @@ export const SaveService = {
       if (cachedSaves.length === 1) {
         fs.copyFileSync(firstSave, result.filePath);
       } else {
-        const AdmZip = require("adm-zip");
         const zip = new AdmZip();
 
         for (const savePath of cachedSaves) {

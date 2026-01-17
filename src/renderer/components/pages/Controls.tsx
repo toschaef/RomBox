@@ -95,7 +95,6 @@ function clearGroup(p: ControlsProfile, group: "move" | "dpad" | "look"): Contro
   return next;
 }
 
-type ConsoleDigitalPath = DigitalPath | "z";
 type ConsoleGroupId = "move" | "dpad" | "c";
 
 function defaultStick(stick: "left" | "right"): StickBinding {
@@ -105,31 +104,8 @@ function defaultDpad(): DpadBinding {
   return { type: "dpad" };
 }
 
-function getConsoleDigital(layout: AnyConsoleLayout, path: ConsoleDigitalPath): DigitalBinding | undefined {
-  const b: any = (layout as any).bindings ?? {};
-  if (path === "z") return b.z as DigitalBinding | undefined;
-
-  const [group, key] = path.split(".") as ["face" | "shoulders" | "system", string];
-  return b?.[group]?.[key] as DigitalBinding | undefined;
-}
-
-function clearConsoleDigital(layout: AnyConsoleLayout, path: ConsoleDigitalPath): AnyConsoleLayout {
-  const next = structuredClone(layout) as any;
-  next.bindings ??= {};
-
-  if (path === "z") {
-    delete next.bindings.z;
-    return next as AnyConsoleLayout;
-  }
-
-  const [group, key] = path.split(".") as ["face" | "shoulders" | "system", string];
-  next.bindings[group] ??= {};
-  delete next.bindings[group][key];
-  return next as AnyConsoleLayout;
-}
-
 function getConsoleGroupValue(layout: AnyConsoleLayout, group: ConsoleGroupId): DpadBinding | StickBinding {
-  const b: any = (layout as any).bindings ?? {};
+  const b = layout.bindings;
   const v = b?.[group];
 
   if (v && (v.type === "dpad" || v.type === "stick")) return v as DpadBinding | StickBinding;
@@ -140,31 +116,29 @@ function getConsoleGroupValue(layout: AnyConsoleLayout, group: ConsoleGroupId): 
 }
 
 function setConsoleGroupMode(layout: AnyConsoleLayout, group: ConsoleGroupId, mode: "dpad" | "stick"): AnyConsoleLayout {
-  const next = structuredClone(layout) as any;
-  next.bindings ??= {};
+  const next = structuredClone(layout);
 
   if (mode === "dpad") {
     next.bindings[group] = defaultDpad();
-    return next as AnyConsoleLayout;
+    return next;
   }
 
   const stick: "left" | "right" = group === "c" ? "right" : "left";
-  next.bindings[group] = defaultStick(stick);
+  next.bindings[group] = defaultStick(stick) as any;
   return next as AnyConsoleLayout;
 }
 
 function clearConsoleGroup(layout: AnyConsoleLayout, group: ConsoleGroupId): AnyConsoleLayout {
-  const next = structuredClone(layout) as any;
-  next.bindings ??= {};
+  const next = structuredClone(layout);
 
   const current = next.bindings[group];
   if (current?.type === "stick") {
-    next.bindings[group] = { type: "stick", stick: current.stick, deadzone: current.deadzone };
+    next.bindings[group] = { type: "stick", stick: current.stick, deadzone: current.deadzone } as any;
   } else {
-    next.bindings[group] = { type: "dpad" };
+    next.bindings[group] = { type: "dpad" } as any;
   }
 
-  return next as AnyConsoleLayout;
+  return next;
 }
 
 function StandardControlsView(props: {
@@ -187,7 +161,7 @@ function StandardControlsView(props: {
     for (const s of SECTION_ORDER) map.set(s.key, []);
     for (const item of STANDARD_LAYOUT) {
       const list = map.get(item.section);
-      if (list) list.push(item as any);
+      if (list) list.push(item);
     }
     return map;
   }, []);
@@ -205,7 +179,7 @@ function StandardControlsView(props: {
             <div key={sec.key}>
               <GroupBindingCard
                 title="Move"
-                value={v as any}
+                value={v}
                 listening={
                   planEquals({ kind: "dpad", group: "move" }) ||
                   planEquals({ kind: "stick", group: "move", stick: "left" })
@@ -250,7 +224,7 @@ function StandardControlsView(props: {
             <div key={sec.key}>
               <GroupBindingCard
                 title="Look"
-                value={v as any}
+                value={v}
                 listening={
                   planEquals({ kind: "dpad", group: "look" }) ||
                   planEquals({ kind: "stick", group: "look", stick: "right" })
@@ -270,8 +244,8 @@ function StandardControlsView(props: {
           <div key={sec.key} className="mb-10">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
               {items
-                .filter((x: any) => x.kind === "digital")
-                .map((item: any) => {
+                .filter((x) => x.kind === "digital")
+                .map((item) => {
                   const path = item.id as DigitalPath;
                   const binding = getDigital(profile, path);
                   const active = isDigitalPressed(binding);
@@ -320,7 +294,7 @@ function ConsoleControlsView(props: {
     for (const s of SECTION_ORDER) map.set(s.key, []);
     for (const item of consoleItems) {
       const list = map.get(item.section);
-      if (list) list.push(item as any);
+      if (list) list.push(item);
     }
     return map;
   }, [consoleItems]);
@@ -331,7 +305,7 @@ function ConsoleControlsView(props: {
         const items = sectionMap.get(sec.key) ?? [];
 
         if (sec.key === "leftStick") {
-          const groupItem = items.find((x: any) => x.kind === "group" && x.id === "move");
+          const groupItem = items.find((x) => x.kind === "group" && x.id === "move");
           if (!groupItem) return null;
 
           const v = getConsoleGroupValue(layout, "move");
@@ -341,15 +315,15 @@ function ConsoleControlsView(props: {
             <div key={sec.key}>
               <GroupBindingCard
                 title={groupItem.label ?? "Move"}
-                value={v as any}
+                value={v}
                 listening={
-                  planEquals({ kind: "dpad", group: "move" } as any) ||
-                  planEquals({ kind: "stick", group: "move", stick: "left" } as any)
+                  planEquals({ kind: "dpad", group: "move" }) ||
+                  planEquals({ kind: "stick", group: "move", stick: "left" })
                 }
                 active={active}
                 onSetMode={(mode) => void saveLayout(setConsoleGroupMode(layout, "move", mode))}
-                onBindDpad={() => startBind({ kind: "dpad", group: "move" } as any)}
-                onBindStick={() => startBind({ kind: "stick", group: "move", stick: "left" } as any)}
+                onBindDpad={() => startBind({ kind: "dpad", group: "move" })}
+                onBindStick={() => startBind({ kind: "stick", group: "move", stick: "left" })}
                 onClear={() => void saveLayout(clearConsoleGroup(layout, "move"))}
                 hint={v.type === "stick" ? "Binds X then Y" : "Binds Up, Down, Left, Right"}
               />
@@ -358,7 +332,7 @@ function ConsoleControlsView(props: {
         }
 
         if (sec.key === "dpad") {
-          const groupItem = items.find((x: any) => x.kind === "group" && x.id === "dpad");
+          const groupItem = items.find((x) => x.kind === "group" && x.id === "dpad");
           if (!groupItem) return null;
 
           const v = getConsoleGroupValue(layout, "dpad");
@@ -368,11 +342,11 @@ function ConsoleControlsView(props: {
             <div key={sec.key}>
               <GroupBindingCard
                 title={groupItem.label ?? "D-Pad"}
-                value={v as any}
-                listening={planEquals({ kind: "dpad", group: "dpad" } as any)}
+                value={v}
+                listening={planEquals({ kind: "dpad", group: "dpad" })}
                 active={active}
                 onSetMode={() => void 0}
-                onBindDpad={() => startBind({ kind: "dpad", group: "dpad" } as any)}
+                onBindDpad={() => startBind({ kind: "dpad", group: "dpad" })}
                 onBindStick={() => void 0}
                 onClear={() => void saveLayout(clearConsoleGroup(layout, "dpad"))}
                 hint="Binds Up, Down, Left, Right"
@@ -382,7 +356,7 @@ function ConsoleControlsView(props: {
         }
 
         if (sec.key === "rightStick") {
-          const groupItem = items.find((x: any) => x.kind === "group" && x.id === "c");
+          const groupItem = items.find((x) => x.kind === "group" && x.id === "c");
           if (!groupItem) return null;
 
           const v = getConsoleGroupValue(layout, "c");
@@ -392,15 +366,15 @@ function ConsoleControlsView(props: {
             <div key={sec.key}>
               <GroupBindingCard
                 title={groupItem.label ?? "C Buttons"}
-                value={v as any}
+                value={v}
                 listening={
-                  planEquals({ kind: "dpad", group: "c" } as any) ||
-                  planEquals({ kind: "stick", group: "c", stick: "right" } as any)
+                  planEquals({ kind: "dpad", group: "c" }) ||
+                  planEquals({ kind: "stick", group: "c", stick: "right" })
                 }
                 active={active}
                 onSetMode={(mode) => void saveLayout(setConsoleGroupMode(layout, "c", mode))}
-                onBindDpad={() => startBind({ kind: "dpad", group: "c" } as any)}
-                onBindStick={() => startBind({ kind: "stick", group: "c", stick: "right" } as any)}
+                onBindDpad={() => startBind({ kind: "dpad", group: "c" })}
+                onBindStick={() => startBind({ kind: "stick", group: "c", stick: "right" })}
                 onClear={() => void saveLayout(clearConsoleGroup(layout, "c"))}
                 hint={v.type === "stick" ? "Binds X then Y" : "Binds Up, Down, Left, Right"}
               />
@@ -412,12 +386,12 @@ function ConsoleControlsView(props: {
           <div key={sec.key} className="mb-10">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
               {items
-                .filter((x: any) => x.kind === "digital")
-                .map((item: any) => {
+                .filter((x) => x.kind === "digital")
+                .map((item) => {
                   const id = item.id as string;
                   const binding = getConsoleDigitalById(layout, id);
                   const active = isDigitalPressed(binding);
-                  const listening = bindStateActive && planEquals({ kind: "digital", path: id } as any);
+                  const listening = bindStateActive && planEquals({ kind: "digital", path: id });
 
                   return (
                     <DigitalBindingCard
@@ -427,7 +401,7 @@ function ConsoleControlsView(props: {
                       binding={binding}
                       isActive={active}
                       isListening={listening}
-                      onBind={() => startBind({ kind: "digital", path: id } as any)}
+                      onBind={() => startBind({ kind: "digital", path: id })}
                       onClear={() => void saveLayout(clearConsoleDigitalById(layout, id))}
                     />
                   );
@@ -510,7 +484,7 @@ export default function Controls() {
   return (
     <div className="h-full w-full p-4 overflow-y-auto">
       <ControlsHeader
-        profiles={profiles as any}
+        profiles={profiles}
         activeProfileId={activeProfileId}
         saving={saving || layoutApi.layoutSaving}
         onChangeProfile={(id) => {
@@ -605,8 +579,8 @@ export default function Controls() {
             layout={layoutApi.consoleLayout}
             saveLayout={(l) => void layoutApi.saveConsoleLayout(l)}
             bindStateActive={bindStateActive}
-            startBind={(p) => startBind(p as any)}
-            planEquals={(p) => planEqualsConsole(p as any)}
+            startBind={(p) => startBind(p)}
+            planEquals={(p) => planEqualsConsole(p)}
             isDigitalPressed={isDigitalPressed}
             isDpadPressed={isDpadPressed}
             isStickPressed={isStickPressed}
@@ -619,7 +593,7 @@ export default function Controls() {
           profile={profile}
           saveProfile={(p) => void saveProfile(p)}
           bindStateActive={bindStateActive}
-          startBind={(p) => startBind(p as any)}
+          startBind={(p) => startBind(p)}
           planEquals={planEqualsStd}
           isDigitalPressed={isDigitalPressed}
           isDpadPressed={isDpadPressed}

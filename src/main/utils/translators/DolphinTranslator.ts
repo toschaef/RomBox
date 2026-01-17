@@ -39,7 +39,7 @@ function detectDeviceKindFromProfile(profile: ControlsProfile): DeviceKind {
   push(p1.dpad?.left);
   push(p1.dpad?.right);
 
-  const move = (p1 as any).move;
+  const move = p1.move;
   if (move && move.type === "dpad") {
     push(move.up);
     push(move.down);
@@ -47,15 +47,15 @@ function detectDeviceKindFromProfile(profile: ControlsProfile): DeviceKind {
     push(move.right);
   }
 
-  const look = (p1 as any).look;
+  const look = p1.look;
   if (look && look.type === "dpad") {
     push(look.up);
-    push(look.down);
+    push(look.down); 
     push(look.left);
     push(look.right);
   }
 
-  const special = (p1 as any).special;
+  const special = p1.special;
   if (special && special.type === "wii") {
     // push(special.nunchuckC);
     // push(special.nunchuckZ);

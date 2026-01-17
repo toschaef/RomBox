@@ -23,7 +23,9 @@ function ensureDir(p: string) {
 function tryChmod755(p: string) {
   try {
     fs.chmodSync(p, 0o755);
-  } catch {}
+  } catch (err) {
+    void err;
+  }
 }
 
 function resolveNativeHelperPath(helperName: string): string | null {
@@ -126,7 +128,13 @@ export const EngineService = {
           status = "not_installed";
         } else {
           try {
-            const binaryConfigPath = cfg.binaries[platform]!;
+            const binaryConfigPath = cfg.binaries[platform];
+            if (!binaryConfigPath) {
+              status = "broken";
+              lastError = "binary config path not found";
+              resolvedBinaryPath = null;
+              return;
+            }
             resolvedBinaryPath = await osHandler.resolveBinaryPath(installDirAbs, binaryConfigPath);
             status = resolvedBinaryPath ? "installed" : "broken";
           } catch (err) {
@@ -302,7 +310,11 @@ export const EngineService = {
       }
 
       // finalize
-      const binaryConfigPath = cfg.binaries[platform]!;
+      const binaryConfigPath = cfg.binaries[platform];
+      if (!binaryConfigPath) {
+        installLog.warn('Binary config path not found', { engineId });
+        return;
+      }
       const resolvedBinary = await osHandler.resolveBinaryPath(installDirAbs, binaryConfigPath);
 
       const needsWrapper = !!cfg.dependencies?.length;
@@ -314,7 +326,7 @@ export const EngineService = {
 
         try {
           BiosService.ensureBiosInstalledFromCache("3ds");
-        } catch (err: any) {
+        } catch (err) {
           installLog.warn('Azahar cache restore failed', err);
         }
       }
@@ -323,7 +335,7 @@ export const EngineService = {
 
       return { success: true };
     } catch (err) {
-      return { success: false, message: (err as Error).message };
+      return { success: false, message: err.message ?? err };
     }
   },
 

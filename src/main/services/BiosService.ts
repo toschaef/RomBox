@@ -37,14 +37,6 @@ function mergeDirNoOverwrite(src: string, dest: string) {
   }
 }
 
-function isAzaharUserRoot(p: string): boolean {
-  return (
-    fs.existsSync(path.join(p, "nand")) ||
-    fs.existsSync(path.join(p, "sysdata")) ||
-    fs.existsSync(path.join(p, "sdmc"))
-  );
-}
-
 function defaultFirmwareDirFallback() {
   return path.join(homedir(), ".config", "Mesen2", "Firmware");
 }
@@ -315,9 +307,9 @@ export const BiosService = {
         try {
           fs.cpSync(cached, dest, { recursive: true, force: true });
           copied.push(name);
-        } catch (e: any) {
+        } catch (err) {
           missing.push(name);
-          log.warn('Failed to restore 3ds BIOS from cache', { name, error: e?.message ?? e });
+          log.warn('Failed to restore 3ds BIOS from cache', { name, error: err.message ?? err });
         }
       }
 
@@ -346,9 +338,9 @@ export const BiosService = {
           fs.copyFileSync(cached, dest);
         }
         copied.push(f.filename);
-      } catch (err: any) {
+      } catch (err) {
         missing.push(f.filename);
-        log.warn('Failed to restore BIOS from cache', { filename: f.filename, error: err?.message ?? err });
+        log.warn('Failed to restore BIOS from cache', { filename: f.filename, err });
       }
     }
 

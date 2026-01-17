@@ -7,29 +7,6 @@ import type { BiosStatus } from "../../../shared/types/bios";
 import { useOutletContext } from "react-router-dom";
 import type { LayoutContextType } from "../layout";
 
-function dirname(p: string): string {
-  const s = p.replace(/\\/g, "/").replace(/\/+$/g, "");
-  const i = s.lastIndexOf("/");
-  if (i <= 0) return s;
-  return s.slice(0, i);
-}
-
-function basename(p: string): string {
-  const s = p.replace(/\\/g, "/").replace(/\/+$/g, "");
-  const i = s.lastIndexOf("/");
-  return i === -1 ? s : s.slice(i + 1);
-}
-
-function ascendToFolderNamed(startPath: string, wantNameLower: string): string {
-  let p = startPath;
-  for (let i = 0; i < 60; i++) {
-    if (basename(p).toLowerCase() === wantNameLower) return p;
-    const up = dirname(p);
-    if (up === p) break;
-    p = up;
-  }
-  return startPath; // fallback
-}
 
 function clsx(...xs: Array<string | false | null | undefined>) {
   return xs.filter(Boolean).join(" ");
@@ -76,7 +53,7 @@ export default function Bios() {
   const [loading, setLoading] = useState(false);
   const [action, setAction] = useState<ActionState>({ kind: "idle" });
   const [toast, setToast] = useState<string | null>(null);
-  const [engineInstalled, setEngineInstalled] = useState<Record<ConsoleID, boolean>>({} as any);
+  const [engineInstalled, setEngineInstalled] = useState<Record<ConsoleID, boolean>>({} as Record<ConsoleID, boolean>);
   const { lastBiosUpdate } = useOutletContext<LayoutContextType>();
 
   const [menuOpenFor, setMenuOpenFor] = useState<ConsoleID | null>(null);
@@ -125,7 +102,7 @@ export default function Bios() {
       console.error("[BiosPage] refresh failed:", err);
       setToast((err as Error).message);
       setItems([]);
-      setEngineInstalled({} as any);
+      setEngineInstalled({} as Record<ConsoleID, boolean>);
     } finally {
       setLoading(false);
     }

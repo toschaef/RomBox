@@ -76,6 +76,10 @@ export function inspectSnesRom(filePath: string): SnesCartInfo | null {
   } catch {
     return null;
   } finally {
-    try { fs.closeSync(fd); } catch {}
+    try {
+      fs.closeSync(fd);
+    } catch (err) {
+      void err;
+    }
   }
 }

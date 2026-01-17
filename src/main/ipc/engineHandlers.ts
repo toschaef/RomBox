@@ -2,7 +2,7 @@ import { ipcMain } from 'electron';
 import { EngineService } from '../services/EngineService';
 
 export default function registerEngineHandlers() {
-  ipcMain.handle('engine:get', async (event, consoleId) => {
+  ipcMain.handle('engine:get', async () => {
     try {
       return await EngineService.getEngines();
     } catch (err) {

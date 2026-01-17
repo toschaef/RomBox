@@ -7,7 +7,6 @@ export const TomlEditor = {
 
     const out: string[] = [];
     const seen = new Set<string>();
-    let replaced = 0;
 
     const kvRe = /^\s*([A-Za-z0-9_.-]+)\s*=\s*([^#]*?)(\s*#.*)?$/;
 
@@ -24,7 +23,6 @@ export const TomlEditor = {
       if (updates[key] !== undefined) {
         out.push(`${key} = ${updates[key]}${comment}`);
         seen.add(key);
-        replaced++;
       } else {
         out.push(line);
       }
@@ -45,28 +43,15 @@ export const TomlEditor = {
 
     const out: string[] = [];
     const seen = new Set<string>();
-    let replaced = 0;
     let inTable = false;
     let tableFound = false;
 
     const headerRe = /^\s*\[([^\]]+)\]\s*$/;
     const kvRe = /^\s*([A-Za-z0-9_.-]+)\s*=\s*([^#]*?)(\s*#.*)?$/;
 
-    const flushMissing = () => {
-      const missing = Object.entries(updates).filter(([k]) => !seen.has(k));
-      for (const [k, v] of missing) out.push(`${k} = ${v}`);
-      return missing.length;
-    };
-
-    let appendedInside = 0;
-
     for (const line of lines) {
       const hm = line.match(headerRe);
       if (hm) {
-        if (inTable) {
-          appendedInside += flushMissing();
-        }
-
         const name = hm[1].trim();
         inTable = name === table;
         if (inTable) tableFound = true;
@@ -83,7 +68,6 @@ export const TomlEditor = {
           if (updates[key] !== undefined) {
             out.push(`${key} = ${updates[key]}${comment}`);
             seen.add(key);
-            replaced++;
             continue;
           }
         }
@@ -92,15 +76,10 @@ export const TomlEditor = {
       out.push(line);
     }
 
-    if (inTable) {
-      appendedInside += flushMissing();
-    }
-
     if (!tableFound) {
       out.push("");
       out.push(`[${table}]`);
       for (const [k, v] of Object.entries(updates)) out.push(`${k} = ${v}`);
-      appendedInside = Object.keys(updates).length;
     }
 
     fs.writeFileSync(filePath, out.join("\n"));

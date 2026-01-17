@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { Game } from '../../../shared/types';
-import type { ConsoleID } from '../../../shared/types';
 import type { EngineID } from '../../../shared/types/engines';
 import GameGrid from '../library/GameGrid';
 import UpdateGameModal from '../inputs/UpdateGameModal';
@@ -104,7 +103,7 @@ export default function Library() {
 
   // listen for game exit to refresh playtime
   useEffect(() => {
-    const unsubscribe = (window as any).electron?.on?.('game-exited', () => {
+    const unsubscribe = window.electron.on?.('game-exited', () => {
       fetchGames();
     });
 

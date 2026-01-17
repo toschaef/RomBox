@@ -84,8 +84,8 @@ export function useControlsBinding(mode: Mode) {
   ]);
 
   const overlayLabel = useMemo(() => {
-    if (mode.kind === "standard") return bindLabel(stdState as any);
-    return bindLabelConsole(consoleState as any);
+    if (mode.kind === "standard") return bindLabel(stdState);
+    return bindLabelConsole(consoleState);
   }, [mode.kind, stdState, consoleState]);
 
   const bindStateActive = mode.kind === "standard" ? stdState.active : consoleState.active;
