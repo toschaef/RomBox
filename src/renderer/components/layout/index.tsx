@@ -6,6 +6,8 @@ import { ScanResponse } from '../../../shared/types';
 export interface LayoutContextType {
   lastBiosUpdate: string | null;
   refreshLibraryTrigger: number;
+  setGlobalLoading: (loading: boolean) => void;
+  setGlobalStatus: (message: string) => void;
 }
 
 const PAGES = [
@@ -19,38 +21,41 @@ const PAGES = [
 export default function Layout() {
   const [lastBiosUpdate, setLastBiosUpdate] = useState<string | null>(null);
   const [refreshLibraryTrigger, setRefreshLibraryTrigger] = useState(0);
-  const [loadingFile, setLoadingFile] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingMessage, setLoadingMessage] = useState<string>("Processing");
 
+  const setGlobalLoading = (l: boolean) => setIsLoading(l);
+  const setGlobalStatus = (s: string) => setLoadingMessage(s);
+
   const onFilesDropped = async (files: FileList) => {
-    setLoadingFile(true);
+    setIsLoading(true);
     setLoadingMessage("Installing");
 
     for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const filePath = window.electron.getPathForFile(file);
+        const file = files[i];
+        const filePath = window.electron.getPathForFile(file);
 
-      if (files.length > 1) setLoadingMessage(`Processing ${i + 1} of ${files.length}...`);
-      
-      try {
-        const result: {success: boolean, games: ScanResponse[], biosCount: number, message?: string } = await window.electron.invoke('process-file-drop', filePath);
-        console.log('Drop Result:', result);
+        if (files.length > 1) setLoadingMessage(`Processing ${i + 1} of ${files.length}...`);
         
-        if (result.success) {
-          if (result.games && result.games.length > 0) {
-            setRefreshLibraryTrigger(prev => prev + 1);
+        try {
+          const result: {success: boolean, games: ScanResponse[], biosCount: number, message?: string } = await window.electron.invoke('process-file-drop', filePath);
+          console.log('Drop Result:', result);
+          
+          if (result.success) {
+            if (result.games && result.games.length > 0) {
+              setRefreshLibraryTrigger(prev => prev + 1);
+            }
+            if (result.biosCount && result.biosCount > 0) {
+              setLastBiosUpdate(Date.now().toString());
+            }
+          } else {
+            console.warn("File drop issue:", result.message);
           }
-          if (result.biosCount && result.biosCount > 0) {
-            setLastBiosUpdate(Date.now().toString());
-          }
-        } else {
-          console.warn("File drop issue:", result.message);
+        } catch (err) {
+          console.error("IPC Error:", err);
+        } finally {
+          setIsLoading(false);
         }
-      } catch (err) {
-        console.error("IPC Error:", err);
-      } finally {
-        setLoadingFile(false);
-      }
     }
   };
 
@@ -72,7 +77,7 @@ export default function Layout() {
       )}
 
       {/* loading modal */}
-      {loadingFile && (
+      {isLoading && (
         <div className="absolute inset-0 z-110 flex flex-col items-center justify-center bg-bg-primary/80 backdrop-blur-md cursor-wait overflow-hidden">
           <svg className="animate-spin h-12 w-12 text-accent-primary mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -89,7 +94,7 @@ export default function Layout() {
       {/* sidebar */}
       <aside className="w-64 flex flex-col border-r border-border-subtle bg-bg-secondary/30">
         <div className="p-6">
-          <div className="text-xl font-black font-stretch-expanded tracking-wide text-transparent bg-clip-text bg-linear-to-r from-accent-primary to-accent-secondary">
+          <div className="text-2xl font-black font-stretch-expanded tracking-wide text-transparent bg-clip-text bg-linear-to-r from-accent-primary to-accent-secondary">
             RomBox
           </div>
         </div>
@@ -100,8 +105,10 @@ export default function Layout() {
               to={`/${p.toLowerCase()}`}
               key={p}
               className={({ isActive }) => `
-                flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all
-                ${isActive ? 'bg-bg-muted text-fg-primary border border-border-highlight' : 'text-fg-muted hover:bg-bg-muted hover:text-fg-primary'}
+                flex items-center gap-3 px-4 py-3 border-l-2 transition-all font-semibold
+                ${isActive 
+                  ? 'bg-bg-muted text-fg-primary border-accent-primary' 
+                  : 'text-fg-muted border-transparent hover:bg-bg-muted hover:text-fg-primary hover:border-border-muted'}
               `}
             >
               {p || "Library"}
@@ -117,7 +124,7 @@ export default function Layout() {
       </aside>
 
       <main className="flex-1 min-h-0 overflow-y-auto relative">
-        <Outlet context={{ lastBiosUpdate, refreshLibraryTrigger } as LayoutContextType} />
+        <Outlet context={{ lastBiosUpdate, refreshLibraryTrigger, setGlobalLoading, setGlobalStatus } as LayoutContextType} />
       </main>
     </div>
   );

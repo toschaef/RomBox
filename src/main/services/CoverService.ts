@@ -24,6 +24,10 @@ const LIBRETRO_REPOS: Record<ConsoleID, string> = {
   ps2: 'Sony_-_PlayStation_2',
 };
 
+const EXTRA_REPOS: Partial<Record<ConsoleID, string>> = {
+  gb: 'Nintendo_-_Game_Boy_Color',
+};
+
 const FAILED_CACHE_FILE = path.join(app.getPath('userData'), 'failed-covers.json');
 let failedCovers: Set<string> = new Set();
 
@@ -60,16 +64,30 @@ function normalizeTitle(title: string): string {
   return normalized;
 }
 
-function buildCoverUrl(consoleId: ConsoleID, title: string): string | null {
-  const repo = LIBRETRO_REPOS[consoleId];
-  if (!repo) {
-    log.warn('No Libretro repo mapping for console', { consoleId });
-    return null;
+function getReposForGame(game: Game): string[] {
+  const primary = LIBRETRO_REPOS[game.consoleId];
+  if (!primary) return [];
+
+  const repos = [primary];
+
+  if (game.consoleId === 'gb') {
+    const ext = path.extname(game.filePath).toLowerCase();
+    const secondary = EXTRA_REPOS.gb;
+    if (secondary) {
+      if (ext === '.gbc') {
+        return [secondary, primary];
+      } else {
+        return [primary, secondary];
+      }
+    }
   }
 
+  return repos;
+}
+
+function buildCoverUrl(repo: string, title: string): string {
   const normalizedTitle = normalizeTitle(title);
   const encodedTitle = encodeURIComponent(normalizedTitle);
-
   return `https://raw.githubusercontent.com/libretro-thumbnails/${repo}/master/Named_Boxarts/${encodedTitle}.png`;
 }
 
@@ -117,28 +135,23 @@ export const CoverService = {
       return null;
     }
 
-    const url = buildCoverUrl(game.consoleId, game.title);
-    if (!url) {
+    const repos = getReposForGame(game);
+    if (!repos.length) {
+      log.warn('No Libretro repo mapping for console', { consoleId: game.consoleId });
       return null;
     }
 
-    log.info('Fetching cover', { gameId: game.id, title: game.title, url });
-
-    const success = await downloadCover(url, coverPath);
-
-    if (success) {
-      log.info('Cover downloaded successfully', { gameId: game.id, path: coverPath });
-      return coverPath;
-    }
-
     const alternativeNames = generateAlternativeNames(game.title);
-    for (const altName of alternativeNames) {
-      const altUrl = buildCoverUrl(game.consoleId, altName);
-      if (altUrl && altUrl !== url) {
-        log.debug('Trying alternative name', { altName, url: altUrl });
-        const altSuccess = await downloadCover(altUrl, coverPath);
-        if (altSuccess) {
-          log.info('Cover found with alternative name', { gameId: game.id, altName });
+    const namesToTry = [game.title, ...alternativeNames];
+
+    for (const repo of repos) {
+      for (const name of namesToTry) {
+        const url = buildCoverUrl(repo, name);
+        log.info('Fetching cover', { gameId: game.id, repo, name, url });
+
+        const success = await downloadCover(url, coverPath);
+        if (success) {
+          log.info('Cover downloaded successfully', { gameId: game.id, path: coverPath, repo, name });
           return coverPath;
         }
       }

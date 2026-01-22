@@ -4,6 +4,7 @@ import ControlsHeader from "../controls/ControlsHeader";
 import ListeningOverlay from "../controls/ListeningOverlay";
 import DigitalBindingCard from "../controls/DigitalBindingCard";
 import GroupBindingCard from "../controls/GroupBindingCard";
+import PageLayout from "../layout/PageLayout";
 
 import { SECTION_ORDER, STANDARD_LAYOUT, type SectionKey } from "../../controls/layout";
 import { getConsoleLayoutItems, CONSOLE_OPTIONS } from "../../controls/consoleLayouts";
@@ -185,6 +186,7 @@ function StandardControlsView(props: {
                   planEquals({ kind: "stick", group: "move", stick: "left" })
                 }
                 active={active}
+                isPressed={isDigitalPressed}
                 onSetMode={(mode) => void saveProfile(setGroupMode(profile, "move", mode))}
                 onBindDpad={() => startBind({ kind: "dpad", group: "move" })}
                 onBindStick={() => startBind({ kind: "stick", group: "move", stick: "left" })}
@@ -206,6 +208,7 @@ function StandardControlsView(props: {
                 value={v}
                 listening={planEquals({ kind: "dpad", group: "dpad" })}
                 active={active}
+                isPressed={isDigitalPressed}
                 onSetMode={() => void 0}
                 onBindDpad={() => startBind({ kind: "dpad", group: "dpad" })}
                 onBindStick={() => void 0}
@@ -230,6 +233,7 @@ function StandardControlsView(props: {
                   planEquals({ kind: "stick", group: "look", stick: "right" })
                 }
                 active={active}
+                isPressed={isDigitalPressed}
                 onSetMode={(mode) => void saveProfile(setGroupMode(profile, "look", mode))}
                 onBindDpad={() => startBind({ kind: "dpad", group: "look" })}
                 onBindStick={() => startBind({ kind: "stick", group: "look", stick: "right" })}
@@ -321,6 +325,7 @@ function ConsoleControlsView(props: {
                   planEquals({ kind: "stick", group: "move", stick: "left" })
                 }
                 active={active}
+                isPressed={isDigitalPressed}
                 onSetMode={(mode) => void saveLayout(setConsoleGroupMode(layout, "move", mode))}
                 onBindDpad={() => startBind({ kind: "dpad", group: "move" })}
                 onBindStick={() => startBind({ kind: "stick", group: "move", stick: "left" })}
@@ -345,6 +350,7 @@ function ConsoleControlsView(props: {
                 value={v}
                 listening={planEquals({ kind: "dpad", group: "dpad" })}
                 active={active}
+                isPressed={isDigitalPressed}
                 onSetMode={() => void 0}
                 onBindDpad={() => startBind({ kind: "dpad", group: "dpad" })}
                 onBindStick={() => void 0}
@@ -372,6 +378,7 @@ function ConsoleControlsView(props: {
                   planEquals({ kind: "stick", group: "c", stick: "right" })
                 }
                 active={active}
+                isPressed={isDigitalPressed}
                 onSetMode={(mode) => void saveLayout(setConsoleGroupMode(layout, "c", mode))}
                 onBindDpad={() => startBind({ kind: "dpad", group: "c" })}
                 onBindStick={() => startBind({ kind: "stick", group: "c", stick: "right" })}
@@ -482,53 +489,56 @@ export default function Controls() {
   };
 
   return (
-    <div className="h-full w-full p-4 overflow-y-auto">
-      <ControlsHeader
-        profiles={profiles}
-        activeProfileId={activeProfileId}
-        saving={saving || layoutApi.layoutSaving}
-        onChangeProfile={(id) => {
-          cancelBind();
+    <PageLayout
+      title="Controls"
+      actions={
+        <ControlsHeader
+          profiles={profiles}
+          activeProfileId={activeProfileId}
+          saving={saving || layoutApi.layoutSaving}
+          onChangeProfile={(id) => {
+            cancelBind();
 
-          void (async () => {
-            await setAsDefault(id);
-            await changeProfile(id);
-          })();
-        }}
-        onCreateProfile={(name) => void createProfile(name)}
-        onRenameProfile={(id, name) => void renameProfile(id, name)}
-        onDeleteProfile={(id) => void deleteProfile(id)}
-        onSetDefault={() => void 0}
-        onClear={() => {
-          cancelBind();
-          if (layoutApi.isConsoleMode && layoutApi.consoleId) {
-            void layoutApi.resetConsoleLayout(layoutApi.consoleId);
-          } else {
-            void saveProfile(makeClearedProfile(profile));
-          }
-        }}
-        onReset={() => {
-          cancelBind();
-          if (layoutApi.isConsoleMode && layoutApi.consoleId) {
-            void layoutApi.resetConsoleLayout(layoutApi.consoleId);
-          } else {
-            void saveProfile(makeResetProfile(profile));
-          }
-        }}
-      />
+            void (async () => {
+              await setAsDefault(id);
+              await changeProfile(id);
+            })();
+          }}
+          onCreateProfile={(name) => void createProfile(name)}
+          onRenameProfile={(id, name) => void renameProfile(id, name)}
+          onDeleteProfile={(id) => void deleteProfile(id)}
+          onSetDefault={() => void 0}
+          onClear={() => {
+            cancelBind();
+            if (layoutApi.isConsoleMode && layoutApi.consoleId) {
+              void layoutApi.resetConsoleLayout(layoutApi.consoleId);
+            } else {
+              void saveProfile(makeClearedProfile(profile));
+            }
+          }}
+          onReset={() => {
+            cancelBind();
+            if (layoutApi.isConsoleMode && layoutApi.consoleId) {
+              void layoutApi.resetConsoleLayout(layoutApi.consoleId);
+            } else {
+              void saveProfile(makeResetProfile(profile));
+            }
+          }}
+        />
+      }
+    >
+      <div className="pb-8">
+        <div className="flex flex-wrap gap-4 items-center mb-8 pb-4 border-b border-border-subtle">
+          <div className="text-xs uppercase tracking-widest font-bold text-fg-muted">Input Layout</div>
 
-      <div className="px-4 pb-4">
-        <div className="flex flex-wrap gap-3 items-center">
-          <div className="text-xs uppercase tracking-widest font-bold text-fg-muted">Layout</div>
-
-          <div className="flex bg-bg-secondary rounded-lg p-1 border border-border-subtle">
+          <div className="flex border border-border-subtle bg-bg-secondary">
             <button
               type="button"
               onClick={() => {
                 cancelBind();
                 layoutApi.setStandard();
               }}
-              className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${layoutApi.isConsoleMode
+              className={`px-3 py-1.5 text-xs font-bold transition-colors border-r border-border-subtle ${layoutApi.isConsoleMode
                   ? "text-fg-secondary hover:text-accent-secondary hover:bg-bg-muted"
                   : "bg-accent-secondary text-white"
                 }`}
@@ -543,7 +553,7 @@ export default function Controls() {
                 const first = CONSOLE_OPTIONS[0]?.id ?? ("nes" as ConsoleID);
                 layoutApi.setConsole(layoutApi.consoleId ?? first);
               }}
-              className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${layoutApi.isConsoleMode
+              className={`px-3 py-1.5 text-xs font-bold transition-colors ${layoutApi.isConsoleMode
                   ? "bg-accent-secondary text-white"
                   : "text-fg-secondary hover:text-accent-secondary hover:bg-bg-muted"
                 }`}
@@ -553,53 +563,58 @@ export default function Controls() {
           </div>
 
           {layoutApi.isConsoleMode ? (
-            <select
-              value={layoutApi.consoleId ?? "nes"}
-              onChange={(e) => {
-                cancelBind();
-                layoutApi.setConsole(e.target.value as ConsoleID);
-              }}
-              className="appearance-none pl-3 pr-8 py-2 text-sm rounded-lg bg-bg-secondary text-fg-primary border border-border-subtle hover:border-border-muted transition-colors"
-            >
-              {CONSOLE_OPTIONS.map((c) => (
-                <option key={c.id} value={c.id} className="bg-bg-secondary text-fg-primary">
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={layoutApi.consoleId ?? "nes"}
+                onChange={(e) => {
+                  cancelBind();
+                  layoutApi.setConsole(e.target.value as ConsoleID);
+                }}
+                className="appearance-none pl-3 pr-8 py-1.5 text-xs font-bold bg-bg-secondary text-fg-primary border border-border-subtle hover:border-border-muted transition-colors rounded-none focus:outline-none focus:border-accent-primary"
+              >
+                {CONSOLE_OPTIONS.map((c) => (
+                  <option key={c.id} value={c.id} className="bg-bg-secondary text-fg-primary">
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[8px] text-fg-secondary">
+                ▼
+              </div>
+            </div>
           ) : null}
         </div>
-      </div>
 
-      {bindStateActive ? <ListeningOverlay listeningFor={overlayLabel} guided={false} /> : null}
+        {bindStateActive ? <ListeningOverlay listeningFor={overlayLabel} guided={false} /> : null}
 
-      {layoutApi.isConsoleMode ? (
-        layoutApi.consoleLayout ? (
-          <ConsoleControlsView
-            layout={layoutApi.consoleLayout}
-            saveLayout={(l) => void layoutApi.saveConsoleLayout(l)}
+        {layoutApi.isConsoleMode ? (
+          layoutApi.consoleLayout ? (
+            <ConsoleControlsView
+              layout={layoutApi.consoleLayout}
+              saveLayout={(l) => void layoutApi.saveConsoleLayout(l)}
+              bindStateActive={bindStateActive}
+              startBind={(p) => startBind(p)}
+              planEquals={(p) => planEqualsConsole(p)}
+              isDigitalPressed={isDigitalPressed}
+              isDpadPressed={isDpadPressed}
+              isStickPressed={isStickPressed}
+            />
+          ) : (
+            <div className="px-4 text-fg-muted">Loading console layout</div>
+          )
+        ) : (
+          <StandardControlsView
+            profile={profile}
+            saveProfile={(p) => void saveProfile(p)}
             bindStateActive={bindStateActive}
             startBind={(p) => startBind(p)}
-            planEquals={(p) => planEqualsConsole(p)}
+            planEquals={planEqualsStd}
             isDigitalPressed={isDigitalPressed}
             isDpadPressed={isDpadPressed}
             isStickPressed={isStickPressed}
           />
-        ) : (
-          <div className="px-4 text-fg-muted">Loading console layout</div>
-        )
-      ) : (
-        <StandardControlsView
-          profile={profile}
-          saveProfile={(p) => void saveProfile(p)}
-          bindStateActive={bindStateActive}
-          startBind={(p) => startBind(p)}
-          planEquals={planEqualsStd}
-          isDigitalPressed={isDigitalPressed}
-          isDpadPressed={isDpadPressed}
-          isStickPressed={isStickPressed}
-        />
-      )}
-    </div>
+        )}
+      </div>
+    </PageLayout>
   );
 }

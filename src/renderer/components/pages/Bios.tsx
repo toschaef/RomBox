@@ -6,6 +6,7 @@ import { engineClient } from "../../clients/engineClient";
 import type { BiosStatus } from "../../../shared/types/bios";
 import { useOutletContext } from "react-router-dom";
 import type { LayoutContextType } from "../layout";
+import PageLayout from "../layout/PageLayout";
 
 
 function clsx(...xs: Array<string | false | null | undefined>) {
@@ -153,44 +154,50 @@ export default function Bios() {
     });
   }, [items]);
 
-  const pageHeader = (
-    <div className="flex items-start justify-between gap-4 p-6">
-      <div>
-        <h1 className="w-full text-2xl font-bold py-3 text-fg-primary">BIOS</h1>
-        <div className="mt-2 text-sm text-fg-muted">
-          Add required system files for consoles that need them. Optional files improve compatibility, but games can still launch.
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => void refresh()}
-          className={clsx(
-            "px-4 py-2 rounded-xl border text-sm font-bold transition-colors",
-            "bg-bg-secondary border-border-subtle text-fg-primary hover:border-border-muted"
-          )}
-          disabled={loading || action.kind === "working"}
-        >
-          Refresh
-        </button>
-      </div>
-    </div>
-  );
-
   if (!items) {
     return (
-      <div className="h-full w-full overflow-y-auto text-sm">
-        {pageHeader}
+      <PageLayout
+        title="BIOS"
+        actions={
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void refresh()}
+              className={clsx(
+                "px-3 py-1.5 border text-xs font-bold transition-colors rounded-none",
+                "bg-bg-secondary border-border-subtle text-fg-primary hover:border-border-muted"
+              )}
+              disabled={loading || action.kind === "working"}
+            >
+              Refresh
+            </button>
+          </div>
+        }
+      >
         <div className="p-6 text-fg-muted">{loading ? "Loading..." : "No data yet."}</div>
-      </div>
+      </PageLayout>
     );
   }
 
   return (
-    <div className="relative h-full w-full overflow-y-auto text-sm">
-      {pageHeader}
-
+    <PageLayout
+      title="BIOS"
+      actions={
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            className={clsx(
+              "px-3 py-1.5 border text-xs font-bold transition-colors rounded-none",
+              "bg-bg-secondary border-border-subtle text-fg-primary hover:border-border-muted"
+            )}
+            disabled={loading || action.kind === "working"}
+          >
+            Refresh
+          </button>
+        </div>
+      }
+    >
       <div className="px-6 pb-10 space-y-4">
         {sorted.map((b) => {
           const engOk = engineInstalled[b.consoleId] ?? false;
@@ -210,7 +217,7 @@ export default function Bios() {
               : ((b.cachedFiles?.length ? b.cachedFiles : (missingReq.length ? missingReq : missingWarn)) ?? []);
 
           return (
-            <div key={b.consoleId} className="rounded-2xl border border-border-subtle bg-bg-secondary">
+            <div key={b.consoleId} className="rounded-sm border border-border-subtle bg-bg-secondary">
               <div className="p-5 flex items-start justify-between gap-6">
                 <div className="min-w-0">
                   <div className="flex items-center gap-3 flex-wrap">
@@ -218,7 +225,7 @@ export default function Bios() {
 
                     <span
                       className={clsx(
-                        "inline-flex items-center px-2.5 py-0.5 rounded-md border text-xs font-semibold",
+                        "inline-flex items-center px-2 py-0.5 rounded-xs border text-[10px] uppercase font-bold tracking-wider",
                         pillClass(s.kind)
                       )}
                       title={!b.required ? "Optional files improve compatibility but are not required." : undefined}
@@ -229,7 +236,7 @@ export default function Bios() {
                     {b.needsBios ? (
                       <span
                         className={clsx(
-                          "inline-flex items-center px-2.5 py-0.5 rounded-md border text-xs font-semibold",
+                          "inline-flex items-center px-2 py-0.5 rounded-xs border text-[10px] uppercase font-bold tracking-wider",
                           pillClass(engOk ? "ok" : "neutral")
                         )}
                         title={engOk ? "Engine installed" : "Install the engine to apply BIOS to its firmware folder"}
@@ -273,7 +280,7 @@ export default function Bios() {
                             onClick={() => setMenuOpenFor((cur) => (cur === b.consoleId ? null : b.consoleId))}
                             disabled={isBusy || action.kind === "working"}
                             className={clsx(
-                              "h-9 w-9 rounded-lg border flex items-center justify-center transition-colors",
+                              "h-8 w-8 rounded-sm border flex items-center justify-center transition-colors",
                               "bg-bg-secondary border-border-subtle text-fg-secondary hover:text-fg-primary hover:border-border-muted",
                               (isBusy || action.kind === "working") && "opacity-60 cursor-not-allowed"
                             )}
@@ -285,7 +292,7 @@ export default function Bios() {
                           {menuOpenFor === b.consoleId ? (
                             <div
                               ref={menuRef}
-                              className="absolute right-0 top-11 z-20 w-64 rounded-xl border border-border-subtle bg-bg-secondary shadow-lg overflow-hidden"
+                              className="absolute right-0 top-10 z-20 w-64 rounded-sm border border-border-subtle bg-bg-secondary shadow-lg overflow-hidden"
                               onMouseDown={(e) => e.stopPropagation()}
                             >
                               <div className="px-4 py-2 text-xs text-fg-muted">
@@ -304,7 +311,7 @@ export default function Bios() {
                                   }}
                                   disabled={isBusy || action.kind === "working"}
                                   className={clsx(
-                                    "w-full text-left px-4 py-2.5 text-sm font-semibold transition-colors",
+                                    "w-full text-left px-4 py-2 text-sm font-semibold transition-colors",
                                     "text-fg-primary hover:bg-bg-muted",
                                     (isBusy || action.kind === "working") && "opacity-60 cursor-not-allowed"
                                   )}
@@ -323,7 +330,7 @@ export default function Bios() {
                       type="button"
                       disabled
                       className={clsx(
-                        "px-3 py-1.5 rounded-lg border text-sm font-semibold",
+                        "px-3 py-1.5 rounded-sm border text-xs uppercase font-bold tracking-wider",
                         "bg-bg-secondary border-border-subtle text-fg-muted opacity-60 cursor-not-allowed"
                       )}
                     >
@@ -340,6 +347,6 @@ export default function Bios() {
           <div className="text-fg-muted p-6">No consoles currently require BIOS.</div>
         ) : null}
       </div>
-    </div>
+    </PageLayout>
   );
 }

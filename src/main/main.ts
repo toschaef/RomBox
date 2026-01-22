@@ -114,12 +114,17 @@ ipcMain.handle('process-file-drop', async (_, filePath) => {
         dropLog.info('Game imported successfully', { gameId: createResult.game.id, title: createResult.game.title });
 
         if (shouldAutoInstall) {
-           dropLog.info('Auto-installing engine for game', { engineId: gameData.engineId });
-           EngineService.installEngine(gameData.engineId, (status) => {
-             dropLog.info(`Engine install status: ${status}`, { engineId: gameData.engineId });
-           }).catch(err => {
-             dropLog.error('Failed to auto-install engine', { engineId: gameData.engineId, error: err.message });
-           });
+           const existingPath = await EngineService.getEnginePath(gameData.engineId);
+           if (!existingPath) {
+             dropLog.info('Auto-installing engine for game', { engineId: gameData.engineId });
+             EngineService.installEngine(gameData.engineId, (status) => {
+               dropLog.info(`Engine install status: ${status}`, { engineId: gameData.engineId });
+             }).catch(err => {
+               dropLog.error('Failed to auto-install engine', { engineId: gameData.engineId, error: err.message });
+             });
+           } else {
+             dropLog.debug('Engine already installed, skipping auto-install', { engineId: gameData.engineId });
+           }
         }
       }
       else if (result.type === "bios") {
@@ -133,12 +138,17 @@ ipcMain.handle('process-file-drop', async (_, filePath) => {
           
           if (shouldAutoInstall) {
              const engineId = result.engineId;
-             dropLog.info('Auto-installing engine for BIOS', { engineId });
-             EngineService.installEngine(engineId, (status) => {
-               dropLog.info(`Engine install status: ${status}`, { engineId });
-             }).catch(err => {
-                dropLog.error('Failed to auto-install engine', { engineId, error: err.message });
-             });
+             const existingPath = await EngineService.getEnginePath(engineId);
+             if (!existingPath) {
+               dropLog.info('Auto-installing engine for BIOS', { engineId });
+               EngineService.installEngine(engineId, (status) => {
+                 dropLog.info(`Engine install status: ${status}`, { engineId });
+               }).catch(err => {
+                  dropLog.error('Failed to auto-install engine', { engineId, error: err.message });
+               });
+             } else {
+               dropLog.debug('Engine already installed, skipping auto-install', { engineId });
+             }
           }
           continue;
         }
@@ -165,12 +175,18 @@ ipcMain.handle('process-file-drop', async (_, filePath) => {
 
           if (shouldAutoInstall) {
              const engineId = result.engineId;
-             dropLog.info('Auto-installing engine for BIOS', { engineId });
-             EngineService.installEngine(engineId, (status) => {
-               dropLog.info(`Engine install status: ${status}`, { engineId });
-             }).catch(err => {
-                dropLog.error('Failed to auto-install engine', { engineId, error: err.message });
-             });
+             const existingPath = await EngineService.getEnginePath(engineId);
+             
+             if (!existingPath) {
+               dropLog.info('Auto-installing engine for BIOS', { engineId });
+               EngineService.installEngine(engineId, (status) => {
+                 dropLog.info(`Engine install status: ${status}`, { engineId });
+               }).catch(err => {
+                  dropLog.error('Failed to auto-install engine', { engineId, error: err.message });
+               });
+             } else {
+               dropLog.debug('Engine already installed, skipping auto-install', { engineId });
+             }
           }
         } finally {
           try {

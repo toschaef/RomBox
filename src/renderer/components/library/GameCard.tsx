@@ -67,7 +67,7 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
     shadow-md
     transition-all
     leading-none
-    rounded-md
+    rounded-sm
     ${getButtonStyle()}
   `;
   
@@ -119,8 +119,49 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
     }
   }, [lastBiosUpdate]);
 
+  const [shouldLoad, setShouldLoad] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (shouldLoad) return;
+
+    let timer: NodeJS.Timeout | null = null;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting) {
+          if (!timer) {
+            timer = setTimeout(() => {
+              setShouldLoad(true);
+              observer.disconnect();
+              timer = null;
+            }, 200);
+          }
+        } else {
+          if (timer) {
+            clearTimeout(timer);
+            timer = null;
+          }
+        }
+      },
+      { rootMargin: '100px' }
+    );
+
+    if (cardRef.current) {
+      observer.observe(cardRef.current);
+    }
+
+    return () => {
+      observer.disconnect();
+      if (timer) clearTimeout(timer);
+    };
+  }, [shouldLoad]);
+
   // effect to fetch cover art
   useEffect(() => {
+    if (!shouldLoad) return;
+
     let cancelled = false;
 
     const fetchCover = async () => {
@@ -155,7 +196,7 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
     return () => {
       cancelled = true;
     };
-  }, [game.id, game.title]);
+  }, [game.id, game.title, shouldLoad]);
 
   const handlePlay = async () => {
     try {
@@ -222,8 +263,76 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
 
   const hasCover = coverPath && !coverError;
 
+  const renderMenu = () => (
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={toggleMenu}
+        className={hasCover ? buttonClass : fallbackButtonClass}
+      >
+        ⋮
+      </button>
+
+      {showMenu && (
+        <div className="
+          absolute 
+          bottom-full 
+          right-0 
+          mb-1 
+          w-32 
+          bg-bg-primary 
+          border border-border-muted 
+          rounded-sm 
+          shadow-lg 
+          z-50
+          overflow-hidden
+          animate-in fade-in zoom-in-95 duration-100
+        ">
+          <div className="
+            px-3 py-2 text-xs text-fg-muted
+            border-b border-border-subtle
+          ">
+            <span className="font-semibold text-fg-primary">Playtime:</span>{' '}
+            {formatPlaytime(game.playtimeSeconds ?? 0)}
+          </div>
+          <button
+            onClick={handleUpdate}
+            className="
+              w-full text-left px-3 py-2 text-xs font-semibold 
+              text-fg-secondary hover:text-fg-primary hover:bg-bg-muted
+              transition-colors
+            "
+          >
+            Rename
+          </button>
+          <button
+            onClick={handleExportSave}
+            className="
+              w-full text-left px-3 py-2 text-xs font-semibold 
+              text-fg-secondary hover:text-fg-primary hover:bg-bg-muted
+              transition-colors
+            "
+          >
+            Export Save
+          </button>
+          <div className="h-px bg-border-subtle mx-1"></div>
+          <button
+            onClick={handleDelete}
+            className="
+              w-full text-left px-3 py-2 text-xs font-semibold 
+              text-red-400 hover:text-red-300 hover:bg-red-500/10
+              transition-colors
+            "
+          >
+            Delete
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div
+      ref={cardRef}
       onClick={handlePlay}
       className={`
         group
@@ -233,206 +342,84 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
         bg-bg-secondary
         ${hasCover ? 'border-none' : 'border border-border-subtle hover:border-border-highlight'}
         rounded-xs
-        overflow-hidden
         transition-all duration-300 ease-out
         cursor-pointer
       `}
     >
-      {hasCover ? (
-        <div className="relative h-full w-auto group">
-          <img
-            src={`cover://${coverPath}`}
-            alt={game.title}
-            className="w-full h-auto object-contain transition-transform duration-300 group-hover:scale-101"
-            draggable={false}
-            onError={(e) => {
-              console.error('[GameCard] Image load error:', game.title, coverPath, e);
-              setCoverError(true);
-            }}
-          />
-          {/* menu button */}
-          <div className="absolute bottom-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" onClick={(e) => e.stopPropagation()}>
-            <div className="relative" ref={menuRef}>
-              <button
-                onClick={toggleMenu}
-                className={buttonClass}
-              >
-                ⋮
-              </button>
-
-              {showMenu && (
-                <div className="
-                  absolute 
-                  bottom-full 
-                  right-0 
-                  mb-1 
-                  w-32 
-                  bg-bg-primary 
-                  border border-border-muted 
-                  rounded-md 
-                  shadow-xl 
-                  z-20 
-                  overflow-hidden
-                  animate-in fade-in zoom-in-95 duration-100
-                ">
-                  <div className="
-                    px-3 py-2 text-xs text-fg-muted
-                    border-b border-border-subtle
-                  ">
-                    <span className="font-semibold">Playtime:</span>{' '}
-                    {formatPlaytime(game.playtimeSeconds ?? 0)}
-                  </div>
-                  <button
-                    onClick={handleUpdate}
-                    className="
-                      w-full text-left px-3 py-2 text-xs font-semibold 
-                      text-fg-secondary hover:text-fg-primary hover:bg-bg-muted
-                      transition-colors
-                    "
-                  >
-                    Rename
-                  </button>
-                  <button
-                    onClick={handleExportSave}
-                    className="
-                      w-full text-left px-3 py-2 text-xs font-semibold 
-                      text-fg-secondary hover:text-fg-primary hover:bg-bg-muted
-                      transition-colors
-                    "
-                  >
-                    Export Save
-                  </button>
-                  <div className="h-px bg-border-subtle mx-1"></div>
-                  <button
-                    onClick={handleDelete}
-                    className="
-                      w-full text-left px-3 py-2 text-xs font-semibold 
-                      text-red-400 hover:text-red-300 hover:bg-red-500/10
-                      transition-colors
-                    "
-                  >
-                    Delete
-                  </button>
-                </div>
-              )}
-            </div>
+      <div className="relative w-full h-full overflow-hidden rounded-xs">
+        {hasCover ? (
+          <div className="relative h-full w-auto">
+            <img
+              src={`cover://${coverPath}`}
+              alt={game.title}
+              className="w-full h-auto object-contain transition-transform duration-300 group-hover:scale-101"
+              draggable={false}
+              onError={(e) => {
+                console.error('[GameCard] Image load error:', game.title, coverPath, e);
+                setCoverError(true);
+              }}
+            />
           </div>
-        </div>
-      ) : (
-        <div className="relative w-full h-full bg-bg-muted flex flex-col">
-           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <span className="
-                text-fg-muted/20
-                font-black
-                text-3xl
-                select-none
-                group-hover:text-fg-muted/30
-                group-hover:scale-110
-                transition-all duration-300
-              ">
-                {game.consoleId.toUpperCase()}
-              </span>
-           </div>
+        ) : (
+          <div className="relative w-full h-full bg-bg-muted flex flex-col">
+             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span className="
+                  text-fg-muted/20
+                  font-black
+                  text-3xl
+                  select-none
+                  group-hover:text-fg-muted/30
+                  group-hover:scale-110
+                  transition-all duration-300
+                ">
+                  {game.consoleId.toUpperCase()}
+                </span>
+             </div>
 
-           <div className="flex-1"></div>
-           
-           <div className="
-             relative z-10 
-             bg-linear-to-t
-             p-3 pt-6
-             flex items-end justify-between
-           ">
-              <div className="flex-1 min-w-0 mr-2">
-                 <h3 className="
-                    text-white/90 
-                    font-bold 
-                    text-xs 
-                    truncate 
-                    drop-shadow-md
-                    group-hover:text-white
-                 ">
-                   {game.title}
-                 </h3>
-                 <span className="
-                    text-[10px] 
-                    uppercase 
-                    tracking-wider 
-                    font-semibold 
-                    text-white/60
-                 ">
-                   {game.consoleId}
-                 </span>
-              </div>
-
-              {/* menu button */}
-              <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
-                <div className="relative" ref={menuRef}>
-                  <button
-                    onClick={toggleMenu}
-                    className={fallbackButtonClass}
-                  >
-                    ⋮
-                  </button>
-                   {showMenu && (
-                    <div className="
-                      absolute 
-                      bottom-full 
-                      right-0 
-                      mb-1 
-                      w-32 
-                      bg-bg-primary 
-                      border border-border-muted 
-                      rounded-md 
-                      shadow-xl 
-                      z-20 
-                      overflow-hidden
-                      animate-in fade-in zoom-in-95 duration-100
-                    ">
-                      <div className="
-                        px-3 py-2 text-xs text-fg-muted
-                        border-b border-border-subtle
-                      ">
-                        <span className="font-semibold text-fg-primary">Playtime:</span>{' '}
-                        {formatPlaytime(game.playtimeSeconds ?? 0)}
-                      </div>
-                      <button
-                        onClick={handleUpdate}
-                        className="
-                          w-full text-left px-3 py-2 text-xs font-semibold 
-                          text-fg-secondary hover:text-fg-primary hover:bg-bg-muted
-                          transition-colors
-                        "
-                      >
-                        Rename
-                      </button>
-                      <button
-                        onClick={handleExportSave}
-                        className="
-                          w-full text-left px-3 py-2 text-xs font-semibold 
-                          text-fg-secondary hover:text-fg-primary hover:bg-bg-muted
-                          transition-colors
-                        "
-                      >
-                        Export Save
-                      </button>
-                      <div className="h-px bg-border-subtle mx-1"></div>
-                      <button
-                        onClick={handleDelete}
-                        className="
-                          w-full text-left px-3 py-2 text-xs font-semibold 
-                          text-red-400 hover:text-red-300 hover:bg-red-500/10
-                          transition-colors
-                        "
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  )}
+             <div className="flex-1"></div>
+             
+             <div className="
+               relative z-10 
+               bg-linear-to-t
+               p-3 pt-6
+               w-full
+             ">
+                <div className="w-full pr-8">
+                   <h3 className="
+                      text-white/90 
+                      font-bold 
+                      text-xs 
+                      truncate 
+                      drop-shadow-md
+                      group-hover:text-white
+                   ">
+                     {game.title}
+                   </h3>
+                   <span className="
+                      text-[10px] 
+                      uppercase 
+                      tracking-wider 
+                      font-semibold 
+                      text-white/60
+                   ">
+                     {game.consoleId}
+                   </span>
                 </div>
-              </div>
-           </div>
-        </div>
-      )}
+             </div>
+          </div>
+        )}
+      </div>
+
+      <div 
+        className={`
+          absolute z-20 
+          ${hasCover ? 'opacity-0 group-hover:opacity-100 bottom-2 right-2' : 'bottom-3 right-3'}
+          transition-opacity duration-200
+        `} 
+        onClick={(e) => e.stopPropagation()}
+      >
+        {renderMenu()}
+      </div>
 
       {installModalOpen && (
         <div onClick={(e) => e.stopPropagation()}>

@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
 import { settingsClient } from '../../clients/settingsClient';
 import type { SettingsShape, SettingKey } from '../../../shared/settings';
+import PageLayout from '../layout/PageLayout';
+import { useOutletContext } from 'react-router-dom';
+import type { LayoutContextType } from '../layout';
 
 export default function Settings() {
   const [loading, setLoading] = useState('');
   const [settings, setSettings] = useState<Partial<SettingsShape>>({});
+  const { setGlobalLoading, setGlobalStatus } = useOutletContext<LayoutContextType>();
 
   useEffect(() => {
     settingsClient.getMany(["setup.autoInstallEngines"]).then(setSettings);
@@ -18,6 +22,8 @@ export default function Settings() {
   const handleAction = async (action: string, endpoint: string, confirmMsg: string) => {
     if (!confirm(confirmMsg)) return;
     setLoading(action);
+    setGlobalLoading(true);
+    setGlobalStatus(`${action}...`);
     try {
       await window.electron.invoke(endpoint);
       alert(`${action} successful.`);
@@ -25,16 +31,14 @@ export default function Settings() {
       alert(`Failed to ${action.toLowerCase()}.`);
     } finally {
       setLoading('');
+      setGlobalLoading(false);
     }
   };
 
   return (
-    <div className="h-full p-8 overflow-y-auto">
-      <header className="mb-8 py-4">
-        <h1 className="text-3xl font-bold text-fg-primary">Settings</h1>
-      </header>
-
-        <section className="bg-bg-secondary border border-bg-muted rounded-xl overflow-hidden">
+    <PageLayout title="Settings">
+      <div className="p-8 space-y-6">
+        <section className="bg-bg-secondary border border-bg-muted rounded-sm overflow-hidden">
           <div className="p-6 space-y-6">
 
             <div>
@@ -49,7 +53,7 @@ export default function Settings() {
                   type="checkbox"
                   checked={settings["setup.autoInstallEngines"] ?? true}
                   onChange={(e) => updateSetting("setup.autoInstallEngines", e.target.checked)}
-                  className="w-5 h-5 accent-accent-primary"
+                  className="w-5 h-5 accent-accent-primary rounded-none"
                 />
               </div>
             </div>
@@ -63,7 +67,7 @@ export default function Settings() {
               <button
                 onClick={() => handleAction('Clear Library', 'game:deleteAll', 'Delete ALL games? Cannot be undone.')}
                 disabled={!!loading}
-                className="px-4 py-2 bg-bg-muted text-fg-primary hover:bg-red-500/10 hover:text-red-400 border border-border-muted rounded-md text-sm font-bold transition-all"
+                className="px-4 py-2 bg-bg-muted text-fg-primary hover:bg-red-500/10 hover:text-red-400 border border-border-muted hover:border-red-500/30 rounded-none text-sm font-bold transition-all"
               >
                 {loading === 'Clear Library' ? 'Processing...' : 'Delete Games'}
               </button>
@@ -79,7 +83,7 @@ export default function Settings() {
               <button
                 onClick={() => handleAction('Clear Engines', 'engine:clear', 'Uninstall all emulators?')}
                 disabled={!!loading}
-                className="px-4 py-2 bg-bg-muted text-fg-primary hover:bg-red-500/10 hover:text-red-400 border border-border-muted rounded-md text-sm font-bold transition-all"
+                className="px-4 py-2 bg-bg-muted text-fg-primary hover:bg-red-500/10 hover:text-red-400 border border-border-muted hover:border-red-500/30 rounded-none text-sm font-bold transition-all"
               >
                 {loading === 'Clear Engines' ? 'Processing...' : 'Delete Engines'}
               </button>
@@ -87,5 +91,6 @@ export default function Settings() {
           </div>
         </section>
       </div>
+    </PageLayout>
   );
 }

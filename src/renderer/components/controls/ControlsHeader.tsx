@@ -50,14 +50,10 @@ export default function ControlsHeader(props: {
         onSubmit={handleModalSubmit}
       />
 
-      <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-6 gap-6 pb-6">
-        <div className="pl-4">
-          <h1 className="text-3xl font-black mb-2 text-fg-primary">Controls</h1>
-          {saving ? <div className="text-xs text-fg-muted">Saving…</div> : <div className="text-xs text-fg-muted"> </div>}
-        </div>
+      <div className="flex items-center gap-4">
+        {saving && <div className="text-xs text-fg-muted uppercase tracking-wider animate-pulse">Saving...</div>}
 
-        <div className="flex flex-col items-end gap-3 w-full lg:w-auto">
-          <div className="flex flex-wrap justify-end items-center gap-2 w-full">
+        <div className="flex items-center gap-2">
             <div className="relative group">
               <select
                 value={activeProfileId ?? ""}
@@ -67,7 +63,7 @@ export default function ControlsHeader(props: {
                   onChangeProfile(id);
                   onSetDefault(id);
                 }}
-                className="appearance-none pl-4 pr-10 py-2 text-sm rounded-lg bg-bg-secondary text-fg-primary border border-border-subtle hover:border-border-muted transition-colors min-w-40"
+                className="appearance-none pl-3 pr-8 py-1.5 text-sm font-medium bg-bg-secondary text-fg-primary border border-border-subtle hover:border-border-muted transition-colors min-w-32 rounded-none focus:outline-none focus:border-accent-primary"
               >
                 {profiles.map((p) => (
                   <option key={p.id} value={p.id} className="bg-bg-secondary text-fg-primary">
@@ -75,16 +71,16 @@ export default function ControlsHeader(props: {
                   </option>
                 ))}
               </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[8px] text-fg-secondary">
-                V
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[8px] text-fg-secondary">
+                ▼
               </div>
             </div>
 
-            <div className="flex bg-bg-secondary rounded-lg p-1 border border-border-subtle">
+            <div className="flex border border-border-subtle bg-bg-secondary">
               <button
                 onClick={() => setModalType("create")}
                 title="New Profile"
-                className="p-2 hover:bg-bg-muted rounded-md text-fg-secondary hover:text-accent-secondary transition-colors"
+                className="p-1.5 hover:bg-bg-muted text-fg-secondary hover:text-accent-secondary transition-colors border-r border-border-subtle"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
@@ -95,7 +91,7 @@ export default function ControlsHeader(props: {
                 onClick={() => setModalType("rename")}
                 title="Rename Current"
                 disabled={!activeProfile}
-                className="p-2 hover:bg-bg-muted rounded-md text-fg-secondary hover:text-accent-secondary transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-fg-secondary"
+                className="p-1.5 hover:bg-bg-muted text-fg-secondary hover:text-accent-secondary transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-fg-secondary border-r border-border-subtle"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -107,13 +103,11 @@ export default function ControlsHeader(props: {
                 </svg>
               </button>
 
-              <div className="w-px bg-border-subtle mx-1"></div>
-
               <button
                 onClick={() => setModalType("delete")}
                 title="Delete Profile"
                 disabled={!activeProfile || profiles.length <= 1}
-                className="p-2 hover:bg-bg-muted rounded-md text-fg-secondary hover:text-red-400 transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-fg-secondary"
+                className="p-1.5 hover:bg-bg-muted text-fg-secondary hover:text-red-400 transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-fg-secondary"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -125,25 +119,26 @@ export default function ControlsHeader(props: {
                 </svg>
               </button>
             </div>
-          </div>
+        </div>
 
-          <div className="flex gap-3">
+        <div className="h-6 w-px bg-border-subtle mx-2"></div>
+
+        <div className="flex gap-2">
             <button
               onClick={onClear}
-              className="px-3 py-1.5 text-xs font-bold rounded transition-colors border bg-bg-secondary text-fg-primary border-border-muted hover:border-border-highlight"
+              className="px-3 py-1.5 text-xs font-bold transition-colors border bg-bg-secondary text-fg-primary border-border-subtle hover:border-border-highlight hover:bg-bg-muted rounded-none"
             >
-              Clear All
+              Clear
             </button>
 
             <button
               onClick={onReset}
-              className="px-3 py-1.5 text-xs font-bold rounded transition-colors border bg-bg-secondary text-fg-primary border-border-muted hover:border-border-highlight"
+              className="px-3 py-1.5 text-xs font-bold transition-colors border bg-bg-secondary text-fg-primary border-border-subtle hover:border-border-highlight hover:bg-bg-muted rounded-none"
             >
               Reset
             </button>
-          </div>
         </div>
-      </header>
+      </div>
     </>
   );
 }

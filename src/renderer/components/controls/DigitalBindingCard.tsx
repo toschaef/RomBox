@@ -27,7 +27,7 @@ export default function DigitalBindingCard(props: {
     <div
       onClick={onBind}
       className={`
-        relative w-full p-4 rounded-xl border text-left cursor-pointer
+        relative w-full p-4 rounded-sm border text-left cursor-pointer
         transition-all ${transitionClass}
         ${isListening ? "border-accent-secondary bg-accent-muted/30" : "border-border-subtle bg-bg-secondary hover:bg-bg-muted hover:border-border-muted"}
         ${isActive ? "ring-1 ring-accent-secondary shadow-[0_0_30px_rgba(124,58,237,0.5)] border-accent-secondary/50 bg-accent-muted/20 z-10 scale-[1.02]" : "scale-100"}
@@ -36,7 +36,7 @@ export default function DigitalBindingCard(props: {
       <div className="flex items-center gap-4">
         <div
           className={`
-            p-2 rounded-lg border transition-colors ${transitionClass}
+            p-2 rounded-sm border transition-colors ${transitionClass}
             ${isActive ? "bg-accent-secondary border-accent-highlight shadow-inner" : "border-border-subtle bg-bg-primary"}
           `}
         >
@@ -71,7 +71,7 @@ export default function DigitalBindingCard(props: {
               ${!isListening && !isActive ? "text-fg-muted" : ""}
             `}
           >
-            {isListening ? "Press input..." : formatDigital(binding)}
+            {isListening ? "Press input" : formatDigital(binding)}
           </div>
         </div>
       </div>

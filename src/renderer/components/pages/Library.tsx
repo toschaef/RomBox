@@ -4,6 +4,7 @@ import type { Game } from '../../../shared/types';
 import type { EngineID } from '../../../shared/types/engines';
 import GameGrid from '../library/GameGrid';
 import UpdateGameModal from '../inputs/UpdateGameModal';
+import PageLayout from '../layout/PageLayout';
 import type { LayoutContextType } from '../layout';
 import { gameClient } from '../../clients/gameClient';
 import { CONSOLEID_ENGLISH_MAP } from '../../../shared/constants';
@@ -140,8 +141,12 @@ export default function Library() {
 
   const filteredGames = useMemo(() => {
     if (!search.trim()) return sortedGames;
-    const term = search.toLowerCase();
-    return sortedGames.filter(g => g.title.toLowerCase().includes(term));
+    const term = search.toLowerCase().replace(/\s+/g, '');
+    return sortedGames.filter(g => {
+      const title = g.title.toLowerCase();
+      const titleNoSpaces = title.replace(/\s+/g, '');
+      return title.includes(search.toLowerCase()) || titleNoSpaces.includes(term);
+    });
   }, [sortedGames, search]);
 
   const groupedGames = useMemo(() => {
@@ -168,18 +173,31 @@ export default function Library() {
     return sortedGroups;
   }, [filteredGames, groupBy]);
 
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey) {
+        if (e.key === '=' || e.key === '+') {
+          e.preventDefault();
+          setGridSize(s => Math.max(1, s - 1));
+        } else if (e.key === '-') {
+          e.preventDefault();
+          setGridSize(s => Math.min(6, s + 1));
+        } else if (e.key === '0') {
+          e.preventDefault();
+          setGridSize(3);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   return (
-    <div
-      className="
-        flex flex-col items-center min-h-screen p-8 transition-colors duration-200
-        bg-bg-primary text-fg-primary
-      "
-    >
-      <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <h1 className="text-3xl font-bold py-4 text-fg-primary shrink-0">Games</h1>
-        
-        
-        <div className="flex items-center gap-4 shrink-0">
+    <PageLayout
+      title="Games"
+      actions={
+        <div className="flex items-center gap-4">
           {/* search bar */}
           <input
             type="text"
@@ -188,8 +206,8 @@ export default function Library() {
             placeholder="Search"
             className="
               bg-bg-secondary text-fg-primary text-sm
-              border border-border-subtle rounded-md
-              px-3 py-1.5 w-full sm:w-40 md:w-56 lg:w-56
+              border border-border-subtle rounded-none
+              px-3 py-1.5 w-40 md:w-56
               placeholder:text-fg-muted
               hover:border-border-highlight
               focus:border-accent-primary focus:outline-none
@@ -198,13 +216,13 @@ export default function Library() {
           />
           {/* sort by */}
           <div className="flex items-center gap-2">
-            <label className="text-sm text-fg-muted font-medium">Sort:</label>
+            <label className="text-sm text-fg-muted font-medium hidden sm:block">Sort:</label>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
               className="
                 bg-bg-secondary text-fg-primary text-sm
-                border border-border-subtle rounded-md
+                border border-border-subtle rounded-none
                 px-3 py-1.5
                 hover:border-border-highlight
                 focus:border-accent-primary focus:outline-none
@@ -219,13 +237,13 @@ export default function Library() {
 
           {/* group by */}
           <div className="flex items-center gap-2">
-            <label className="text-sm text-fg-muted font-medium">Group:</label>
+            <label className="text-sm text-fg-muted font-medium hidden sm:block">Group:</label>
             <select
               value={groupBy}
               onChange={(e) => setGroupBy(e.target.value as GroupOption)}
               className="
                 bg-bg-secondary text-fg-primary text-sm
-                border border-border-subtle rounded-md
+                border border-border-subtle rounded-none
                 px-3 py-1.5
                 hover:border-border-highlight
                 focus:border-accent-primary focus:outline-none
@@ -239,17 +257,16 @@ export default function Library() {
           </div>
 
           {/* grid size */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center border border-border-subtle rounded-none overflow-hidden">
             <button
               onClick={() => setGridSize(s => Math.max(1, s - 1))}
               disabled={gridSize <= 1}
               className="
                 w-7 h-7 flex items-center justify-center
                 bg-bg-secondary text-fg-primary text-sm font-bold
-                border border-border-subtle rounded-md
                 hover:border-border-highlight hover:bg-bg-muted
                 disabled:opacity-40 disabled:cursor-not-allowed
-                transition-colors
+                transition-colors border-r border-border-subtle
               "
             >
               +
@@ -260,7 +277,6 @@ export default function Library() {
               className="
                 w-7 h-7 flex items-center justify-center
                 bg-bg-secondary text-fg-primary text-sm font-bold
-                border border-border-subtle rounded-md
                 hover:border-border-highlight hover:bg-bg-muted
                 disabled:opacity-40 disabled:cursor-not-allowed
                 transition-colors
@@ -270,21 +286,21 @@ export default function Library() {
             </button>
           </div>
         </div>
-      </div>
-
+      }
+    >
       {/* groups */}
       {Object.entries(groupedGames).map(([groupName, groupGames]) => (
-        <div key={groupName} className="w-full mb-8 items-center">
+        <div key={groupName} className="w-full mb-8">
           {groupBy !== 'none' && (
             <h2 className={`
               font-semibold text-fg-secondary mb-4 
               border-b border-border-subtle pb-2
-              transition-all
-              ${gridSize === 1 ? 'text-2xl' : gridSize === 2 ? 'text-xl' : gridSize === 3 ? 'text-lg' : 'text-base'}
+              uppercase tracking-wide
+              ${gridSize === 1 ? 'text-xl' : gridSize === 2 ? 'text-lg' : 'text-base'}
             `}>
               {groupName}
-              <span className={`ml-2 text-fg-muted font-normal ${gridSize <= 2 ? 'text-sm' : 'text-xs'}`}>
-                ({groupGames.length})
+              <span className="ml-2 text-fg-muted font-normal text-xs opacity-70">
+                [{groupGames.length}]
               </span>
             </h2>
           )}
@@ -309,6 +325,6 @@ export default function Library() {
           }}
         />
       )}
-    </div>
+    </PageLayout>
   );
 }
