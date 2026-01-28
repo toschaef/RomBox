@@ -50,4 +50,4 @@ controller options per console
 
 multiplayer support
 
-![Star History](renderer/assets/star-history.png)
+![Star History](src/renderer/assets/star-history.png)
