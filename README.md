@@ -49,3 +49,5 @@ theme customization
 controller options per console
 
 multiplayer support
+
+![Star History](renderer/assets/star-history.png)
