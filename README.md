@@ -49,3 +49,5 @@ theme customization
 controller options per console
 
 multiplayer support
+
+![Star Map](renderer/assets/star-map.png)
