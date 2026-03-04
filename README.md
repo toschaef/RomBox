@@ -10,7 +10,7 @@
 2. Drag and drop your game/BIOS files
 3. Click on the cover to launch
 
-## Disclaimers
+### Disclaimers
 
 RomBox is currently in early access and is only supported on Apple Silicon (ARM) MacOS
 
@@ -57,11 +57,12 @@ BIOSes can be viewed and deleted in the BIOS window, and are installed by draggi
 
 | Console | Expected BIOS Filename | Required |
 | --- | --- | --- |
+| SNES | `dsp1.rom`<br>`dsp1b.rom`<br>`dsp2.rom`<br>`dsp3.rom`<br>`dsp4.rom`<br>`st010.rom`<br>`st011.rom` | Required for<br>some games |
 | Game Boy Advance | `gba_bios.bin` | Yes |
 | Nintendo DS | `bios7.bin`<br>`bios9.bin`<br>`firmware.bin` | Yes (All) |
 | Nintendo 3DS | Install your `user` directory uploaded from your 3DS | No |
 | PS1 | `scph1001.bin`<br>`scph5500.bin`<br>`scph5501.bin`<br>`scph5502.bin`<br>`scph7502.bin`<br>`ps1_bios.bin` | Yes (One) |
-| PS2 | `scph10000.binn`<br>`scph39001.bin`<br>`scph70012.bin`<br>`scph77001.bin`<br>`scph39004.bin`<br>`ps2_bios.bin` | Yes (One) |
+| PS2 | `scph10000.binn`<br>`scph39001.bin`<br>`scph70012.bin`<br>`scph77001.bin`<br>`scph39004.bin`<br>`bios.bin`<br>`ps2_bios.bin` | Yes (One) |
 
 ### Controls
 
