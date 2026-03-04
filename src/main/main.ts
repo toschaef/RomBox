@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, protocol, net } from 'electron';
+import { updateElectronApp } from 'update-electron-app';
 import { initDB } from './data/db';
 import registerGameHandlers from './ipc/gameHandlers';
 import registerEngineHandlers from './ipc/engineHandlers';
@@ -26,6 +27,8 @@ if (require('electron-squirrel-startup')) {
   log.info('Squirrel startup detected, quitting');
   app.quit();
 }
+
+updateElectronApp();
 
 const createWindow = (): void => {
   const mainWindow = new BrowserWindow({

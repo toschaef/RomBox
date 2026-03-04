@@ -197,12 +197,10 @@ export const BiosService = {
     const required = c.bios.required ?? true;
     const files = c.bios.files ?? [];
 
-    // Default behavior:
     let reqFiles = files.filter((f) => (f.level ?? "required") === "required" && !f.gameSpecific);
     let warnFiles = files.filter((f) => (f.level ?? "required") === "warning" || !!f.gameSpecific);
     let forceRequiredForThisGame = false;
 
-    // SNES override: only check chip firmware needed by THIS ROM, and treat it as required
     if (consoleId === "snes") {
       const needed = getRequiredSnesFirmware(game.filePath);
       const neededSet = new Set(needed.map((x) => x.toLowerCase()));
