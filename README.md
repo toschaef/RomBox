@@ -2,17 +2,20 @@
 
 # Installation:
 
-[Download RomBox](https://github.com/toschaef/RomBox/releases/download/untagged-43ad98062780f31632a9/rombox-darwin-arm64-0.9.5.zip)
+[Download RomBox](https://github.com/toschaef/RomBox/releases/latest)
 
 ### Quick Start
 
-1. Install/Open RomBox
-2. Drag and drop your game/BIOS files
-3. Click on the cover to launch
+1. Install/Unzip RomBox
+2. Move it to `/Applications/` and sign with `xattr -cr /Applications/rombox.app`
+3. Drag and drop your game/BIOS files
+4. Click on the cover to launch
 
 ### Disclaimers
 
 RomBox is currently in early access and is only supported on Apple Silicon (ARM) MacOS
+
+I don't pay for an Apple Developer Certificate, so you must sign it with `xattr -cr /Applications/rombox.app` (after moving it to `/Applications/`)
 
 RomBox is an open-source frontend and is not affiliated with, nor authorized, endorsed, or licensed in any way by any console manufacturers or game developers. All trademarks are the property of their respective holders.
 
