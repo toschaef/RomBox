@@ -2,7 +2,7 @@
 
 # Installation:
 
-[![Download RomBox](https://img.shields.io/github/v/release/toschaef/rombox?label=Download%20Latest)](https://github.com/toschaef/rombox/releases/latest)
+[Download RomBox](https://github.com/toschaef/RomBox/releases/download/untagged-43ad98062780f31632a9/rombox-darwin-arm64-0.9.5.zip)
 
 ### Quick Start
 
@@ -10,11 +10,19 @@
 2. Drag and drop your game/BIOS files
 3. Click on the cover to launch
 
+## Disclaimers
+
+RomBox is currently in early access and is only supported on Apple Silicon (ARM) MacOS
+
+RomBox is an open-source frontend and is not affiliated with, nor authorized, endorsed, or licensed in any way by any console manufacturers or game developers. All trademarks are the property of their respective holders.
+
+RomBox does not come bundled with any copyrighted game files or BIOS images. Users are responsible for providing their own files, which should be **legally** dumped from their own physical hardware and media.
+
 # Setup
 
 **IMPORTANT** - RomBox creates copies of the files installed onto it, so keep that in mind your disk space could fill up quickly with large games. I suggest keeping your games on an external drive, to avoid them taking up twice as much necessary space.
 
-To install games and BIOSes, drag and drop your **legally aquired** files anywhere on the application. The accepted game file extentions and BIOS filenames are described below.
+To install games and BIOSes, drag and drop your aquired files anywhere on the application. The accepted game file extentions and BIOS filenames are described below.
 
 RomBox will accept raw files, directories, or archives. Directories and archives can include both games and BIOSes, and it will install all the same.
 
