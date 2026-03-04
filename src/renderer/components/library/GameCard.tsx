@@ -269,7 +269,7 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
         onClick={toggleMenu}
         className={hasCover ? buttonClass : fallbackButtonClass}
       >
-        ⋮
+        {'\u22EE'}
       </button>
 
       {showMenu && (

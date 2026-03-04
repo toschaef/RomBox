@@ -286,7 +286,7 @@ export default function Bios() {
                             )}
                             title="More"
                           >
-                            <span className="text-lg leading-none">⋯</span>
+                            <span className="text-lg leading-none">{'\u22EF'}</span>
                           </button>
 
                           {menuOpenFor === b.consoleId ? (

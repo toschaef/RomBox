@@ -396,7 +396,7 @@ export default function Engines() {
                           (isBusy || action.kind === "working") && "opacity-60 cursor-not-allowed"
                         )}
                       >
-                        <span className="text-lg leading-none">⋯</span>
+                        <span className="text-lg leading-none">{'\u22EF'}</span>
                       </button>
 
                       {menuOpenFor === row.engineId ? (

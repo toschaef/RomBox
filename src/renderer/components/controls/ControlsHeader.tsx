@@ -72,7 +72,7 @@ export default function ControlsHeader(props: {
                 ))}
               </select>
               <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[8px] text-fg-secondary">
-                ▼
+                {'\u25BC'}
               </div>
             </div>
 

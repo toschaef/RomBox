@@ -282,7 +282,7 @@ export default function Library() {
                 transition-colors
               "
             >
-              −
+              -
             </button>
           </div>
         </div>
