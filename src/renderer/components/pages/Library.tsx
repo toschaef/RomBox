@@ -145,7 +145,10 @@ export default function Library() {
     return sortedGames.filter(g => {
       const title = g.title.toLowerCase();
       const titleNoSpaces = title.replace(/\s+/g, '');
-      return title.includes(search.toLowerCase()) || titleNoSpaces.includes(term);
+      const acronym = title.split(/\s+/).map(w => w[0]).filter(Boolean).join('');
+      return title.includes(search.toLowerCase())
+        || titleNoSpaces.includes(term)
+        || acronym.startsWith(term);
     });
   }, [sortedGames, search]);
 
