@@ -96,7 +96,7 @@ function clearGroup(p: ControlsProfile, group: "move" | "dpad" | "look"): Contro
   return next;
 }
 
-type ConsoleGroupId = "move" | "dpad" | "c";
+type ConsoleGroupId = "move" | "dpad" | "c" | "look";
 
 function defaultStick(stick: "left" | "right"): StickBinding {
   return { type: "stick", stick, deadzone: 0.15 };
@@ -124,7 +124,7 @@ function setConsoleGroupMode(layout: AnyConsoleLayout, group: ConsoleGroupId, mo
     return next;
   }
 
-  const stick: "left" | "right" = group === "c" ? "right" : "left";
+  const stick: "left" | "right" = (group === "c" || group === "look") ? "right" : "left";
   next.bindings[group] = defaultStick(stick) as any;
   return next as AnyConsoleLayout;
 }
@@ -362,10 +362,11 @@ function ConsoleControlsView(props: {
         }
 
         if (sec.key === "rightStick") {
-          const groupItem = items.find((x) => x.kind === "group" && x.id === "c");
+          const groupItem = items.find((x) => x.kind === "group" && (x.id === "c" || x.id === "look"));
           if (!groupItem) return null;
 
-          const v = getConsoleGroupValue(layout, "c");
+          const groupId = groupItem.id as "c" | "look";
+          const v = getConsoleGroupValue(layout, groupId);
           const active = v.type === "stick" ? isStickPressed(v) : isDpadPressed(v);
 
           return (
@@ -374,15 +375,15 @@ function ConsoleControlsView(props: {
                 title={groupItem.label ?? "C Buttons"}
                 value={v}
                 listening={
-                  planEquals({ kind: "dpad", group: "c" }) ||
-                  planEquals({ kind: "stick", group: "c", stick: "right" })
+                  planEquals({ kind: "dpad", group: groupId }) ||
+                  planEquals({ kind: "stick", group: groupId, stick: "right" })
                 }
                 active={active}
                 isPressed={isDigitalPressed}
-                onSetMode={(mode) => void saveLayout(setConsoleGroupMode(layout, "c", mode))}
-                onBindDpad={() => startBind({ kind: "dpad", group: "c" })}
-                onBindStick={() => startBind({ kind: "stick", group: "c", stick: "right" })}
-                onClear={() => void saveLayout(clearConsoleGroup(layout, "c"))}
+                onSetMode={(mode) => void saveLayout(setConsoleGroupMode(layout, groupId, mode))}
+                onBindDpad={() => startBind({ kind: "dpad", group: groupId })}
+                onBindStick={() => startBind({ kind: "stick", group: groupId, stick: "right" })}
+                onClear={() => void saveLayout(clearConsoleGroup(layout, groupId))}
                 hint={v.type === "stick" ? "Binds X then Y" : "Binds Up, Down, Left, Right"}
               />
             </div>

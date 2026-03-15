@@ -14,8 +14,8 @@ export type InputEvent =
 
 export type BindPlanConsole =
   | { kind: "digital"; path: string }
-  | { kind: "dpad"; group: "move" | "dpad" | "c" }
-  | { kind: "stick"; group: "move" | "c"; stick: "left" | "right" };
+  | { kind: "dpad"; group: "move" | "dpad" | "c" | "look" }
+  | { kind: "stick"; group: "move" | "c" | "look"; stick: "left" | "right" };
 
 export type BindState =
   | { active: false }
@@ -47,13 +47,13 @@ function setDigital(
   return setConsoleDigital(layout, plan.path, value);
 }
 
-function setGroupDpad(layout: AnyConsoleLayout, group: "move" | "dpad" | "c", nextDpad: DpadBinding) {
+function setGroupDpad(layout: AnyConsoleLayout, group: "move" | "dpad" | "c" | "look", nextDpad: DpadBinding) {
   const next = structuredClone(layout);
   (next.bindings as any)[group] = nextDpad;
   return next;
 }
 
-function setGroupStick(layout: AnyConsoleLayout, group: "move" | "c", nextStick: StickBinding) {
+function setGroupStick(layout: AnyConsoleLayout, group: "move" | "c" | "look", nextStick: StickBinding) {
   const next = structuredClone(layout);
   (next.bindings as any)[group] = nextStick;
   return next;

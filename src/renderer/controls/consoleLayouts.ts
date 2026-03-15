@@ -221,7 +221,7 @@ export const CONSOLE_LAYOUTS: Partial<Record<ConsoleID, ConsoleControlItem[]>> =
 
   ps1: [
     { kind: "group", id: "move", label: "Left Stick", section: "leftStick" },
-    { kind: "group", id: "c", label: "Right Stick", section: "rightStick" },
+    { kind: "group", id: "look", label: "Right Stick", section: "rightStick" },
     { kind: "group", id: "dpad", label: "D-Pad", section: "dpad" },
 
     { kind: "digital", id: "face.primary", label: "Cross", icon: btnA, section: "face" },
@@ -242,7 +242,7 @@ export const CONSOLE_LAYOUTS: Partial<Record<ConsoleID, ConsoleControlItem[]>> =
 
   ps2: [
     { kind: "group", id: "move", label: "Left Stick", section: "leftStick" },
-    { kind: "group", id: "c", label: "Right Stick", section: "rightStick" },
+    { kind: "group", id: "look", label: "Right Stick", section: "rightStick" },
     { kind: "group", id: "dpad", label: "D-Pad", section: "dpad" },
 
     { kind: "digital", id: "face.primary", label: "Cross", icon: btnA, section: "face" },
