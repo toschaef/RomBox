@@ -236,12 +236,29 @@ export const SaveService = {
     }
 
     const restoredFiles: string[] = [];
+    const skippedFiles: string[] = [];
 
     for (const savePath of cachedSaves) {
       const fileName = path.basename(savePath);
       const destPath = path.join(emulatorSaveDir, fileName);
 
       try {
+        const cachedStats = fs.statSync(savePath);
+
+        if (fs.existsSync(destPath)) {
+          const destStats = fs.statSync(destPath);
+
+          if (destStats.mtimeMs > cachedStats.mtimeMs) {
+            saveLog.warn('Skipping restore: destination is newer than cache', {
+              fileName,
+              cachedMtime: new Date(cachedStats.mtimeMs).toISOString(),
+              destMtime: new Date(destStats.mtimeMs).toISOString(),
+            });
+            skippedFiles.push(fileName);
+            continue;
+          }
+        }
+
         fs.copyFileSync(savePath, destPath);
         restoredFiles.push(fileName);
       } catch (err) {
@@ -249,7 +266,7 @@ export const SaveService = {
       }
     }
 
-    saveLog.info('Restore complete', { count: restoredFiles.length, files: restoredFiles });
+    saveLog.info('Restore complete', { count: restoredFiles.length, files: restoredFiles, skipped: skippedFiles });
     return { success: true, restoredFiles };
   },
 
