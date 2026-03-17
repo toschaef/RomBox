@@ -9,6 +9,7 @@ import type { EmulatorPatch, TranslateContext } from "../translators/ITranslator
 import { resolveConsoleBindings } from "../resolveConsoleBindings";
 import type { PlayerBindings } from "../../../shared/types/controls";
 import { DuckStation } from "../schema/duckstation";
+import { SettingsService } from "../../services/SettingsService";
 
 function ensureDirs(configDir: string) {
   fs.mkdirSync(configDir, { recursive: true });
@@ -73,6 +74,10 @@ export class DuckStationConfigurator extends BaseConfigurator {
     const settingsIni = DuckStation.iniPath(configDir);
     const biosDir = path.join(configDir, "bios");
 
+    const settingsSvc = new SettingsService();
+    const fullscreen = settingsSvc.get("launch.fullscreen");
+    const fs_flag = fullscreen ? "true" : "false";
+
     const biosFile = findBiosFile(biosDir);
 
     const pathNtscU = biosFile ? path.join(biosDir, biosFile) : "";
@@ -96,8 +101,8 @@ export class DuckStationConfigurator extends BaseConfigurator {
         IncreaseTimerResolution: "true",
         InhibitScreensaver: "true",
         StartPaused: "false",
-        StartFullscreen: "false",
-        StartInFullscreen: "false",
+        StartFullscreen: fs_flag,
+        StartInFullscreen: fs_flag,
         ShowStatusBar: "false",
         DoubleClickTogglesFullscreen: "false",
         PauseOnFocusLoss: "false",
@@ -181,8 +186,8 @@ export class DuckStationConfigurator extends BaseConfigurator {
         ShowStatusIndicators: "false",
         ShowInputs: "false",
         ShowEnhancements: "false",
-        Fullscreen: "false",
-        StartFullscreen: "false",
+        Fullscreen: fs_flag,
+        StartFullscreen: fs_flag,
         DoubleClickTogglesFullscreen: "false",
         StretchVertically: "false",
       },

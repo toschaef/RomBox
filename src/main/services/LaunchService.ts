@@ -6,6 +6,7 @@ import { SaveService } from './SaveService';
 import { ENGINES } from '../config/engines';
 import { osHandler } from '../platform';
 import { getConfigurator } from '../utils/configurators';
+import { SettingsService } from './SettingsService';
 import { Logger } from '../utils/logger';
 import type { Game } from '../../shared/types';
 
@@ -75,9 +76,12 @@ export const LaunchService = {
       }
     }
 
+    const settingsSvc = new SettingsService();
+    const fullscreen = settingsSvc.get("launch.fullscreen");
+
     const engineConfig = ENGINES[game.engineId];
     const fullCommand = engineConfig.getLaunchCommand
-      ? engineConfig.getLaunchCommand(game, enginePath)
+      ? engineConfig.getLaunchCommand(game, enginePath, { fullscreen })
       : [enginePath, game.filePath];
 
     const binary = fullCommand[0];

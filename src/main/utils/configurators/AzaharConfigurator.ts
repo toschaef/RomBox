@@ -20,6 +20,7 @@ import type { EmulatorPatch, TranslateContext } from "../translators/ITranslator
 import { AzaharTranslator } from "../translators/AzaharTranslator";
 import type { AzaharLearnedSDL } from "../azahar/sdlprobe";
 import { runAzaharSdlProbe } from "../azahar/sdlprobe";
+import { SettingsService } from "../../services/SettingsService";
 
 
 function ensureQtConfigFile(configDir: string): string {
@@ -216,6 +217,12 @@ export class AzaharConfigurator implements EmulatorConfigurator {
 
     patches.push({ kind: "ini-set", section: "UI", key: "showStatusBar", value: "false" });
     patches.push({ kind: "ini-set", section: "UI", key: "showStatusBar\\default", value: "false" });
+
+    const settingsSvc = new SettingsService();
+    const fullscreen = settingsSvc.get("launch.fullscreen");
+    const fs_flag = fullscreen ? "true" : "false";
+    patches.push({ kind: "ini-set", section: "UI", key: "fullscreen", value: fs_flag });
+    patches.push({ kind: "ini-set", section: "UI", key: "fullscreen\\default", value: "false" });
 
     patches.push({ kind: "ini-set", section: "UI", key: "show_advanced_frametime_info", value: "false" });
     patches.push({ kind: "ini-set", section: "UI", key: "show_advanced_frametime_info\\default", value: "false" });

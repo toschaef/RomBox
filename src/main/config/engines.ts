@@ -1,4 +1,4 @@
-import type { EngineDefinition } from "../../shared/types/engines";
+import type { EngineDefinition, LaunchOptions } from "../../shared/types/engines";
 import type { Game } from "../../shared/types";
 import fs from "fs";
 import path from "path";
@@ -35,7 +35,12 @@ export const ENGINES: Record<string, EngineDefinition> = {
         sourceName: "SDL2",
       },
     ],
-    getLaunchCommand: (game: Game, binPath: string) => [binPath, game.filePath],
+    getLaunchCommand: (game: Game, binPath: string, options?: LaunchOptions) => {
+      const args = [binPath];
+      if (options?.fullscreen) args.push("--fullscreen");
+      args.push(game.filePath);
+      return args;
+    },
   },
 
   melonds: {
@@ -50,7 +55,12 @@ export const ENGINES: Record<string, EngineDefinition> = {
       win32: "melonDS.exe",
       darwin: "melonDS.app/Contents/MacOS/melonDS",
     },
-    getLaunchCommand: (game, binPath) => [binPath, game.filePath],
+    getLaunchCommand: (game, binPath, options?: LaunchOptions) => {
+      const args = [binPath];
+      if (options?.fullscreen) args.push("--fullscreen");
+      args.push(game.filePath);
+      return args;
+    },
   },
 
   azahar: {
@@ -104,7 +114,12 @@ export const ENGINES: Record<string, EngineDefinition> = {
     binaries: {
       darwin: `ares-v${ARES_VERSION}/ares.app/Contents/MacOS/ares`,
     },
-    getLaunchCommand: (game, binPath) => [binPath, game.filePath],
+    getLaunchCommand: (game, binPath, options?: LaunchOptions) => {
+      const args = [binPath];
+      if (options?.fullscreen) args.push("--fullscreen");
+      args.push(game.filePath);
+      return args;
+    },
   },
 
   rmg: {

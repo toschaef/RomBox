@@ -10,6 +10,7 @@ import type { EmulatorPatch, TranslateContext } from "../translators/ITranslator
 import { resolveConsoleBindings } from "../resolveConsoleBindings";
 import type { PlayerBindings } from "../../../shared/types/controls";
 import { DOLPHIN } from "../schema/dolphin";
+import { SettingsService } from "../../services/SettingsService";
 
 
 function iniGetAll(text: string, section: string, key: string): string[] {
@@ -99,8 +100,12 @@ export class DolphinConfigurator extends BaseConfigurator {
     ensureDirs(configDir);
     const dolphinIni = path.join(configDir, "Dolphin.ini");
 
+    const settingsSvc = new SettingsService();
+    const fullscreen = settingsSvc.get("launch.fullscreen");
+    const fs_flag = fullscreen ? "True" : "False";
+
     IniEditor.updateIni(dolphinIni, {
-      Display: { RenderToMain: "False", Fullscreen: "False" },
+      Display: { RenderToMain: "False", Fullscreen: fs_flag },
       Interface: {
         ShowMainWindow: "False",
         ConfirmStop: "False",

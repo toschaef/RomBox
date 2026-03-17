@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { settingsClient } from '../../clients/settingsClient';
 import type { SettingsShape, SettingKey } from '../../../shared/settings';
 import PageLayout from '../layout/PageLayout';
+import ToggleSwitch from '../inputs/ToggleSwitch';
 import { useOutletContext } from 'react-router-dom';
 import type { LayoutContextType } from '../layout';
 
@@ -11,7 +12,7 @@ export default function Settings() {
   const { setGlobalLoading, setGlobalStatus } = useOutletContext<LayoutContextType>();
 
   useEffect(() => {
-    settingsClient.getMany(["setup.autoInstallEngines"]).then(setSettings);
+    settingsClient.getMany(["setup.autoInstallEngines", "launch.fullscreen"]).then(setSettings);
   }, []);
 
   const updateSetting = async <K extends SettingKey>(key: K, value: SettingsShape[K]) => {
@@ -48,12 +49,26 @@ export default function Settings() {
                    <p className="text-sm text-fg-muted">Automatically install required emulators when installing games/bios</p>
                 </div>
               
-                <input
+                <ToggleSwitch
                   id="autoInstallEngines"
-                  type="checkbox"
                   checked={settings["setup.autoInstallEngines"] ?? true}
-                  onChange={(e) => updateSetting("setup.autoInstallEngines", e.target.checked)}
-                  className="w-5 h-5 accent-accent-primary rounded-none"
+                  onChange={(checked) => updateSetting("setup.autoInstallEngines", checked)}
+                />
+              </div>
+            </div>
+            <div className="h-px bg-border-subtle" />
+
+            <div>
+              <div className="flex justify-between items-center">
+                <div>
+                   <h3 className="font-bold text-fg-primary">Launch in Fullscreen</h3>
+                   <p className="text-sm text-fg-muted">Start emulators in fullscreen mode when launching games</p>
+                </div>
+              
+                <ToggleSwitch
+                  id="launchFullscreen"
+                  checked={settings["launch.fullscreen"] ?? false}
+                  onChange={(checked) => updateSetting("launch.fullscreen", checked)}
                 />
               </div>
             </div>

@@ -9,6 +9,7 @@ import type { EmulatorPatch, TranslateContext } from "../translators/ITranslator
 import { resolveConsoleBindings } from "../resolveConsoleBindings";
 import type { PlayerBindings } from "../../../shared/types/controls";
 import { PCSX2 } from "../schema/pcsx2";
+import { SettingsService } from "../../services/SettingsService";
 
 function ensureDirs(configDir: string) {
   fs.mkdirSync(configDir, { recursive: true });
@@ -78,9 +79,13 @@ export class PCSX2Configurator extends BaseConfigurator {
 
     const biosFile = findBiosFile(biosDir);
 
+    const settingsSvc = new SettingsService();
+    const fullscreen = settingsSvc.get("launch.fullscreen");
+    const fs_flag = fullscreen ? "true" : "false";
+
     const iniConfig: Record<string, Record<string, string>> = {
       UI: {
-        StartFullscreen: "false",
+        StartFullscreen: fs_flag,
         HideMouseCursor: "true",
         ConfirmShutdown: "false",
         HideCursorOnIdle: "true",
@@ -91,7 +96,7 @@ export class PCSX2Configurator extends BaseConfigurator {
         EnableFastBoot: "true",
       },
       Graphics: {
-        DefaultToFullscreen: "false",
+        DefaultToFullscreen: fs_flag,
       },
       AutoUpdater: {
         CheckAtStartup: "false",

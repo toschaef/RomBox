@@ -3,6 +3,10 @@ import type { BiosConfig, BiosConfigRuntime } from "../bios"
 
 export type EngineID = 'ares' | 'azahar' | 'dolphin' | 'duckstation' | 'melonds' | 'mesen' | 'pcsx2' | 'rmg';
 
+export type LaunchOptions = {
+  fullscreen?: boolean;
+};
+
 export interface EngineConfig {
   id: ConsoleID;
   name: string;
@@ -25,7 +29,7 @@ export interface EngineConfig {
 
   // runtime
   detect: (buffer: Buffer) => boolean;
-  getLaunchCommand: (game: Game, emulatorPath: string) => string[];
+  getLaunchCommand: (game: Game, emulatorPath: string, options?: LaunchOptions) => string[];
   postLaunch?: () => void;
 }
 
@@ -53,7 +57,7 @@ export type EngineDefinition = {
   binaries: Partial<Record<Platform, string>>;
   dependencies?: EngineDependency[];
 
-  getLaunchCommand: (game: Game, enginePath: string) => string[];
+  getLaunchCommand: (game: Game, enginePath: string, options?: LaunchOptions) => string[];
 };
 
 export type EngineDefinitionDTO = Omit<EngineDefinition, "getLaunchCommand" | "postLaunch">;
