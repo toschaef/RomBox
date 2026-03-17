@@ -245,5 +245,37 @@ export class AzaharConfigurator implements EmulatorConfigurator {
     IniEditor.updateIni(qtIniPath, { UI: uiUpdates }, { format: "compact" });
     IniEditor.updateIni(qtIniPath, { Miscellaneous: miscUpdates }, { format: "compact" });
     IniEditor.updateIni(qtIniPath, { Renderer: rendererUpdates }, { format: "compact" });
+
+    syncPerGameConfigs(configDir, { resScale });
+  }
+}
+
+/**
+ * syncs per-game configs each launch
+ */
+function syncPerGameConfigs(
+  configDir: string,
+  values: { resScale: string },
+): void {
+  const customDir = path.join(configDir, "custom");
+  if (!fs.existsSync(customDir)) return;
+
+  let entries: string[];
+  try {
+    entries = fs.readdirSync(customDir).filter(f => f.endsWith(".ini"));
+  } catch {
+    return;
+  }
+
+  for (const file of entries) {
+    const filePath = path.join(customDir, file);
+
+    IniEditor.updateIni(filePath, {
+      Renderer: {
+        resolution_factor: values.resScale,
+        "resolution_factor\\default": "false",
+        "resolution_factor\\use_global": "true",
+      },
+    }, { format: "compact" });
   }
 }
