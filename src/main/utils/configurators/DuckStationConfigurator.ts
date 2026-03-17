@@ -10,6 +10,7 @@ import { resolveConsoleBindings } from "../resolveConsoleBindings";
 import type { PlayerBindings } from "../../../shared/types/controls";
 import { DuckStation } from "../schema/duckstation";
 import { SettingsService } from "../../services/SettingsService";
+import { getResolutionMultiplier } from "../../../shared/resolution";
 
 function ensureDirs(configDir: string) {
   fs.mkdirSync(configDir, { recursive: true });
@@ -77,6 +78,8 @@ export class DuckStationConfigurator extends BaseConfigurator {
     const settingsSvc = new SettingsService();
     const fullscreen = settingsSvc.get("launch.fullscreen");
     const fs_flag = fullscreen ? "true" : "false";
+    const resolution = settingsSvc.get("launch.resolution");
+    const resScale = String(getResolutionMultiplier(resolution, "duckstation"));
 
     const biosFile = findBiosFile(biosDir);
 
@@ -136,7 +139,7 @@ export class DuckStationConfigurator extends BaseConfigurator {
       GPU: {
         Renderer: "Auto",
         Adapter: "",
-        ResolutionScale: "1",
+        ResolutionScale: resScale,
         Multisamples: "1",
         UseDebugDevice: "false",
         PerSampleShading: "false",

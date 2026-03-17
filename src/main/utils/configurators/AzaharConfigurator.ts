@@ -21,6 +21,7 @@ import { AzaharTranslator } from "../translators/AzaharTranslator";
 import type { AzaharLearnedSDL } from "../azahar/sdlprobe";
 import { runAzaharSdlProbe } from "../azahar/sdlprobe";
 import { SettingsService } from "../../services/SettingsService";
+import { getResolutionMultiplier } from "../../../shared/resolution";
 
 
 function ensureQtConfigFile(configDir: string): string {
@@ -227,16 +228,22 @@ export class AzaharConfigurator implements EmulatorConfigurator {
     patches.push({ kind: "ini-set", section: "UI", key: "show_advanced_frametime_info", value: "false" });
     patches.push({ kind: "ini-set", section: "UI", key: "show_advanced_frametime_info\\default", value: "false" });
 
+    const resScale = String(getResolutionMultiplier(settingsSvc.get("launch.resolution"), "azahar"));
+    patches.push({ kind: "ini-set", section: "Renderer", key: "resolution_factor", value: resScale });
+    patches.push({ kind: "ini-set", section: "Renderer", key: "resolution_factor\\default", value: "false" });
+
 
     const updates = patchesToIniUpdates(patches);
     const rawControls = updates[AZAHAR.sections.controls] ?? {};
     const uiUpdates = updates[AZAHAR.sections.ui] ?? {};
     const miscUpdates = updates["Miscellaneous"] ?? {};
+    const rendererUpdates = updates["Renderer"] ?? {};
 
     const controls = buildControlsSection({ rawControls, preKV });
 
     IniEditor.overwriteSection(qtIniPath, "Controls", controls, { format: "compact" });
     IniEditor.updateIni(qtIniPath, { UI: uiUpdates }, { format: "compact" });
     IniEditor.updateIni(qtIniPath, { Miscellaneous: miscUpdates }, { format: "compact" });
+    IniEditor.updateIni(qtIniPath, { Renderer: rendererUpdates }, { format: "compact" });
   }
 }

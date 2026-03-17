@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { settingsClient } from '../../clients/settingsClient';
 import type { SettingsShape, SettingKey } from '../../../shared/settings';
+import { RESOLUTION_OPTIONS } from '../../../shared/resolution';
 import PageLayout from '../layout/PageLayout';
 import ToggleSwitch from '../inputs/ToggleSwitch';
+import SettingsSelect from '../inputs/SettingsSelect';
 import { useOutletContext } from 'react-router-dom';
 import type { LayoutContextType } from '../layout';
 
@@ -12,7 +14,7 @@ export default function Settings() {
   const { setGlobalLoading, setGlobalStatus } = useOutletContext<LayoutContextType>();
 
   useEffect(() => {
-    settingsClient.getMany(["setup.autoInstallEngines", "launch.fullscreen"]).then(setSettings);
+    settingsClient.getMany(["setup.autoInstallEngines", "launch.fullscreen", "launch.resolution"]).then(setSettings);
   }, []);
 
   const updateSetting = async <K extends SettingKey>(key: K, value: SettingsShape[K]) => {
@@ -69,6 +71,23 @@ export default function Settings() {
                   id="launchFullscreen"
                   checked={settings["launch.fullscreen"] ?? false}
                   onChange={(checked) => updateSetting("launch.fullscreen", checked)}
+                />
+              </div>
+            </div>
+            <div className="h-px bg-border-subtle" />
+
+            <div>
+              <div className="flex justify-between items-center">
+                <div>
+                   <h3 className="font-bold text-fg-primary">Resolution</h3>
+                   <p className="text-sm text-fg-muted">Internal rendering resolution for 3D emulators (PS1, PS2, GC/Wii, 3DS)</p>
+                </div>
+              
+                <SettingsSelect
+                  id="launchResolution"
+                  value={settings["launch.resolution"] ?? 0}
+                  options={RESOLUTION_OPTIONS}
+                  onChange={(v) => updateSetting("launch.resolution", Number(v))}
                 />
               </div>
             </div>

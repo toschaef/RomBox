@@ -10,6 +10,7 @@ import { resolveConsoleBindings } from "../resolveConsoleBindings";
 import type { PlayerBindings } from "../../../shared/types/controls";
 import { PCSX2 } from "../schema/pcsx2";
 import { SettingsService } from "../../services/SettingsService";
+import { getResolutionMultiplier } from "../../../shared/resolution";
 
 function ensureDirs(configDir: string) {
   fs.mkdirSync(configDir, { recursive: true });
@@ -82,6 +83,8 @@ export class PCSX2Configurator extends BaseConfigurator {
     const settingsSvc = new SettingsService();
     const fullscreen = settingsSvc.get("launch.fullscreen");
     const fs_flag = fullscreen ? "true" : "false";
+    const resolution = settingsSvc.get("launch.resolution");
+    const resScale = String(getResolutionMultiplier(resolution, "pcsx2"));
 
     const iniConfig: Record<string, Record<string, string>> = {
       UI: {
@@ -94,6 +97,9 @@ export class PCSX2Configurator extends BaseConfigurator {
       },
       EmuCore: {
         EnableFastBoot: "true",
+      },
+      "EmuCore/GS": {
+        upscale_multiplier: resScale,
       },
       Graphics: {
         DefaultToFullscreen: fs_flag,

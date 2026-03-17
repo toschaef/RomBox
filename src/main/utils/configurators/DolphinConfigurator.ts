@@ -11,6 +11,7 @@ import { resolveConsoleBindings } from "../resolveConsoleBindings";
 import type { PlayerBindings } from "../../../shared/types/controls";
 import { DOLPHIN } from "../schema/dolphin";
 import { SettingsService } from "../../services/SettingsService";
+import { getResolutionMultiplier } from "../../../shared/resolution";
 
 
 function iniGetAll(text: string, section: string, key: string): string[] {
@@ -103,6 +104,8 @@ export class DolphinConfigurator extends BaseConfigurator {
     const settingsSvc = new SettingsService();
     const fullscreen = settingsSvc.get("launch.fullscreen");
     const fs_flag = fullscreen ? "True" : "False";
+    const resolution = settingsSvc.get("launch.resolution");
+    const resScale = String(getResolutionMultiplier(resolution, "dolphin"));
 
     IniEditor.updateIni(dolphinIni, {
       Display: { RenderToMain: "False", Fullscreen: fs_flag },
@@ -115,6 +118,11 @@ export class DolphinConfigurator extends BaseConfigurator {
         ShowStatusbar: "False",
       },
       General: { RecursiveISOPaths: "False" },
+    });
+
+    const gfxIni = path.join(configDir, "GFX.ini");
+    IniEditor.updateIni(gfxIni, {
+      Settings: { InternalResolution: resScale },
     });
 
     if (this.game.consoleId === "wii") {

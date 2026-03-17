@@ -17,6 +17,8 @@ function validate<K extends SettingKey>(key: K, value: unknown): value is Settin
       return typeof value === "boolean";
     case "controls.activeProfileId":
       return typeof value === "string";
+    case "launch.resolution":
+      return typeof value === "number";
     default:
       return false;
   }
