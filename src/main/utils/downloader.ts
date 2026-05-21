@@ -47,7 +47,24 @@ export const Downloader = {
 
     } catch (err) {
       if (fs.existsSync(destPath)) fs.unlinkSync(destPath);
-      throw new Error(`Download failed for ${url}: ${err.message} (Status: ${err.response?.status})`);
+
+      let errorMessage = err.message || 'An unknown error occurred';
+      
+      if (err.code === 'ENOTFOUND') {
+        errorMessage = 'Network Error';
+      } else if (err.code === 'ETIMEDOUT' || err.code === 'ECONNABORTED') {
+        errorMessage = 'Connection timed out';
+      } else if (err.response?.status) {
+        if (err.response.status === 404) {
+          errorMessage = 'Engine file could not be found';
+        } else if (err.response.status === 403) {
+          errorMessage = 'Access to engine file denied';
+        } else {
+          errorMessage = `Server returned an error (${err.response.status})`;
+        }
+      }
+
+      throw new Error(`Download failed: ${errorMessage}`);
     }
   }
 };

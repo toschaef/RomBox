@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useDragAndDrop } from '../../hooks/useDragAndDrop';
-import { ScanResponse } from '../../../shared/types';
+import { useNotifications } from '../../hooks/useNotifications';
+import type { DropResult } from '../../../shared/types';
 
 export interface LayoutContextType {
   lastBiosUpdate: string | null;
@@ -11,7 +12,7 @@ export interface LayoutContextType {
 }
 
 const PAGES = [
-  "", // Libary
+  "", // Library
   "Controls",
   "Engines",
   "Bios",
@@ -21,15 +22,20 @@ const PAGES = [
 export default function Layout() {
   const [lastBiosUpdate, setLastBiosUpdate] = useState<string | null>(null);
   const [refreshLibraryTrigger, setRefreshLibraryTrigger] = useState(0);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [loadingMessage, setLoadingMessage] = useState<string>("Processing");
 
-  const setGlobalLoading = (l: boolean) => setIsLoading(l);
+  const { notify, setLoadingMessage } = useNotifications();
+
+  const setGlobalLoadingState = (l: boolean) => setLoadingMessage(l ? "Processing" : null);
   const setGlobalStatus = (s: string) => setLoadingMessage(s);
-
   const onFilesDropped = async (files: FileList) => {
-    setIsLoading(true);
     setLoadingMessage("Installing");
+
+    let anyGames = false;
+    let anyBios = false;
+
+    const allGameTitles: string[] = [];
+    const allBiosLabels: string[] = [];
+    const errors: string[] = [];
 
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
@@ -38,24 +44,55 @@ export default function Layout() {
         if (files.length > 1) setLoadingMessage(`Processing ${i + 1} of ${files.length}...`);
         
         try {
-          const result: {success: boolean, games: ScanResponse[], biosCount: number, message?: string } = await window.electron.invoke('process-file-drop', filePath);
+          const result = await window.electron.invoke('process-file-drop', filePath) as DropResult;
           console.log('Drop Result:', result);
           
           if (result.success) {
-            if (result.games && result.games.length > 0) {
-              setRefreshLibraryTrigger(prev => prev + 1);
+            if (result.games?.length > 0) {
+              anyGames = true;
+              for (const g of result.games) allGameTitles.push(g.title);
             }
-            if (result.biosCount && result.biosCount > 0) {
-              setLastBiosUpdate(Date.now().toString());
+            if (result.biosCount > 0) {
+              anyBios = true;
+              if (result.biosLabels) allBiosLabels.push(...result.biosLabels);
             }
           } else {
-            console.warn("File drop issue:", result.message);
+            const ext = file.name.includes('.') ? '.' + file.name.split('.').pop() : '(none)';
+            errors.push(result.message ?? `Unknown extension ${ext}`);
           }
         } catch (err) {
           console.error("IPC Error:", err);
-        } finally {
-          setIsLoading(false);
+          errors.push((err as Error).message ?? `Failed to process ${file.name}`);
         }
+    }
+
+    if (anyGames) setRefreshLibraryTrigger(prev => prev + 1);
+    if (anyBios) setLastBiosUpdate(Date.now().toString());
+    setLoadingMessage(null);
+
+    const totalItems = allGameTitles.length + allBiosLabels.length + errors.length;
+
+    if (totalItems <= 3) {
+      for (const title of allGameTitles) {
+        notify(`Installed ${title}`, { type: 'success' });
+      }
+      for (const label of allBiosLabels) {
+        notify(`Installed ${label}`, { type: 'success' });
+      }
+      for (const err of errors) {
+        notify(err, { type: 'error' });
+      }
+    } else {
+      const successCount = allGameTitles.length + allBiosLabels.length;
+      if (successCount > 0) {
+        const parts: string[] = [];
+        if (allGameTitles.length > 0) parts.push(`${allGameTitles.length} game${allGameTitles.length > 1 ? 's' : ''}`);
+        if (allBiosLabels.length > 0) parts.push(`${allBiosLabels.length} BIOS file${allBiosLabels.length > 1 ? 's' : ''}`);
+        notify(`Installed ${parts.join(' and ')}`, { type: 'success' });
+      }
+      if (errors.length > 0) {
+        notify(`${errors.length} file${errors.length > 1 ? 's' : ''} failed: ${errors.slice(0, 3).join(', ')}${errors.length > 3 ? '…' : ''}`, { type: 'error' });
+      }
     }
   };
 
@@ -72,21 +109,6 @@ export default function Layout() {
           <div className="text-center animate-pulse">
             <h2 className="text-5xl font-bold text-accent-primary mb-2">Drop File</h2>
             <p className="text-xl text-fg-muted">Add Game or Install BIOS</p>
-          </div>
-        </div>
-      )}
-
-      {/* loading modal */}
-      {isLoading && (
-        <div className="absolute inset-0 z-110 flex flex-col items-center justify-center bg-bg-primary/80 backdrop-blur-md cursor-wait overflow-hidden">
-          <svg className="animate-spin h-12 w-12 text-accent-primary mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          
-          <div className="z-10 flex flex-col items-center">
-             <h2 className="text-3xl font-black text-transparent bg-clip-text bg-linear-to-r from-accent-primary to-accent-secondary animate-pulse drop-shadow-md">{loadingMessage}</h2>
-             <p className="text-sm text-fg-primary mt-2 font-bold drop-shadow-md">Large files may take a while to unzip.</p>
           </div>
         </div>
       )}
@@ -124,7 +146,7 @@ export default function Layout() {
       </aside>
 
       <main className="flex-1 min-h-0 overflow-y-auto relative">
-        <Outlet context={{ lastBiosUpdate, refreshLibraryTrigger, setGlobalLoading, setGlobalStatus } as LayoutContextType} />
+        <Outlet context={{ lastBiosUpdate, refreshLibraryTrigger, setGlobalLoading: setGlobalLoadingState, setGlobalStatus } as LayoutContextType} />
       </main>
     </div>
   );

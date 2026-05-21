@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Game } from '../../../shared/types';
 import { gameClient } from '../../clients/gameClient';
+import { useNotifications } from '../../hooks/useNotifications';
 
 interface Props {
   game: Game;
@@ -11,6 +12,7 @@ interface Props {
 export default function UpdateGameModal({ game, onClose, onSave }: Props) {
   const [title, setTitle] = useState(game.title);
   const [isSaving, setIsSaving] = useState(false);
+  const { notify } = useNotifications();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +28,7 @@ export default function UpdateGameModal({ game, onClose, onSave }: Props) {
       }
     } catch (err) {
       console.error("Failed to update", err);
+      notify(`Error renaming ${game.title}`, { type: 'error' });
     } finally {
       setIsSaving(false);
     }
@@ -40,7 +43,7 @@ export default function UpdateGameModal({ game, onClose, onSave }: Props) {
         
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           
-          {/* onyl title so far */}
+          {/* only title so far */}
           <div>
             <label className="block text-xs font-bold text-fg-muted uppercase tracking-wider mb-2">
               Game Title

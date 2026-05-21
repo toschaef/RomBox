@@ -37,3 +37,17 @@ export interface ScanResponse extends IpcResponse {
 export interface LibraryResponse extends IpcResponse {
   games: Game[];
 }
+
+export interface DropResult extends IpcResponse {
+  games: Game[];
+  biosCount: number;
+  biosLabels?: string[];
+  nothingRecognized?: boolean;
+  fileExtension?: string;
+}
+
+export * from './bios';
+export * from './controls';
+export * from './engines';
+export * from './notifications';
+export * from './saves';

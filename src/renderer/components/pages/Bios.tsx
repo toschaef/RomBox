@@ -7,6 +7,7 @@ import type { BiosStatus } from "../../../shared/types/bios";
 import { useOutletContext } from "react-router-dom";
 import type { LayoutContextType } from "../layout";
 import PageLayout from "../layout/PageLayout";
+import { useNotifications } from "../../hooks/useNotifications";
 
 
 function clsx(...xs: Array<string | false | null | undefined>) {
@@ -53,9 +54,9 @@ export default function Bios() {
   const [items, setItems] = useState<BiosStatus[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [action, setAction] = useState<ActionState>({ kind: "idle" });
-  const [toast, setToast] = useState<string | null>(null);
   const [engineInstalled, setEngineInstalled] = useState<Record<ConsoleID, boolean>>({} as Record<ConsoleID, boolean>);
   const { lastBiosUpdate } = useOutletContext<LayoutContextType>();
+  const { notify } = useNotifications();
 
   const [menuOpenFor, setMenuOpenFor] = useState<ConsoleID | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -101,7 +102,7 @@ export default function Bios() {
       setEngineInstalled(Object.fromEntries(pairs) as Record<ConsoleID, boolean>);
     } catch (err) {
       console.error("[BiosPage] refresh failed:", err);
-      setToast((err as Error).message);
+      notify((err as Error).message, { type: 'error' });
       setItems([]);
       setEngineInstalled({} as Record<ConsoleID, boolean>);
     } finally {
@@ -122,14 +123,13 @@ export default function Bios() {
 
   const doDelete = async (consoleId: ConsoleID, fileName: string) => {
     setAction({ kind: "working", consoleId, action: "delete" });
-    setToast(null);
 
     try {
       const r = await biosClient.deleteBios({ consoleId, fileName });
       if (!r.success) throw new Error(r.message || r.error || "Delete failed");
-      setToast(`${getConsoleNameFromId(consoleId)}: removed ${fileName}.`);
+      notify(`${getConsoleNameFromId(consoleId)}: removed ${fileName}.`, { type: 'success' });
     } catch (err) {
-      setToast((err as Error).message);
+      notify((err as Error).message, { type: 'error' });
     } finally {
       setAction({ kind: "idle" });
       await refresh();

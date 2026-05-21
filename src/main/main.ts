@@ -17,6 +17,7 @@ import { Logger } from './utils/logger';
 import path from 'path';
 import fs from 'fs';
 import { pathToFileURL } from 'url';
+import { getConsoleNameFromId } from '../shared/constants';
 
 const log = Logger.create('Main');
 
@@ -103,7 +104,7 @@ ipcMain.handle('process-file-drop', async (_, filePath) => {
     dropLog.info('Scan complete', { resultCount: results.length });
     
     const processedGames = [];
-    let biosCount = 0;
+    const biosLabels: string[] = [];
 
     const settingsService = new SettingsService();
     const shouldAutoInstall = settingsService.get("setup.autoInstallEngines");
@@ -132,12 +133,19 @@ ipcMain.handle('process-file-drop', async (_, filePath) => {
       }
       else if (result.type === "bios") {
         dropLog.info('Processing BIOS file', { consoleId: result.consoleId });
+
+        const consoleName = getConsoleNameFromId(result.consoleId);
+
+        const biosFileName = result.zipEntryName
+          ? path.basename(result.zipEntryName)
+          : path.basename(result.filePath);
+        biosLabels.push(`${consoleName} BIOS (${biosFileName})`);
+
         const st = fs.statSync(result.filePath);
 
         if (!result.zipEntryName && st.isDirectory()) {
           dropLog.info('Installing BIOS from directory');
           await BiosService.installBios(result.consoleId, result.filePath);
-          biosCount++;
           
           if (shouldAutoInstall) {
              const engineId = result.engineId;
@@ -173,7 +181,6 @@ ipcMain.handle('process-file-drop', async (_, filePath) => {
           dropLog.info('Extracting BIOS file', { originalName });
           await Extractor.extractToFile(result.filePath, tempPath, result.zipEntryName);
           await BiosService.installBios(result.consoleId, tempPath);
-          biosCount++;
           dropLog.info('BIOS installed successfully', { consoleId: result.consoleId });
 
           if (shouldAutoInstall) {
@@ -202,16 +209,24 @@ ipcMain.handle('process-file-drop', async (_, filePath) => {
       }
     }
 
+    const nothingRecognized = processedGames.length === 0 && biosLabels.length === 0;
+    const fileExt = path.extname(filePath).toLowerCase() || undefined;
+
     dropLog.info('File drop processing complete', { 
       gamesProcessed: processedGames.length, 
-      biosFilesProcessed: biosCount 
+      biosFilesProcessed: biosLabels.length 
     });
     
     return {
-      success: true,
+      success: !nothingRecognized,
       games: processedGames,
-      biosCount,
-      message: `Processed ${processedGames.length} games and ${biosCount} BIOS files.`
+      biosCount: biosLabels.length,
+      biosLabels,
+      nothingRecognized,
+      fileExtension: nothingRecognized ? fileExt : undefined,
+      message: nothingRecognized
+        ? `Unknown extension ${fileExt ?? '(none)'}`
+        : `Processed ${processedGames.length} games and ${biosLabels.length} BIOS files.`
     };
   } catch (err) {
     dropLog.error('Drop failed', err);

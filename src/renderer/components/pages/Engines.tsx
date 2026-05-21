@@ -6,6 +6,7 @@ import { getConsoleNameFromId, ENGINE_MAP } from "../../../shared/constants";
 import PageLayout from "../layout/PageLayout";
 import { useOutletContext } from "react-router-dom";
 import type { LayoutContextType } from "../layout";
+import { useNotifications } from "../../hooks/useNotifications";
 
 function clsx(...xs: Array<string | false | null | undefined>) {
   return xs.filter(Boolean).join(" ");
@@ -59,11 +60,11 @@ export default function Engines() {
   const [engines, setEngines] = useState<EngineInfo[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [action, setAction] = useState<ActionState>({ kind: "idle" });
-  const [toast, setToast] = useState<string | null>(null);
   const [installStatus, setInstallStatus] = useState<string>("");
   const [menuOpenFor, setMenuOpenFor] = useState<EngineID | null>(null);
 
   const { setGlobalLoading, setGlobalStatus } = useOutletContext<LayoutContextType>();
+  const { notify } = useNotifications();
 
   console.log("[Engines] engines:", engines);
 
@@ -103,7 +104,7 @@ export default function Engines() {
       setEngines(list);
     } catch (err) {
       console.error("[Engines] getEngines failed", err);
-      setToast((err as Error).message);
+      notify((err as Error).message, { type: 'error' });
       setEngines([]);
     } finally {
       setLoading(false);
@@ -161,15 +162,14 @@ export default function Engines() {
     setAction({ kind: "working", engineId: row.engineId, action: "install" });
     setGlobalLoading(true);
     setGlobalStatus(`Installing ${row.displayName}...`);
-    setToast(null);
     setInstallStatus("");
 
     try {
       const r = await engineClient.installEngine(row.engineId);
       if (!r.success) throw new Error(r.message || r.error || "Install failed");
-      setToast(`${row.displayName} installed.`);
+      notify(`${row.displayName} installed.`, { type: 'success' });
     } catch (err) {
-      setToast((err as Error).message);
+      notify((err as Error).message, { type: 'error' });
     } finally {
       setAction({ kind: "idle" });
       setGlobalLoading(false);
@@ -181,15 +181,14 @@ export default function Engines() {
     setAction({ kind: "working", engineId: row.engineId, action: "delete" });
     setGlobalLoading(true);
     setGlobalStatus(`Deleting ${row.displayName}...`);
-    setToast(null);
     setInstallStatus("");
 
     try {
       const r = await engineClient.deleteEngine(row.engineId);
       if (!r.success) throw new Error(r.message || r.error || "Uninstall failed");
-      setToast(`${row.displayName} removed.`);
+      notify(`Uninstalled ${row.displayName}`, { type: 'success' });
     } catch (err) {
-      setToast((err as Error).message);
+      notify((err as Error).message, { type: 'error' });
     } finally {
       setAction({ kind: "idle" });
       setGlobalLoading(false);
@@ -201,7 +200,6 @@ export default function Engines() {
     setAction({ kind: "working", engineId: row.engineId, action: "repair" });
     setGlobalLoading(true);
     setGlobalStatus(`Repairing ${row.displayName}...`);
-    setToast(null);
     setInstallStatus("");
 
     try {
@@ -211,9 +209,9 @@ export default function Engines() {
       const ins = await engineClient.installEngine(row.engineId);
       if (!ins.success) throw new Error(ins.message || ins.error || "Install failed during repair");
 
-      setToast(`${row.displayName} repaired.`);
+      notify(`${row.displayName} repaired.`, { type: 'success' });
     } catch (err) {
-      setToast((err as Error).message);
+      notify((err as Error).message, { type: 'error' });
     } finally {
       setAction({ kind: "idle" });
       setGlobalLoading(false);

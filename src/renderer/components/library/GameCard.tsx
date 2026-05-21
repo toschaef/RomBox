@@ -5,6 +5,7 @@ import BiosModal from '../inputs/BiosModal';
 import { gameClient } from '../../clients/gameClient';
 import { saveClient } from '../../clients/saveClient';
 import { IpcResponse } from '../../../shared/types';
+import { useNotifications } from '../../hooks/useNotifications';
 
 function formatPlaytime(seconds: number): string {
   if (seconds < 60) return `${seconds}s`;
@@ -32,6 +33,7 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
   const [coverLoading, setCoverLoading] = useState(false);
   const [coverError, setCoverError] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { notify } = useNotifications();
 
   const getButtonStyle = () => {
     if (gridSize >= 6) {
@@ -211,9 +213,11 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
         setBiosModalOpen(true);
       } else {
         console.error("Launch error:", result.message);
+        notify(`Error launching ${game.title}: ${result.message}`, { type: 'error' });
       }
     } catch (err) {
       console.error("IPC Error", err);
+      notify(`Error launching ${game.title}: ${err}`, { type: 'error' });
     }
   };
 
@@ -225,12 +229,14 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm(`Delete game ${game.title}?`)) {
+    if (confirm(`Delete ${game.title}?`)) {
       try {
         await window.electron.invoke('game:delete', game.id);
+        notify(`Deleted ${game.title}`, { type: 'success' });
         onDelete();
       } catch (err) {
         console.error(err);
+        notify(`Error deleting ${game.title}`, { type: 'error' });
       }
     }
     setShowMenu(false);
@@ -246,13 +252,16 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
       
       if (result.success && result.exportedTo) {
         console.log(`[GameCard] Save exported to: ${result.exportedTo}`);
+        notify(`Save exported for ${game.title}`, { type: 'success' });
       } else if (result.error === 'Export cancelled') {
         console.log('[GameCard] Export cancelled by user');
       } else {
         console.warn(`[GameCard] Export failed: ${result.error}`);
+        notify(`Error exporting save for ${game.title}: ${result.error}`, { type: 'error' });
       }
     } catch (err) {
       console.error('[GameCard] Export error:', err);
+      notify(`Error exporting save`, { type: 'error' });
     }
   };
 
