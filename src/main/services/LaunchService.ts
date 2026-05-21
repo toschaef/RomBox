@@ -1,3 +1,4 @@
+import fs from 'fs';
 import { BrowserWindow } from 'electron';
 import { EngineService } from './EngineService';
 import { BiosService } from './BiosService'
@@ -86,6 +87,12 @@ export const LaunchService = {
 
     const binary = fullCommand[0];
     const args = fullCommand.slice(1);
+
+    // file existence check
+    if (!fs.existsSync(game.filePath)) {
+      gameLog.warn('Game file missing', { filePath: game.filePath });
+      return { success: false, code: 'MISSING_FILE', message: `Game file not found: ${game.filePath}` };
+    }
 
     // execution
     gameLog.info('Launching emulator', { binary, args });

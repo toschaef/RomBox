@@ -1,4 +1,5 @@
-import { execSync, spawn, type ChildProcess } from "child_process";
+import { execSync, exec, spawn, type ChildProcess } from "child_process";
+import { promisify } from "util";
 import path from "path";
 import fs from "fs";
 import AdmZip from "adm-zip";
@@ -13,6 +14,8 @@ type FinalizeOptions = {
   resetMesenSupportDir?: boolean;
   verbose?: boolean;
 };
+
+const execAsync = promisify(exec);
 
 export class MacHandler implements PlatformHandler {
 
@@ -49,7 +52,7 @@ export class MacHandler implements PlatformHandler {
   ): Promise<void> {
     console.log(`[Mac] Installing dependency: ${searchName} from ${path.basename(dmgPath)}`);
 
-    const mountPoint = this.mountDmgReadonly(dmgPath);
+    const mountPoint = await this.mountDmgReadonly(dmgPath);
     try {
       const foundPath = findFile(mountPoint, searchName);
       if (!foundPath) throw new Error(`Could not find ${searchName} in DMG`);
@@ -61,17 +64,17 @@ export class MacHandler implements PlatformHandler {
       if (fs.statSync(foundPath).isDirectory()) {
         const binaryInside = findFile(foundPath, searchName);
         if (!binaryInside) throw new Error("Found directory, but no binary inside framework");
-        fs.copyFileSync(binaryInside, destPath);
+        await fs.promises.copyFile(binaryInside, destPath);
       } else {
-        fs.copyFileSync(foundPath, destPath);
+        await fs.promises.copyFile(foundPath, destPath);
       }
 
-      this.tryExec(`install_name_tool -id "@executable_path/${targetFilename}" "${destPath}"`, true);
+      await this.tryExecAsync(`install_name_tool -id "@executable_path/${targetFilename}" "${destPath}"`, true);
 
       await this.removeQuarantine(destPath);
       console.log(`[Mac] Dependency installed: ${destPath}`);
     } finally {
-      this.unmountDmg(mountPoint);
+      await this.unmountDmg(mountPoint);
     }
   }
 
@@ -114,8 +117,8 @@ export class MacHandler implements PlatformHandler {
     return found;
   }
 
-  // rework this for prod, but good for dev
-  clearPlatformData(): void {
+  // rework this eventually
+  async clearPlatformData(): Promise<void> {
     const home = homedir();
     const pathsToDelete = [
       path.join(home, ".config", "Mesen2"),
@@ -131,7 +134,7 @@ export class MacHandler implements PlatformHandler {
     for (const p of pathsToDelete) {
       if (fs.existsSync(p)) {
         console.log(`[Mac] Cleaning config: ${p}`);
-        fs.rmSync(p, { recursive: true, force: true });
+        await fs.promises.rm(p, { recursive: true, force: true });
       }
     }
   }
@@ -322,28 +325,29 @@ export class MacHandler implements PlatformHandler {
   private async extractDmg(filePath: string, destDir: string): Promise<void> {
     const mountPoint = path.join(path.dirname(filePath), `mount_${Date.now()}`);
     try {
-      this.tryExec(`hdiutil attach -nobrowse -noautoopen -mountpoint "${mountPoint}" "${filePath}"`);
+      await this.tryExecAsync(`hdiutil attach -nobrowse -noautoopen -mountpoint "${mountPoint}" "${filePath}"`);
       const appBundles = this.findAllAppBundles(mountPoint);
       if (appBundles.length === 0) throw new Error("No .app bundle found inside DMG.");
 
       for (const appPath of appBundles) {
         console.log(`[Mac] Copy app: ${path.basename(appPath)} -> ${destDir}`);
-        this.tryExec(`cp -R "${appPath}" "${destDir}/"`);
+        await this.tryExecAsync(`cp -R "${appPath}" "${destDir}/"`);
       }
     } finally {
-      if (fs.existsSync(mountPoint)) this.unmountDmg(mountPoint);
+      if (fs.existsSync(mountPoint)) await this.unmountDmg(mountPoint);
     }
   }
 
-  private mountDmgReadonly(dmgPath: string): string {
-    const mountOutput = execSync(`hdiutil attach "${dmgPath}" -nobrowse -readonly`).toString();
+  private async mountDmgReadonly(dmgPath: string): Promise<string> {
+    const { stdout } = await execAsync(`hdiutil attach "${dmgPath}" -nobrowse -readonly`);
+    const mountOutput = stdout.toString();
     const mountPoint = mountOutput.match(/\/Volumes\/[^\n\r]*/)?.[0].trim() || "";
     if (!mountPoint) throw new Error("Could not mount DMG");
     return mountPoint;
   }
 
-  private unmountDmg(mountPoint: string): void {
-    this.tryExec(`hdiutil detach "${mountPoint}" -force`, true);
+  private async unmountDmg(mountPoint: string): Promise<void> {
+    await this.tryExecAsync(`hdiutil detach "${mountPoint}" -force`, true);
   }
 
   private getAppBundlePath(p: string): string | null {
@@ -371,7 +375,7 @@ export class MacHandler implements PlatformHandler {
     console.log(`[Mac] Create wrapper for: ${binaryName}`);
 
     try {
-      fs.renameSync(targetBinary, realBinaryPath);
+      await fs.promises.rename(targetBinary, realBinaryPath);
 
       const scriptContent = [
         "#!/bin/bash",
@@ -380,7 +384,7 @@ export class MacHandler implements PlatformHandler {
         `exec "$DIR/${realBinaryName}" "$@"`,
       ].join("\n");
 
-      fs.writeFileSync(targetBinary, scriptContent, "utf-8");
+      await fs.promises.writeFile(targetBinary, scriptContent, "utf-8");
       this.tryChmod(targetBinary);
       this.tryChmod(realBinaryPath);
 
@@ -388,7 +392,7 @@ export class MacHandler implements PlatformHandler {
       await this.adHocSign(realBinaryPath);
 
       console.log("[Mac] Wrapper ok");
-    } catch (err) {
+    } catch (err: any) {
       console.error(`[Mac] Wrapper failed: ${err?.message ?? err}`);
     }
   }
@@ -409,9 +413,17 @@ export class MacHandler implements PlatformHandler {
     }
   }
 
+  private async tryExecAsync(cmd: string, ignoreErrors = false): Promise<void> {
+    try {
+      await execAsync(cmd);
+    } catch (err) {
+      if (!ignoreErrors) throw err;
+    }
+  }
+
   private async removeQuarantine(filePath: string): Promise<void> {
     try {
-      execSync(`xattr -r -d com.apple.quarantine "${filePath}"`, { stdio: "ignore" });
+      await execAsync(`xattr -r -d com.apple.quarantine "${filePath}"`);
       console.log(`[Mac] Unquarantine: ${path.basename(filePath)}`);
     } catch (err) {
       void err;
@@ -420,8 +432,8 @@ export class MacHandler implements PlatformHandler {
 
   private async adHocSign(filePath: string): Promise<void> {
     try {
-      this.tryExec(`codesign --remove-signature "${filePath}"`, true);
-      execSync(`codesign --force --sign - --preserve-metadata=entitlements "${filePath}"`, { stdio: "ignore" });
+      await this.tryExecAsync(`codesign --remove-signature "${filePath}"`, true);
+      await execAsync(`codesign --force --sign - --preserve-metadata=entitlements "${filePath}"`);
     } catch (err) {
       void err;
     }
@@ -429,8 +441,8 @@ export class MacHandler implements PlatformHandler {
 
   private async deepSign(appPath: string): Promise<void> {
     try {
-      execSync(`codesign --force --deep --sign - "${appPath}"`, { stdio: "ignore" });
-    } catch (err) {
+      await execAsync(`codesign --force --deep --sign - "${appPath}"`);
+    } catch (err: any) {
       console.error(`[Mac] Deep sign failed: ${err?.message ?? err}`);
     }
   }

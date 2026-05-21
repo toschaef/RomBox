@@ -28,13 +28,13 @@ export const Extractor = {
     if (!zipEntryName) {
       if (sourcePath !== destPath) {
         const destDir = path.dirname(destPath);
-        if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
+        await fs.promises.mkdir(destDir, { recursive: true });
 
-        const st = fs.statSync(sourcePath);
+        const st = await fs.promises.stat(sourcePath);
         if (st.isDirectory()) {
-          fs.cpSync(sourcePath, destPath, { recursive: true, force: true });
+          await fs.promises.cp(sourcePath, destPath, { recursive: true, force: true });
         } else {
-          fs.copyFileSync(sourcePath, destPath);
+          await fs.promises.copyFile(sourcePath, destPath);
         }
       }
       return;
@@ -42,11 +42,11 @@ export const Extractor = {
 
     const ext = path.extname(sourcePath).toLowerCase();
     const destDir = path.dirname(destPath);
-    if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
+    await fs.promises.mkdir(destDir, { recursive: true });
 
     if (ext === '.7z') {
       const tempDir = path.join(app.getPath('temp'), 'rombox_7z_' + crypto.randomUUID());
-      if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
+      await fs.promises.mkdir(tempDir, { recursive: true });
 
       try {
         await Extractor.extract7z(sourcePath, tempDir, zipEntryName);
@@ -54,15 +54,15 @@ export const Extractor = {
         const extractedPath = path.join(tempDir, zipEntryName);
         if (!fs.existsSync(extractedPath)) throw new Error(`7z Extraction failed: ${zipEntryName} not found`);
 
-        const st = fs.statSync(extractedPath);
+        const st = await fs.promises.stat(extractedPath);
         if (st.isDirectory()) {
-          fs.cpSync(extractedPath, destPath, { recursive: true, force: true });
-          fs.rmSync(extractedPath, { recursive: true, force: true });
+          await fs.promises.cp(extractedPath, destPath, { recursive: true, force: true });
+          await fs.promises.rm(extractedPath, { recursive: true, force: true });
         } else {
-          fs.renameSync(extractedPath, destPath);
+          await fs.promises.rename(extractedPath, destPath);
         }
       } finally {
-        try { fs.rmSync(tempDir, { recursive: true, force: true }); } catch (err) { void err; }
+        try { await fs.promises.rm(tempDir, { recursive: true, force: true }); } catch (err) { void err; }
       }
     }
     else {
