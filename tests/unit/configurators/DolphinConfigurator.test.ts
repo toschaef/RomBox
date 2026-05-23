@@ -41,8 +41,25 @@ describe("DolphinConfigurator", () => {
     };
     const configurator = new DolphinConfigurator(game);
     await configurator.configure();
+
     const dolphinIni = path.join(tempDir, "Library/Application Support/Dolphin/Config/Dolphin.ini");
     expect(fs.existsSync(dolphinIni)).toBe(true);
+    const dolphinText = fs.readFileSync(dolphinIni, "utf-8");
+    expect(dolphinText).toContain("RenderToMain = False");
+    expect(dolphinText).toContain("Fullscreen = False");
+
+    const gfxIni = path.join(tempDir, "Library/Application Support/Dolphin/Config/GFX.ini");
+    expect(fs.existsSync(gfxIni)).toBe(true);
+    const gfxText = fs.readFileSync(gfxIni, "utf-8");
+    expect(gfxText).toContain("InternalResolution = 1");
+
+    const gcPadNew = path.join(tempDir, "Library/Application Support/Dolphin/Config/GCPadNew.ini");
+    expect(fs.existsSync(gcPadNew)).toBe(true);
+    const gcPadText = fs.readFileSync(gcPadNew, "utf-8");
+    // GCPad1 face.primary 'KeyU' -> 'U'
+    expect(gcPadText).toContain("Buttons/A = U");
+    // GCPad1 system.start 'KeyT' -> 'T'
+    expect(gcPadText).toContain("Buttons/Start = T");
   });
 
   it("should configure DolphinConfigurator for Wii", async () => {
@@ -57,7 +74,17 @@ describe("DolphinConfigurator", () => {
     };
     const configurator = new DolphinConfigurator(game);
     await configurator.configure();
+
     const dolphinIni = path.join(tempDir, "Library/Application Support/Dolphin/Config/Dolphin.ini");
     expect(fs.existsSync(dolphinIni)).toBe(true);
+    const dolphinText = fs.readFileSync(dolphinIni, "utf-8");
+    expect(dolphinText).toContain("WiimoteSource0 = 1");
+
+    const wiimoteNew = path.join(tempDir, "Library/Application Support/Dolphin/Config/WiimoteNew.ini");
+    expect(fs.existsSync(wiimoteNew)).toBe(true);
+    const wiiText = fs.readFileSync(wiimoteNew, "utf-8");
+    expect(wiiText).toContain("Extension = Classic");
+    expect(wiiText).toContain("Classic/Buttons/A = U");
+    expect(wiiText).toContain("Classic/Buttons/+ = T");
   });
 });

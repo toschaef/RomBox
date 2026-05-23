@@ -9,7 +9,6 @@ jest.mock("os", () => {
 
 import path from "path";
 import fs from "fs";
-import { app } from "electron";
 const ipcMain = require("electron").ipcMain as any;
 import { initDB } from "../../src/main/data/db";
 import registerSettingsHandlers from "../../src/main/ipc/settingsHandler";

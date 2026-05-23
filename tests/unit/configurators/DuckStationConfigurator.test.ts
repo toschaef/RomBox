@@ -31,7 +31,26 @@ describe("DuckStationConfigurator", () => {
   it("should configure DuckStationConfigurator", async () => {
     const configurator = new DuckStationConfigurator();
     await configurator.configure();
-    const duckDir = path.join(tempDir, "Library/Application Support/DuckStation");
-    expect(fs.existsSync(duckDir)).toBe(true);
+
+    const settingsIni = path.join(tempDir, "Library/Application Support/DuckStation/settings.ini");
+    expect(fs.existsSync(settingsIni)).toBe(true);
+
+    const iniText = fs.readFileSync(settingsIni, "utf-8");
+    // Verify specific sections and parameters
+    expect(iniText).toContain("[Main]");
+    expect(iniText).toContain("StartFullscreen = false");
+    expect(iniText).toContain("SaveStateOnExit = true");
+
+    expect(iniText).toContain("[GPU]");
+    expect(iniText).toContain("ResolutionScale = 1");
+
+    expect(iniText).toContain("[Display]");
+    expect(iniText).toContain("Fullscreen = false");
+    expect(iniText).toContain("AspectRatio = Auto");
+
+    expect(iniText).toContain("[Pad1]");
+    expect(iniText).toContain("Cross = Keyboard/U");
+    expect(iniText).toContain("Start = Keyboard/T");
+    expect(iniText).toContain("Up = Keyboard/3");
   });
 });

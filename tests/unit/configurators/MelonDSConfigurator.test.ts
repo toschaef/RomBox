@@ -31,7 +31,20 @@ describe("MelonDSConfigurator", () => {
   it("should configure MelonDSConfigurator", async () => {
     const configurator = new MelonDSConfigurator();
     await configurator.configure();
-    const melonDir = path.join(tempDir, "Library/Preferences/melonDS");
-    expect(fs.existsSync(melonDir)).toBe(true);
+
+    const melonToml = path.join(tempDir, "Library/Preferences/melonDS/melonDS.toml");
+    expect(fs.existsSync(melonToml)).toBe(true);
+
+    const tomlText = fs.readFileSync(melonToml, "utf-8");
+    // Verify specific sections and parameters
+    expect(tomlText).toContain("[Instance0]");
+    expect(tomlText).toContain("JoystickID = 0");
+    expect(tomlText).toContain("Key_A = 85");
+    expect(tomlText).toContain("Key_Start = 84");
+
+    expect(tomlText).toContain("[Instance0.Keyboard]");
+    expect(tomlText).toContain("A = 85");
+    expect(tomlText).toContain("Start = 84");
+    expect(tomlText).toContain("Up = 51");
   });
 });
