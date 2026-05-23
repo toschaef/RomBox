@@ -52,6 +52,14 @@ export const TomlEditor = {
     for (const line of lines) {
       const hm = line.match(headerRe);
       if (hm) {
+        if (inTable) {
+          const missing = Object.entries(updates).filter(([k]) => !seen.has(k));
+          for (const [k, v] of missing) {
+            out.push(`${k} = ${v}`);
+            seen.add(k);
+          }
+        }
+
         const name = hm[1].trim();
         inTable = name === table;
         if (inTable) tableFound = true;
@@ -74,6 +82,14 @@ export const TomlEditor = {
       }
 
       out.push(line);
+    }
+
+    if (inTable) {
+      const missing = Object.entries(updates).filter(([k]) => !seen.has(k));
+      for (const [k, v] of missing) {
+        out.push(`${k} = ${v}`);
+        seen.add(k);
+      }
     }
 
     if (!tableFound) {
