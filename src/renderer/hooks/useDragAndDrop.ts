@@ -25,6 +25,17 @@ export const useDragAndDrop = (onFilesDropped: OnFilesDropped) => {
     e.stopPropagation();
     setIsDragging(false);
 
+    console.log("[E2E DIAGNOSTIC] handleDrop called. dataTransfer exists:", !!e.dataTransfer);
+    if (e.dataTransfer) {
+      console.log("[E2E DIAGNOSTIC] dataTransfer.files exists:", !!e.dataTransfer.files);
+      if (e.dataTransfer.files) {
+        console.log("[E2E DIAGNOSTIC] dataTransfer.files.length:", e.dataTransfer.files.length);
+        for (let i = 0; i < e.dataTransfer.files.length; i++) {
+          console.log("[E2E DIAGNOSTIC] file at index", i, "is:", e.dataTransfer.files[i]);
+        }
+      }
+    }
+
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       onFilesDropped(e.dataTransfer.files);
     }

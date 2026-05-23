@@ -32,9 +32,11 @@ if (require('electron-squirrel-startup')) {
 updateElectronApp();
 
 const createWindow = (): void => {
+  const isHidden = process.argv.includes('--hidden-test-window');
   const mainWindow = new BrowserWindow({
     height: 1000,
     width: 1200,
+    show: !isHidden,
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
     },
@@ -229,7 +231,11 @@ ipcMain.handle('process-file-drop', async (_, filePath) => {
         : `Processed ${processedGames.length} games and ${biosLabels.length} BIOS files.`
     };
   } catch (err) {
-    dropLog.error('Drop failed', err);
-    return { success: false, message: err.message };
+    const errorMessage = err instanceof Error
+      ? err.message
+      : (typeof err === 'string' ? err : String(err));
+    dropLog.error('Drop failed', { error: err, message: errorMessage });
+
+    return { success: false, message: errorMessage ?? "Unknown Error" };
   }
 });

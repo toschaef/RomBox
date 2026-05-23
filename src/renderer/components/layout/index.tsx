@@ -28,6 +28,7 @@ export default function Layout() {
   const setGlobalLoadingState = (l: boolean) => setLoadingMessage(l ? "Processing" : null);
   const setGlobalStatus = (s: string) => setLoadingMessage(s);
   const onFilesDropped = async (files: FileList) => {
+    console.log("[E2E DIAGNOSTIC] onFilesDropped called with files length:", files.length);
     setLoadingMessage("Installing");
 
     let anyGames = false;
@@ -39,7 +40,17 @@ export default function Layout() {
 
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const filePath = window.electron.getPathForFile(file);
+        let filePath = '';
+        try {
+          filePath = window.electron.getPathForFile(file);
+          console.log("[E2E DIAGNOSTIC] getPathForFile returned:", filePath);
+        } catch (err) {
+          console.log("[E2E DIAGNOSTIC] getPathForFile threw:", err);
+        }
+        if (!filePath) {
+          filePath = (file as any).path || '';
+          console.log("[E2E DIAGNOSTIC] fallback path value:", filePath);
+        }
 
         if (files.length > 1) setLoadingMessage(`Processing ${i + 1} of ${files.length}...`);
         

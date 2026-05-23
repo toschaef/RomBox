@@ -116,8 +116,13 @@ export default function Engines() {
   }, []);
 
   useEffect(() => {
-    engineClient.onInstallStatusUpdate((s) => setInstallStatus(s));
-  }, []);
+    engineClient.onInstallStatusUpdate((s) => {
+      setInstallStatus(s);
+      if (s && s !== "complete") {
+        setGlobalStatus(s);
+      }
+    });
+  }, [setGlobalStatus]);
 
   const rows = useMemo<EmulatorRow[]>(() => {
     const list = engines ?? [];
