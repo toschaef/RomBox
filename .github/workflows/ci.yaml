@@ -42,6 +42,9 @@ jobs:
       # - name: Run ESLint
       #   run: npm run lint
 
+      - name: Build and Package Application
+        run: npm run package
+
       - name: Run Tests (Linux with Xvfb)
         if: matrix.os == 'ubuntu-latest'
         run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npm test
