@@ -18,7 +18,7 @@
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
 
-    "test": "jest --config ./config/jest.config.js --runInBand --silent; npm run test:e2e",
+    "test": "jest --config ./config/jest.config.js --runInBand --silent && npm run test:e2e",
     "test:watch": "jest --config ./config/jest.config.js --watch",
     "test:e2e": "TEST_PACKAGED=true playwright test --config=config/playwright.config.ts",
     "test:unit": "jest --config ./config/jest.config.js --runInBand --silent --coverage=false \"tests/(unit|renderer)\"",
