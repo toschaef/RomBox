@@ -18,7 +18,7 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "eslint --ext .ts,.tsx .",
+    "lint": "eslint --config config/.eslintrc.json --ext .ts,.tsx .",
 
     "test": "jest --config ./config/jest.config.js --runInBand --silent && npm run test:e2e",
     "test:watch": "jest --config ./config/jest.config.js --watch",
