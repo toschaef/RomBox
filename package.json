@@ -2,17 +2,19 @@
   "name": "rombox",
   "productName": "rombox",
   "version": "0.9.9",
-  "description": "My Electron application description",
+  "description": "RomBox emulator frontend",
   "main": ".webpack/main",
   "config": {
     "forge": "./config/forge.config.ts"
   },
+  "homepage": "https://toschaef.github.io/RomBox",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/toschaef/rombox.git"
   },
   "scripts": {
     "start": "electron-forge start",
+    "start:clean": "rm -rf ./tmp-dev-userdata && electron-forge start -- --user-data-dir=./tmp-dev-userdata",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
