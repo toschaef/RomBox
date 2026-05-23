@@ -1,4 +1,6 @@
 ![Version](https://img.shields.io/github/package-json/v/toschaef/RomBox)
+[![CI Pipeline](https://github.com/toschaef/RomBox/actions/workflows/ci.yaml/badge.svg)](https://github.com/toschaef/RomBox/actions/workflows/ci.yaml)
+[![CD Workflow](https://github.com/toschaef/RomBox/actions/workflows/cd.yaml/badge.svg)](https://github.com/toschaef/RomBox/actions/workflows/cd.yaml)
 
 # Installation:
 
