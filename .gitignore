@@ -96,8 +96,5 @@ test-results/
 # Package
 out/
 
-# Github
-.github/
-
 # In-Progress
 /icon/
