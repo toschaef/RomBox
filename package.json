@@ -1,7 +1,7 @@
 {
   "name": "rombox",
   "productName": "rombox",
-  "version": "0.9.9",
+  "version": "0.9.10",
   "description": "RomBox emulator frontend",
   "main": ".webpack/main",
   "config": {
@@ -19,7 +19,6 @@
     "make": "electron-forge make",
     "publish": "electron-forge publish",
     "lint": "eslint --config config/.eslintrc.json --ext .ts,.tsx .",
-
     "test": "jest --config ./config/jest.config.js --runInBand --silent && npm run test:e2e",
     "test:watch": "jest --config ./config/jest.config.js --watch",
     "test:e2e": "TEST_PACKAGED=true playwright test --config=config/playwright.config.ts",
