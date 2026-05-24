@@ -12,6 +12,7 @@ import PageLayout from '../layout/PageLayout';
 import type { LayoutContextType } from '../layout';
 import { gameClient } from '../../clients/gameClient';
 import { CONSOLEID_ENGLISH_MAP } from '../../../shared/constants';
+import ImportButton from '../library/ImportButton';
 
 const ENGINE_DISPLAY_NAMES: Record<EngineID, string> = {
   'mesen': 'Mesen',
@@ -65,7 +66,7 @@ export default function Library() {
     });
   };
 
-  const { lastBiosUpdate, refreshLibraryTrigger } = useOutletContext<LayoutContextType>();
+  const { lastBiosUpdate, refreshLibraryTrigger, importFilePaths } = useOutletContext<LayoutContextType>();
 
   const fetchGames = async () => {
     try {
@@ -188,6 +189,7 @@ export default function Library() {
       title="Games"
       actions={
         <div className="flex items-center gap-4">
+          <ImportButton onImport={importFilePaths} />
           <SearchBar value={search} onChange={setSearch} />
           <SortSelect value={sortBy} onChange={setSortBy} />
           <GroupSelect value={groupBy} onChange={setGroupBy} />

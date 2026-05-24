@@ -12,7 +12,7 @@ export default function PageLayout({ title, children, actions, noPadding = false
     <div className="flex flex-col h-full w-full bg-bg-primary text-fg-primary overflow-hidden">
       <header className="
         shrink-0 
-        flex items-center justify-between 
+        flex items-center justify-between gap-6
         px-6 py-4 md:p-6
         border-b border-border-subtle 
         bg-bg-secondary/50 backdrop-blur-sm

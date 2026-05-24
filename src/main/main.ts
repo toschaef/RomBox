@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, protocol, net } from 'electron';
+import { app, BrowserWindow, ipcMain, protocol, net, dialog } from 'electron';
 import { updateElectronApp } from 'update-electron-app';
 import { initDB } from './data/db';
 import registerGameHandlers from './ipc/gameHandlers';
@@ -238,4 +238,18 @@ ipcMain.handle('process-file-drop', async (_, filePath) => {
 
     return { success: false, message: errorMessage ?? "Unknown Error" };
   }
+});
+
+ipcMain.handle('select-files-or-directories', async (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (!window) return [];
+  
+  const result = await dialog.showOpenDialog(window, {
+    properties: ['openFile', 'openDirectory', 'multiSelections'],
+    title: 'Select Games or BIOS Files/Folders',
+    buttonLabel: 'Import',
+  });
+  
+  if (result.canceled) return [];
+  return result.filePaths;
 });

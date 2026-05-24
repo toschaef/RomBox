@@ -9,6 +9,8 @@ export interface LayoutContextType {
   refreshLibraryTrigger: number;
   setGlobalLoading: (loading: boolean) => void;
   setGlobalStatus: (message: string) => void;
+  importFiles: (files: FileList) => Promise<void>;
+  importFilePaths: (filePaths: string[]) => Promise<void>;
 }
 
 const PAGES = [
@@ -27,32 +29,19 @@ export default function Layout() {
 
   const setGlobalLoadingState = (l: boolean) => setLoadingMessage(l ? "Processing" : null);
   const setGlobalStatus = (s: string) => setLoadingMessage(s);
-  const onFilesDropped = async (files: FileList) => {
-    console.log("[E2E DIAGNOSTIC] onFilesDropped called with files length:", files.length);
+  const importFilePaths = async (filePaths: string[]) => {
     setLoadingMessage("Installing");
 
     let anyGames = false;
     let anyBios = false;
 
     const allGameTitles: string[] = [];
-    const allBiosLabels: string[] = [];
+    const BiosLabels: string[] = [];
     const errors: string[] = [];
 
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        let filePath = '';
-        try {
-          filePath = window.electron.getPathForFile(file);
-          console.log("[E2E DIAGNOSTIC] getPathForFile returned:", filePath);
-        } catch (err) {
-          console.log("[E2E DIAGNOSTIC] getPathForFile threw:", err);
-        }
-        if (!filePath) {
-          filePath = (file as File & { path?: string }).path || '';
-          console.log("[E2E DIAGNOSTIC] fallback path value:", filePath);
-        }
-
-        if (files.length > 1) setLoadingMessage(`Processing ${i + 1} of ${files.length}...`);
+    for (let i = 0; i < filePaths.length; i++) {
+        const filePath = filePaths[i];
+        if (filePaths.length > 1) setLoadingMessage(`Processing ${i + 1} of ${filePaths.length}...`);
         
         try {
           const result = await window.electron.invoke('process-file-drop', filePath) as DropResult;
@@ -65,15 +54,17 @@ export default function Layout() {
             }
             if (result.biosCount > 0) {
               anyBios = true;
-              if (result.biosLabels) allBiosLabels.push(...result.biosLabels);
+              if (result.biosLabels) BiosLabels.push(...result.biosLabels);
             }
           } else {
-            const ext = file.name.includes('.') ? '.' + file.name.split('.').pop() : '(none)';
+            const fileName = filePath.split(/[/\\]/).pop() || 'file';
+            const ext = fileName.includes('.') ? '.' + fileName.split('.').pop() : '(none)';
             errors.push(result.message ?? `Unknown extension ${ext}`);
           }
         } catch (err) {
           console.error("IPC Error:", err);
-          errors.push((err as Error).message ?? `Failed to process ${file.name}`);
+          const fileName = filePath.split(/[/\\]/).pop() || 'file';
+          errors.push((err as Error).message ?? `Failed to process ${fileName}`);
         }
     }
 
@@ -81,30 +72,49 @@ export default function Layout() {
     if (anyBios) setLastBiosUpdate(Date.now().toString());
     setLoadingMessage(null);
 
-    const totalItems = allGameTitles.length + allBiosLabels.length + errors.length;
+    const totalItems = allGameTitles.length + BiosLabels.length + errors.length;
 
     if (totalItems <= 3) {
       for (const title of allGameTitles) {
         notify(`Installed ${title}`, { type: 'success' });
       }
-      for (const label of allBiosLabels) {
+      for (const label of BiosLabels) {
         notify(`Installed ${label}`, { type: 'success' });
       }
       for (const err of errors) {
         notify(err, { type: 'error' });
       }
     } else {
-      const successCount = allGameTitles.length + allBiosLabels.length;
+      const successCount = allGameTitles.length + BiosLabels.length;
       if (successCount > 0) {
         const parts: string[] = [];
         if (allGameTitles.length > 0) parts.push(`${allGameTitles.length} game${allGameTitles.length > 1 ? 's' : ''}`);
-        if (allBiosLabels.length > 0) parts.push(`${allBiosLabels.length} BIOS file${allBiosLabels.length > 1 ? 's' : ''}`);
+        if (BiosLabels.length > 0) parts.push(`${BiosLabels.length} BIOS file${BiosLabels.length > 1 ? 's' : ''}`);
         notify(`Installed ${parts.join(' and ')}`, { type: 'success' });
       }
       if (errors.length > 0) {
         notify(`${errors.length} file${errors.length > 1 ? 's' : ''} failed: ${errors.slice(0, 3).join(', ')}${errors.length > 3 ? '…' : ''}`, { type: 'error' });
       }
     }
+  };
+
+  const onFilesDropped = async (files: FileList) => {
+    console.log("[E2E DIAGNOSTIC] onFilesDropped called with files length:", files.length);
+    const paths: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      let filePath = '';
+      try {
+        filePath = window.electron.getPathForFile(file);
+      } catch (err) {
+        console.log("[E2E DIAGNOSTIC] getPathForFile threw:", err);
+      }
+      if (!filePath) {
+        filePath = (file as File & { path?: string }).path || '';
+      }
+      if (filePath) paths.push(filePath);
+    }
+    await importFilePaths(paths);
   };
 
   const { isDragging, dragProps } = useDragAndDrop(onFilesDropped);
@@ -157,7 +167,14 @@ export default function Layout() {
       </aside>
 
       <main className="flex-1 min-h-0 overflow-y-auto relative">
-        <Outlet context={{ lastBiosUpdate, refreshLibraryTrigger, setGlobalLoading: setGlobalLoadingState, setGlobalStatus } as LayoutContextType} />
+        <Outlet context={{ 
+          lastBiosUpdate, 
+          refreshLibraryTrigger, 
+          setGlobalLoading: setGlobalLoadingState, 
+          setGlobalStatus,
+          importFiles: onFilesDropped,
+          importFilePaths
+        } as LayoutContextType} />
       </main>
     </div>
   );
