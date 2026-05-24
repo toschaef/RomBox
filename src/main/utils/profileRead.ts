@@ -12,13 +12,13 @@ export function dpadDirBinding(dpad: DpadBinding, dir: Dir): DigitalBinding | un
 export function getDpadLike(profile: ControlsProfile, dir: Dir): DigitalBinding | undefined {
   const p1 = profile.player1;
 
-  const move = (p1 as any).move as DpadBinding | StickBinding | undefined;
+  const move = (p1 as unknown as { move?: unknown }).move as DpadBinding | StickBinding | undefined;
   if (move && move.type === "dpad") {
     const fromMove = pickDir(move, dir);
     if (fromMove) return fromMove;
   }
 
-  const dpad = (p1 as any).dpad as DpadBinding | undefined;
+  const dpad = (p1 as unknown as { dpad?: unknown }).dpad as DpadBinding | undefined;
   if (dpad && dpad.type === "dpad") {
     const fromDpad = pickDir(dpad, dir);
     if (fromDpad) return fromDpad;

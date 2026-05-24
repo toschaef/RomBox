@@ -49,13 +49,13 @@ function setDigital(
 
 function setGroupDpad(layout: AnyConsoleLayout, group: "move" | "dpad" | "c" | "look", nextDpad: DpadBinding) {
   const next = structuredClone(layout);
-  (next.bindings as any)[group] = nextDpad;
+  (next.bindings as unknown as Record<string, unknown>)[group] = nextDpad;
   return next;
 }
 
 function setGroupStick(layout: AnyConsoleLayout, group: "move" | "c" | "look", nextStick: StickBinding) {
   const next = structuredClone(layout);
-  (next.bindings as any)[group] = nextStick;
+  (next.bindings as unknown as Record<string, unknown>)[group] = nextStick;
   return next;
 }
 

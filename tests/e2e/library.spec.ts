@@ -1,4 +1,4 @@
-import { _electron as electron, test, expect } from '@playwright/test';
+import { _electron as electron, test, expect, type ElectronApplication, type Page } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
 
@@ -22,8 +22,8 @@ function findExecutable(): string {
 }
 
 test.describe('RomBox Library E2E Suite', () => {
-  let electronApp: any;
-  let page: any;
+  let electronApp: ElectronApplication;
+  let page: Page;
   const tempUserDataDir = path.join(__dirname, '../../temp-e2e-library-userdata');
 
   test.beforeAll(async () => {
@@ -35,13 +35,11 @@ test.describe('RomBox Library E2E Suite', () => {
     const executablePath = findExecutable();
 
     if (executablePath) {
-      console.log(`[E2E-Library] Executing E2E against production build: ${executablePath}`);
       electronApp = await electron.launch({
         executablePath,
         args: [`--user-data-dir=${tempUserDataDir}`, '--hidden-test-window']
       });
     } else {
-      console.log('[E2E-Library] Executing E2E against development build via electron-forge.');
       electronApp = await electron.launch({
         args: [
           path.join(__dirname, '../../'),
@@ -52,7 +50,6 @@ test.describe('RomBox Library E2E Suite', () => {
     }
 
     page = await electronApp.firstWindow();
-    page.on('console', (msg: any) => console.log(`[Library E2E Console] ${msg.text()}`));
   });
 
   test.afterAll(async () => {
@@ -79,10 +76,10 @@ test.describe('RomBox Library E2E Suite', () => {
 
   test('should handle ROM drag and drop, search, and click-to-play launch', async () => {
     // 1. Mock the game:launch IPC handler in the main process
-    await electronApp.evaluate(async (electronModule: any) => {
-      const { ipcMain } = electronModule;
+    await electronApp.evaluate(async (electronModule: unknown) => {
+      const { ipcMain } = electronModule as typeof import('electron');
       ipcMain.removeHandler('game:launch');
-      ipcMain.handle('game:launch', async (event: any, game: any) => {
+      ipcMain.handle('game:launch', async () => {
         return { success: true };
       });
     });
@@ -93,7 +90,7 @@ test.describe('RomBox Library E2E Suite', () => {
 
     // 3. Set up a promise that resolves when the expected console log appears
     const launchConsolePromise = new Promise<void>((resolve) => {
-      page.on('console', (msg: any) => {
+      page.on('console', (msg) => {
         if (msg.text().includes('Game launched without electron error')) {
           resolve();
         }
@@ -106,7 +103,7 @@ test.describe('RomBox Library E2E Suite', () => {
       if (!element) throw new Error('Root element not found');
 
       Object.defineProperty(DragEvent.prototype, 'dataTransfer', {
-        get() { return (this as any)._mockDataTransfer || null; },
+        get() { return (this as unknown as { _mockDataTransfer?: unknown })._mockDataTransfer || null; },
         configurable: true
       });
 
@@ -117,7 +114,7 @@ test.describe('RomBox Library E2E Suite', () => {
       Object.defineProperty(file, 'path', { value: fullPath, enumerable: true, configurable: true });
 
       const mockDataTransfer = {
-        files: Object.assign([file], { item: (i: number) => file }),
+        files: Object.assign([file], { item: () => file }),
         types: ['Files'],
         getData: () => '',
         setData: () => ''
@@ -127,7 +124,7 @@ test.describe('RomBox Library E2E Suite', () => {
         bubbles: true,
         cancelable: true
       });
-      (event as any)._mockDataTransfer = mockDataTransfer;
+      (event as unknown as { _mockDataTransfer: unknown })._mockDataTransfer = mockDataTransfer;
 
       element.dispatchEvent(event);
     }, { fullPath: dummyRomPath });

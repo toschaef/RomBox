@@ -1,8 +1,6 @@
 import { Extractor } from "../../src/main/utils/extractor";
 import { spawn } from "child_process";
 import fs from "fs";
-import path from "path";
-import { app } from "electron";
 
 jest.mock("child_process", () => ({
   spawn: jest.fn()

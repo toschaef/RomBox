@@ -8,6 +8,16 @@ import { app } from "electron";
 
 const log = Logger.create('LibraryService');
 
+interface GameDbRow {
+  id: string;
+  title: string;
+  filePath: string;
+  consoleId: string;
+  engineId: string;
+  playtime_seconds?: number;
+  last_played_at?: number;
+}
+
 export const LibraryService = {
   createGame: (gameData: Game) => {
     log.info('Creating game', { id: gameData.id, title: gameData.title, consoleId: gameData.consoleId });
@@ -56,16 +66,17 @@ export const LibraryService = {
 
       log.info('Games created from files', { count: createdGames.length });
       return { success: true, games: createdGames };
-    } catch (err: any) {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       log.error('Create games from files failed', err);
-      return { success: false, message: err.message };
+      return { success: false, message: msg };
     }
   },
 
   getGames: () => {
     log.debug('Getting all games');
     try {
-      const rows = getDB().prepare("select * from games").all() as any[];
+      const rows = getDB().prepare("select * from games").all() as GameDbRow[];
       const games = rows.map(row => ({
         ...row,
         playtimeSeconds: row.playtime_seconds ?? 0,
@@ -73,15 +84,16 @@ export const LibraryService = {
       }));
       log.debug('Games retrieved', { count: games.length });
       return { success: true, games };
-    } catch (err: any) { 
+    } catch (err) { 
+      const msg = err instanceof Error ? err.message : String(err);
       log.error('Failed to get games', err);
-      return { success: false, message: err.message }; 
+      return { success: false, message: msg }; 
     }
   },
 
   getGame: (id: string) => {
     try {
-      const row = getDB().prepare("select * from games where id = @id").get({ id }) as any;
+      const row = getDB().prepare("select * from games where id = @id").get({ id }) as GameDbRow | undefined;
       if (!row) return { success: false, message: "Game not found" };
       return {
         success: true,
@@ -91,7 +103,10 @@ export const LibraryService = {
           lastPlayedAt: row.last_played_at ?? null,
         }
       };
-    } catch (err) { return { success: false, message: err.message }; }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { success: false, message: msg };
+    }
   },
 
   updateGame: (game: Game) => {
@@ -100,7 +115,10 @@ export const LibraryService = {
         update games set title = @title, consoleId = @consoleId where id = @id
       `);
       return { success: stmt.run({ id: game.id, title: game.title, consoleId: game.consoleId }).changes > 0 };
-    } catch (err) { return { success: false, message: err.message }; }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { success: false, message: msg };
+    }
   },
 
   deleteGame: (gameId: string) => {
@@ -118,9 +136,10 @@ export const LibraryService = {
 
       log.info('Game deleted successfully', { gameId, title: game.title });
       return { success: true };
-    } catch (err: any) { 
+    } catch (err) { 
+      const msg = err instanceof Error ? err.message : String(err);
       log.error('Failed to delete game', err);
-      return { success: false, message: err.message }; 
+      return { success: false, message: msg }; 
     }
   },
 
@@ -145,9 +164,10 @@ export const LibraryService = {
       `);
       const result = stmt.run(Math.floor(seconds), gameId);
       return { success: result.changes > 0 };
-    } catch (err: any) {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       log.error('Failed to update playtime', err);
-      return { success: false, message: err.message };
+      return { success: false, message: msg };
     }
   },
 
@@ -160,9 +180,10 @@ export const LibraryService = {
       `);
       const result = stmt.run(Date.now(), gameId);
       return { success: result.changes > 0 };
-    } catch (err: any) {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       log.error('Failed to update last played time', err);
-      return { success: false, message: err.message };
+      return { success: false, message: msg };
     }
   },
 };

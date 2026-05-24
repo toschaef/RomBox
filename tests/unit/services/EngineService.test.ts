@@ -1,12 +1,11 @@
 import fs from "fs";
 import path from "path";
 import { EngineService } from "../../../src/main/services/EngineService";
-import { initDB, getDB } from "../../../src/main/data/db";
-import { ENGINES } from "../../../src/main/config/engines";
 
 jest.mock("../../../src/main/platform", () => ({
   osHandler: {
     resolveBinaryPath: jest.fn().mockImplementation((dir: string) => {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const fs = require("fs");
       if (fs.existsSync(dir)) {
         return "/mock/path/to/binary";
@@ -84,9 +83,9 @@ describe("EngineService", () => {
     const progressSpy = jest.fn();
     
     // Setup file size mock
-    jest.spyOn(fs, "statSync").mockReturnValue({ size: 10 * 1024 * 1024 } as any); // 10MB
-    jest.spyOn(fs, "readdirSync").mockReturnValue([] as any);
-    jest.spyOn(fs, "unlinkSync").mockImplementation(() => {});
+    jest.spyOn(fs, "statSync").mockReturnValue({ size: 10 * 1024 * 1024 } as unknown as fs.Stats); // 10MB
+    jest.spyOn(fs, "readdirSync").mockReturnValue([] as unknown as ReturnType<typeof fs.readdirSync>);
+    jest.spyOn(fs, "unlinkSync").mockImplementation(() => { /* mock */ });
 
     const result = await EngineService.installEngine("mesen", progressSpy);
     expect(result?.success).toBe(true);
@@ -98,7 +97,7 @@ describe("EngineService", () => {
     const installDir = path.join(tempDir, "engines", "mesen");
     fs.mkdirSync(installDir, { recursive: true });
 
-    const rmSpy = jest.spyOn(fs, "rmSync").mockImplementation(() => {});
+    const rmSpy = jest.spyOn(fs, "rmSync").mockImplementation(() => { /* mock */ });
 
     const result = EngineService.deleteEngine("mesen");
     expect(result.success).toBe(true);
@@ -106,8 +105,8 @@ describe("EngineService", () => {
   });
 
   it("should clear all engines successfully", () => {
-    const rmSpy = jest.spyOn(fs, "rmSync").mockImplementation(() => {});
-    const mkdirSpy = jest.spyOn(fs, "mkdirSync").mockImplementation(() => "");
+    jest.spyOn(fs, "rmSync").mockImplementation(() => { /* mock */ });
+    jest.spyOn(fs, "mkdirSync").mockImplementation(() => "");
 
     const result = EngineService.clearEngines();
     expect(result.success).toBe(true);

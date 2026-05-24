@@ -1,11 +1,11 @@
-import { _electron as electron, test, expect } from '@playwright/test';
+import { _electron as electron, test, expect, type ElectronApplication, type Page } from '@playwright/test';
 import findExecutable from './findExecutable';
 import path from 'path';
 import fs from 'fs';
 
 test.describe('RomBox Engines E2E Suite', () => {
-  let electronApp: any;
-  let page: any;
+  let electronApp: ElectronApplication;
+  let page: Page;
   const tempUserDataDir = path.join(__dirname, '../../temp-e2e-engines-userdata');
 
   test.beforeAll(async () => {
@@ -17,13 +17,11 @@ test.describe('RomBox Engines E2E Suite', () => {
     const executablePath = findExecutable();
 
     if (executablePath) {
-      console.log(`[E2E-Engines] Executing E2E against production build: ${executablePath}`);
       electronApp = await electron.launch({
         executablePath,
         args: [`--user-data-dir=${tempUserDataDir}`, '--hidden-test-window']
       });
     } else {
-      console.log('[E2E-Engines] Executing E2E against development build via electron-forge.');
       electronApp = await electron.launch({
         args: [
           path.join(__dirname, '../../'),
@@ -34,7 +32,6 @@ test.describe('RomBox Engines E2E Suite', () => {
     }
 
     page = await electronApp.firstWindow();
-    page.on('console', (msg: any) => console.log(`[Engines E2E Console] ${msg.text()}`));
   });
 
   test.afterAll(async () => {
@@ -52,8 +49,8 @@ test.describe('RomBox Engines E2E Suite', () => {
 
   test('should handle engine installer UI with mock progress stubs', async () => {
     // Intercept engine IPC calls in the main process to mock installation progress
-    await electronApp.evaluate(async (electronModule: any) => {
-      const { ipcMain } = electronModule;
+    await electronApp.evaluate(async (electronModule: unknown) => {
+      const { ipcMain } = electronModule as typeof import('electron');
 
       ipcMain.removeHandler('engine:get');
       ipcMain.handle('engine:get', async () => {
@@ -72,25 +69,25 @@ test.describe('RomBox Engines E2E Suite', () => {
       });
 
       ipcMain.removeHandler('engine:install-engine');
-      ipcMain.handle('engine:install-engine', async (event: any, engineId: any) => {
-        const webContents = event.sender;
+      ipcMain.handle('engine:install-engine', async (event: unknown) => {
+        const webContents = (event as { sender: { send: (channel: string, message: string) => void } }).sender;
         
         setTimeout(() => {
           try {
             webContents.send('install-status-update', 'Downloading emulator files...');
-          } catch (e) {}
+          } catch (e) { /* ignore */ }
         }, 50);
 
         setTimeout(() => {
           try {
             webContents.send('install-status-update', 'Extracting files to directory...');
-          } catch (e) {}
+          } catch (e) { /* ignore */ }
         }, 200);
 
         setTimeout(() => {
           try {
             webContents.send('install-status-update', 'complete');
-          } catch (e) {}
+          } catch (e) { /* ignore */ }
         }, 400);
 
         return { success: true };

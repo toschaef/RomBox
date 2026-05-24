@@ -34,9 +34,9 @@ export function useControlsBinding(mode: Mode) {
       clearLastDetectedInput();
 
       if (mode.kind === "standard") {
-        setStdState({ active: true, plan: plan as any, step: 0, startedAt: performance.now() });
+        setStdState({ active: true, plan: plan as BindPlan, step: 0, startedAt: performance.now() });
       } else {
-        setConsoleState({ active: true, plan: plan as any, step: 0, startedAt: performance.now() });
+        setConsoleState({ active: true, plan: plan as BindPlanConsole, step: 0, startedAt: performance.now() });
       }
     },
     [mode.kind, clearLastDetectedInput]

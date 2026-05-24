@@ -1,9 +1,8 @@
 import fs from "fs";
 import path from "path";
 import { SaveService } from "../../../src/main/services/SaveService";
-import { app, dialog } from "electron";
+import { dialog } from "electron";
 import type { Game } from "../../../src/shared/types";
-import AdmZip from "adm-zip";
 
 jest.mock("../../../src/main/platform", () => ({
   osHandler: {

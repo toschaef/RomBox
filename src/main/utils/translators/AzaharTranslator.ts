@@ -56,20 +56,26 @@ function keyboardAnalogBlob(args: {
   return [down, "engine:analog_from_button", left, mod, `modifier_scale:${scale}`, right, up].join(",");
 }
 
-function isFourKeyDpad(x: any): x is { type: "dpad"; up: DigitalBinding; down: DigitalBinding; left: DigitalBinding; right: DigitalBinding } {
-  return !!x &&
-    x.type === "dpad" &&
-    x.up?.type === "key" &&
-    x.down?.type === "key" &&
-    x.left?.type === "key" &&
-    x.right?.type === "key";
+function isFourKeyDpad(x: unknown): x is { type: "dpad"; up: DigitalBinding; down: DigitalBinding; left: DigitalBinding; right: DigitalBinding } {
+  if (typeof x !== "object" || x === null) return false;
+  const obj = x as Record<string, unknown>;
+  const up = obj.up as Record<string, unknown> | undefined;
+  const down = obj.down as Record<string, unknown> | undefined;
+  const left = obj.left as Record<string, unknown> | undefined;
+  const right = obj.right as Record<string, unknown> | undefined;
+  return obj.type === "dpad" &&
+    up?.type === "key" &&
+    down?.type === "key" &&
+    left?.type === "key" &&
+    right?.type === "key";
 }
 
-function isStickBinding(x: any): boolean {
-  return !!x && x.type === "stick";
+function isStickBinding(x: unknown): boolean {
+  if (typeof x !== "object" || x === null) return false;
+  return (x as Record<string, unknown>).type === "stick";
 }
 
-function pickModifierFromMove(move: any): DigitalBinding {
+function pickModifierFromMove(): DigitalBinding {
   return { type: "key", code: "ShiftLeft" };
 }
 
@@ -89,13 +95,20 @@ export class AzaharTranslator {
     patches.push({ kind: "ini-set", section: AZAHAR.sections.controls, key: azProfileKey(idx, "name"), value: AZAHAR.profileName });
     patches.push({ kind: "ini-set", section: AZAHAR.sections.controls, key: azProfileDefaultKey(idx, "name"), value: "false" });
 
-    const b: any = bindings as any;
+    const b = bindings as unknown as {
+      move?: unknown;
+      look?: unknown;
+      dpad?: Record<string, DigitalBinding | undefined>;
+      face?: Record<string, DigitalBinding | undefined>;
+      shoulders?: Record<string, DigitalBinding | undefined>;
+      system?: Record<string, DigitalBinding | undefined>;
+    };
 
     const move = b.move;
     const look = b.look;
 
     if (isFourKeyDpad(move)) {
-      const mod = pickModifierFromMove(move);
+      const mod = pickModifierFromMove();
       const blob = keyboardAnalogBlob({
         up: move.up,
         down: move.down,
@@ -118,7 +131,7 @@ export class AzaharTranslator {
     }
 
     if (isFourKeyDpad(look)) {
-      const mod = pickModifierFromMove(move);
+      const mod = pickModifierFromMove();
       const blob = keyboardAnalogBlob({
         up: look.up,
         down: look.down,

@@ -46,11 +46,12 @@ describe("inspectSnesRom", () => {
 
     const result = inspectSnesRom(testFile);
     expect(result).not.toBeNull();
-    expect(result!.headerOffset).toBe(0x7fc0);
-    expect(result!.cartName.trim()).toBe("SUPER MARIO WORLD");
-    expect(result!.mapper).toBe("lorom");
-    expect(result!.mapMode).toBe(0x20);
-    expect(result!.romType).toBe(0x02);
+    if (!result) return;
+    expect(result.headerOffset).toBe(0x7fc0);
+    expect(result.cartName.trim()).toBe("SUPER MARIO WORLD");
+    expect(result.mapper).toBe("lorom");
+    expect(result.mapMode).toBe(0x20);
+    expect(result.romType).toBe(0x02);
   });
 
   it("should inspect HiROM cart headers correctly", () => {
@@ -58,11 +59,12 @@ describe("inspectSnesRom", () => {
 
     const result = inspectSnesRom(testFile);
     expect(result).not.toBeNull();
-    expect(result!.headerOffset).toBe(0xffc0);
-    expect(result!.cartName.trim()).toBe("CHRONO TRIGGER");
-    expect(result!.mapper).toBe("hirom");
-    expect(result!.mapMode).toBe(0x21);
-    expect(result!.romType).toBe(0x03);
+    if (!result) return;
+    expect(result.headerOffset).toBe(0xffc0);
+    expect(result.cartName.trim()).toBe("CHRONO TRIGGER");
+    expect(result.mapper).toBe("hirom");
+    expect(result.mapMode).toBe(0x21);
+    expect(result.romType).toBe(0x03);
   });
 
   it("should inspect ExHiROM cart headers correctly", () => {
@@ -71,11 +73,12 @@ describe("inspectSnesRom", () => {
 
     const result = inspectSnesRom(testFile);
     expect(result).not.toBeNull();
-    expect(result!.headerOffset).toBe(0x40ffc0);
-    expect(result!.cartName.trim()).toBe("TALES OF PHANTASIA");
-    expect(result!.mapper).toBe("exhirom");
-    expect(result!.mapMode).toBe(0x25);
-    expect(result!.romType).toBe(0x05);
+    if (!result) return;
+    expect(result.headerOffset).toBe(0x40ffc0);
+    expect(result.cartName.trim()).toBe("TALES OF PHANTASIA");
+    expect(result.mapper).toBe("exhirom");
+    expect(result.mapMode).toBe(0x25);
+    expect(result.romType).toBe(0x05);
   });
 
   it("should return null for invalid or corrupted files", () => {

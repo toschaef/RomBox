@@ -1,17 +1,14 @@
-import { getDB } from '../../src/main/data/db';
-import path from 'path';
-
 class MockDatabase {
   pragmaCalls: string[] = [];
   execCalls: string[] = [];
-  data: Record<string, any[]> = {
+  data: Record<string, Record<string, unknown>[]> = {
     games: [],
     controller_profiles: [],
     console_layouts: [],
     settings: []
   };
 
-  constructor(path: string) {}
+  constructor(path: string) { void path; }
 
   pragma(str: string) {
     this.pragmaCalls.push(str);
@@ -21,33 +18,31 @@ class MockDatabase {
     this.execCalls.push(sql);
   }
 
-  transaction(fn: any) {
-    return (...args: any[]) => fn(...args);
+  transaction(fn: (...args: unknown[]) => unknown) {
+    return (...args: unknown[]) => fn(...args);
   }
 
   prepare(sql: string) {
     const query = sql.replace(/\s+/g, ' ').trim();
-    const self = this;
-    
     return {
-      all: jest.fn().mockImplementation((...params: any[]) => {
+      all: jest.fn().mockImplementation((...params: unknown[]) => {
         const flatParams = params.length === 1 && Array.isArray(params[0]) ? params[0] : params;
-        return self.executeSelect(query, flatParams, false);
+        return this.executeSelect(query, flatParams, false);
       }),
-      get: jest.fn().mockImplementation((...params: any[]) => {
+      get: jest.fn().mockImplementation((...params: unknown[]) => {
         const flatParams = params.length === 1 && Array.isArray(params[0]) ? params[0] : params;
-        const results = self.executeSelect(query, flatParams, true);
+        const results = this.executeSelect(query, flatParams, true);
         return results[0];
       }),
-      run: jest.fn().mockImplementation((...params: any[]) => {
+      run: jest.fn().mockImplementation((...params: unknown[]) => {
         const flatParams = params.length === 1 && (Array.isArray(params[0]) || typeof params[0] === 'object') ? [params[0]] : params;
-        return self.executeUpdate(query, flatParams);
+        return this.executeUpdate(query, flatParams);
       }),
       close: jest.fn()
     };
   }
 
-  executeSelect(query: string, params: any[], limitOne = false): any[] {
+  executeSelect(query: string, params: unknown[], limitOne = false): Record<string, unknown>[] {
     const queryUpper = query.toUpperCase();
 
     if (queryUpper.includes('PRAGMA TABLE_INFO')) {
@@ -81,7 +76,7 @@ class MockDatabase {
       return [];
     }
     
-    const [_, fieldsStr, tableName, whereStr, orderByStr, limitStr] = selectMatch;
+    const [, fieldsStr, tableName, whereStr, orderByStr, limitStr] = selectMatch;
     const table = this.data[tableName.toLowerCase()];
     if (!table) return [];
     
@@ -109,9 +104,9 @@ class MockDatabase {
           if (valB === undefined || valB === null) return -1;
           
           if (dir === 'DESC') {
-            return valA > valB ? -1 : 1;
+            return (valA as number | string) > (valB as number | string) ? -1 : 1;
           } else {
-            return valA > valB ? 1 : -1;
+            return (valA as number | string) > (valB as number | string) ? 1 : -1;
           }
         }
         return 0;
@@ -132,9 +127,11 @@ class MockDatabase {
     if (fieldsStr.trim() !== '*') {
       const fields = fieldsStr.split(',').map(f => f.trim().split(' ').pop());
       results = results.map(row => {
-        const projected: any = {};
+        const projected: Record<string, unknown> = {};
         for (const f of fields) {
-          projected[f!] = row[f!];
+          if (f) {
+            projected[f] = row[f];
+          }
         }
         return projected;
       });
@@ -143,24 +140,24 @@ class MockDatabase {
     return results;
   }
 
-  evaluateWhere(whereStr: string, row: any, params: any[]): boolean {
+  evaluateWhere(whereStr: string, row: Record<string, unknown>, params: unknown[]): boolean {
     const conditions = whereStr.split(/\s+AND\s+/i);
     let paramIndex = 0;
     
     for (const condition of conditions) {
       const match = condition.trim().match(/(\w+)\s*(=|!=|LIKE|<|>)\s*(.*)/i);
       if (!match) continue;
-      const [_, col, op, valExpr] = match;
+      const [, col, op, valExpr] = match;
       
       const colVal = row[col];
-      let filterVal: any;
+      let filterVal: unknown;
       
       const expr = valExpr.trim();
       if (expr === '?') {
         filterVal = params[paramIndex++];
       } else if (expr.startsWith('@')) {
         const prop = expr.substring(1);
-        filterVal = params[0] ? params[0][prop] : undefined;
+        filterVal = params[0] ? (params[0] as Record<string, unknown>)[prop] : undefined;
       } else {
         if (expr.startsWith("'") && expr.endsWith("'")) {
           filterVal = expr.slice(1, -1);
@@ -183,33 +180,33 @@ class MockDatabase {
     return true;
   }
 
-  executeUpdate(query: string, params: any[]): { changes: number } {
+  executeUpdate(query: string, params: unknown[]): { changes: number } {
     const queryUpper = query.toUpperCase();
     
     if (queryUpper.startsWith('INSERT')) {
       const match = query.match(/INSERT\s+(?:OR\s+\w+\s+)?INTO\s+(\w+)\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)/i);
       if (!match) return { changes: 0 };
       
-      const [_, tableName, colsStr, valsStr] = match;
+      const [, tableName, colsStr, valsStr] = match;
       const table = this.data[tableName.toLowerCase()];
       if (!table) return { changes: 0 };
       
       const cols = colsStr.split(',').map(c => c.trim());
       const valsExprs = valsStr.split(',').map(v => v.trim());
       
-      const row: any = {};
+      const row: Record<string, unknown> = {};
       let paramIndex = 0;
       
       for (let i = 0; i < cols.length; i++) {
         const col = cols[i];
         const expr = valsExprs[i];
         
-        let val: any;
+        let val: unknown;
         if (expr === '?') {
           val = params[paramIndex++];
         } else if (expr.startsWith('@')) {
           const prop = expr.substring(1);
-          val = params[0] ? params[0][prop] : undefined;
+          val = params[0] ? (params[0] as Record<string, unknown>)[prop] : undefined;
         } else {
           if (expr.startsWith("'") && expr.endsWith("'")) {
             val = expr.slice(1, -1);
@@ -250,7 +247,7 @@ class MockDatabase {
       const updateMatch = query.match(/UPDATE\s+(\w+)\s+SET\s+(.*?)(?:\s+WHERE\s+(.*))?$/i);
       if (!updateMatch) return { changes: 0 };
       
-      const [_, tableName, setStr, whereStr] = updateMatch;
+      const [, tableName, setStr, whereStr] = updateMatch;
       const table = this.data[tableName.toLowerCase()];
       if (!table) return { changes: 0 };
       
@@ -279,21 +276,21 @@ class MockDatabase {
         for (const set of sets) {
           const setMatch = set.match(/(\w+)\s*=\s*(.*)/);
           if (!setMatch) continue;
-          const [__, col, expr] = setMatch;
+          const [, col, expr] = setMatch;
           
           if (expr.includes('+')) {
             const addMatch = expr.match(/(\w+)\s*\+\s*(\?|\w+)/);
             if (addMatch) {
-              const val = setParams[setParamIndex++];
-              row[col] = (row[col] ?? 0) + val;
+              const val = setParams[setParamIndex++] as number;
+              row[col] = ((row[col] as number) ?? 0) + val;
             }
           } else {
-            let val: any;
+            let val: unknown;
             if (expr === '?') {
               val = setParams[setParamIndex++];
             } else if (expr.startsWith('@')) {
               const prop = expr.substring(1);
-              val = params[0] ? params[0][prop] : undefined;
+              val = params[0] ? (params[0] as Record<string, unknown>)[prop] : undefined;
             } else {
               if (expr.startsWith("'") && expr.endsWith("'")) {
                 val = expr.slice(1, -1);
@@ -321,7 +318,7 @@ class MockDatabase {
       const deleteMatch = query.match(/DELETE\s+FROM\s+(\w+)(?:\s+WHERE\s+(.*))?$/i);
       if (!deleteMatch) return { changes: 0 };
       
-      const [_, tableName, whereStr] = deleteMatch;
+      const [, tableName, whereStr] = deleteMatch;
       const table = this.data[tableName.toLowerCase()];
       if (!table) return { changes: 0 };
       
@@ -340,14 +337,14 @@ class MockDatabase {
     return { changes: 0 };
   }
 
-  close() {}
+  close() { /* mock close */ }
 }
 
 const mockBetterSqlite3 = jest.fn().mockImplementation((path: string) => {
   return new MockDatabase(path);
 });
 
-(mockBetterSqlite3 as any).default = mockBetterSqlite3;
+(mockBetterSqlite3 as unknown as Record<string, unknown>).default = mockBetterSqlite3;
 
 module.exports = mockBetterSqlite3;
 export default mockBetterSqlite3;

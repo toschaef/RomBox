@@ -48,7 +48,7 @@ export default function Layout() {
           console.log("[E2E DIAGNOSTIC] getPathForFile threw:", err);
         }
         if (!filePath) {
-          filePath = (file as any).path || '';
+          filePath = (file as File & { path?: string }).path || '';
           console.log("[E2E DIAGNOSTIC] fallback path value:", filePath);
         }
 

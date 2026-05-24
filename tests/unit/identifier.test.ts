@@ -77,7 +77,7 @@ describe('detectConsoleFromHeader utility', () => {
   });
 
   it('should return undefined and catch gracefully when file does not exist', async () => {
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { /* mock */ });
     const consoleId = await detectConsoleFromHeader(path.join(tempDir, 'does-not-exist.bin'));
     
     expect(consoleId).toBeUndefined();

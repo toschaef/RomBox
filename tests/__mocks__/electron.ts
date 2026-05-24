@@ -15,23 +15,23 @@ export const app = {
   getVersion: jest.fn().mockReturnValue('0.9.9-mock'),
 };
 
-const handlers: Record<string, Function> = {};
+const handlers: Record<string, (...args: unknown[]) => unknown> = {};
 
 export const ipcMain = {
   on: jest.fn(),
-  handle: jest.fn().mockImplementation((channel: string, cb: Function) => {
+  handle: jest.fn().mockImplementation((channel: string, cb: (...args: unknown[]) => unknown) => {
     handlers[channel] = cb;
   }),
   removeHandler: jest.fn().mockImplementation((channel: string) => {
     delete handlers[channel];
   }),
   // Helper methods for testing
-  _invoke: async (channel: string, ...args: any[]) => {
+  _invoke: async (channel: string, ...args: unknown[]) => {
     const cb = handlers[channel];
     if (!cb) {
       throw new Error(`No IPC handler registered for channel: ${channel}`);
     }
-    return cb({ sender: { send: jest.fn() } }, ...args);
+    return cb({ sender: { send: jest.fn() } } as unknown, ...args);
   },
   _clearHandlers: () => {
     for (const key in handlers) {
@@ -53,7 +53,7 @@ export const contextBridge = {
 };
 
 export const webUtils = {
-  getPathForFile: jest.fn().mockImplementation((file: any) => file?.path || ''),
+  getPathForFile: jest.fn().mockImplementation((file: unknown) => (file as { path?: string })?.path || ''),
 };
 
 export const shell = {

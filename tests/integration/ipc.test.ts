@@ -1,5 +1,6 @@
 // Mock 'os' at the very top before any service/config imports are resolved
 jest.mock("os", () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const path = require("path");
   return {
     ...jest.requireActual("os"),
@@ -9,7 +10,8 @@ jest.mock("os", () => {
 
 import path from "path";
 import fs from "fs";
-const ipcMain = require("electron").ipcMain as any;
+import { ipcMain as electronIpcMain } from "electron";
+const ipcMain = electronIpcMain as unknown as typeof import("../__mocks__/electron").ipcMain;
 import { initDB } from "../../src/main/data/db";
 import registerSettingsHandlers from "../../src/main/ipc/settingsHandler";
 import registerGameHandlers from "../../src/main/ipc/gameHandlers";
@@ -55,10 +57,10 @@ describe("IPC Handler Integration Tests", () => {
   describe("Settings IPC Handlers", () => {
     it("should set and get a setting via IPC", async () => {
       // Set setting
-      const setRes = await ipcMain._invoke("settings:set", {
+      const setRes = (await ipcMain._invoke("settings:set", {
         key: "controls.activeProfileId",
         value: "profile-1",
-      });
+      })) as { success: boolean };
       expect(setRes.success).toBe(true);
 
       // Get setting
@@ -94,13 +96,13 @@ describe("IPC Handler Integration Tests", () => {
       LibraryService.createGame(mockGame);
 
       // Fetch all games via IPC
-      const getListRes = await ipcMain._invoke("game:getAll");
+      const getListRes = (await ipcMain._invoke("game:getAll")) as { success: boolean; games: { title: string }[] };
       expect(getListRes.success).toBe(true);
       expect(getListRes.games).toHaveLength(1);
       expect(getListRes.games[0].title).toBe("IPC Test Game");
 
       // Fetch specific game via IPC
-      const getGameRes = await ipcMain._invoke("game:get", "ipc-game");
+      const getGameRes = (await ipcMain._invoke("game:get", "ipc-game")) as { success: boolean; game: { title: string } };
       expect(getGameRes.success).toBe(true);
       expect(getGameRes.game.title).toBe("IPC Test Game");
     });
@@ -110,10 +112,10 @@ describe("IPC Handler Integration Tests", () => {
 
       // Update game via IPC
       const updated = { ...mockGame, title: "IPC Updated Title" };
-      const updateRes = await ipcMain._invoke("game:update", updated);
+      const updateRes = (await ipcMain._invoke("game:update", updated)) as { success: boolean };
       expect(updateRes.success).toBe(true);
 
-      const checkRes = await ipcMain._invoke("game:get", "ipc-game");
+      const checkRes = (await ipcMain._invoke("game:get", "ipc-game")) as { game: { title: string } };
       expect(checkRes.game.title).toBe("IPC Updated Title");
 
       // Delete game via IPC
@@ -123,7 +125,7 @@ describe("IPC Handler Integration Tests", () => {
       const testGame = { ...mockGame, filePath: romPath };
       LibraryService.createGame(testGame);
 
-      const deleteRes = await ipcMain._invoke("game:delete", "ipc-game");
+      const deleteRes = (await ipcMain._invoke("game:delete", "ipc-game")) as { success: boolean };
       expect(deleteRes.success).toBe(true);
       expect(fs.existsSync(romPath)).toBe(false);
     });
@@ -131,7 +133,7 @@ describe("IPC Handler Integration Tests", () => {
 
   describe("Bios IPC Handlers", () => {
     it("should return BIOS status via IPC", async () => {
-      const statusRes = await ipcMain._invoke("bios:get");
+      const statusRes = (await ipcMain._invoke("bios:get")) as { success: boolean; items: unknown[] };
       expect(statusRes.success).toBe(true);
       expect(statusRes.items.length).toBeGreaterThan(0);
     });
@@ -139,9 +141,9 @@ describe("IPC Handler Integration Tests", () => {
 
   describe("Engine IPC Handlers", () => {
     it("should list all engines via IPC", async () => {
-      const enginesRes = await ipcMain._invoke("engine:get");
+      const enginesRes = (await ipcMain._invoke("engine:get")) as unknown[];
       expect(enginesRes.length).toBeGreaterThan(0);
-      const mesen = enginesRes.find((e: any) => e.engineId === "mesen");
+      const mesen = enginesRes.find((e: unknown) => (e as { engineId: string }).engineId === "mesen") as { name: string } | undefined;
       expect(mesen).toBeDefined();
       expect(mesen.name).toBe("Mesen 2");
     });

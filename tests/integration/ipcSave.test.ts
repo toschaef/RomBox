@@ -1,4 +1,5 @@
 jest.mock("os", () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const path = require("path");
   return {
     ...jest.requireActual("os"),
@@ -8,7 +9,8 @@ jest.mock("os", () => {
 
 import path from "path";
 import fs from "fs";
-const ipcMain = require("electron").ipcMain as any;
+import { ipcMain as electronIpcMain } from "electron";
+const ipcMain = electronIpcMain as unknown as typeof import("../__mocks__/electron").ipcMain;
 import { initDB } from "../../src/main/data/db";
 import registerSaveHandlers from "../../src/main/ipc/saveHandler";
 import { LibraryService } from "../../src/main/services/LibraryService";
@@ -51,7 +53,7 @@ describe("IPC Save Handler Integration Tests", () => {
   });
 
   it("should return game not found when querying nonexistent gameId", async () => {
-    const statusRes = await ipcMain._invoke("save:status", { gameId: "nonexistent" });
+    const statusRes = (await ipcMain._invoke("save:status", { gameId: "nonexistent" })) as { success: boolean; message?: string };
     expect(statusRes.success).toBe(false);
     expect(statusRes.message).toBe("Game not found");
   });
@@ -69,28 +71,28 @@ describe("IPC Save Handler Integration Tests", () => {
     fs.writeFileSync(saveFilePath, "mock-save-data");
 
     // 2. Query status via IPC
-    const statusRes = await ipcMain._invoke("save:status", { gameId: mockGame.id });
+    const statusRes = (await ipcMain._invoke("save:status", { gameId: mockGame.id })) as { success: boolean; status: { hasCachedSave: boolean } };
     expect(statusRes.success).toBe(true);
     expect(statusRes.status.hasCachedSave).toBe(false);
 
     // 3. Trigger backup via IPC
-    const backupRes = await ipcMain._invoke("save:backup", { gameId: mockGame.id });
+    const backupRes = (await ipcMain._invoke("save:backup", { gameId: mockGame.id })) as { success: boolean };
     expect(backupRes.success).toBe(true);
 
     // Verify local backup now exists in status
-    const statusRes2 = await ipcMain._invoke("save:status", { gameId: mockGame.id });
+    const statusRes2 = (await ipcMain._invoke("save:status", { gameId: mockGame.id })) as { status: { hasCachedSave: boolean } };
     expect(statusRes2.status.hasCachedSave).toBe(true);
 
     // 4. List all saves via IPC
-    const listRes = await ipcMain._invoke("save:list");
+    const listRes = (await ipcMain._invoke("save:list")) as { success: boolean; saves: unknown[] };
     expect(listRes.success).toBe(true);
     expect(listRes.saves.length).toBeGreaterThan(0);
 
     // 5. Delete local backup cache
-    const deleteRes = await ipcMain._invoke("save:delete", { gameId: mockGame.id });
+    const deleteRes = (await ipcMain._invoke("save:delete", { gameId: mockGame.id })) as { success: boolean };
     expect(deleteRes.success).toBe(true);
 
-    const statusRes3 = await ipcMain._invoke("save:status", { gameId: mockGame.id });
+    const statusRes3 = (await ipcMain._invoke("save:status", { gameId: mockGame.id })) as { status: { hasCachedSave: boolean } };
     expect(statusRes3.status.hasCachedSave).toBe(false);
   });
 });

@@ -5,7 +5,6 @@ import {
   getDirFromMove,
   getStickDirFromMove,
   getDirUnion,
-  getDirFromBinding,
   getDirFromLook,
 } from "../../src/main/utils/profileRead";
 import type { ControlsProfile } from "../../src/shared/types/controls";
@@ -111,12 +110,12 @@ describe("profileRead", () => {
         invertY: true
       };
       // invertX inverts left (normal: neg) to pos
-      expect((getDirFromMove(mockProfile, "left") as any)?.dir).toBe("pos");
-      expect((getDirFromMove(mockProfile, "right") as any)?.dir).toBe("neg");
+      expect((getDirFromMove(mockProfile, "left") as unknown as { dir?: string })?.dir).toBe("pos");
+      expect((getDirFromMove(mockProfile, "right") as unknown as { dir?: string })?.dir).toBe("neg");
 
       // invertY inverts up (normal: pos due to swap) to neg
-      expect((getDirFromMove(mockProfile, "up") as any)?.dir).toBe("neg");
-      expect((getDirFromMove(mockProfile, "down") as any)?.dir).toBe("pos");
+      expect((getDirFromMove(mockProfile, "up") as unknown as { dir?: string })?.dir).toBe("neg");
+      expect((getDirFromMove(mockProfile, "down") as unknown as { dir?: string })?.dir).toBe("pos");
     });
   });
 

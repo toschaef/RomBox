@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Readable } from 'stream';
+import { Readable, Writable } from 'stream';
 import axios from 'axios';
 import { Downloader } from '../../src/main/utils/downloader';
 
@@ -137,13 +137,15 @@ describe('Downloader utility', () => {
     fs.unlinkSync(destPath);
 
     const call = mockedAxios.get.mock.calls[0];
-    expect(call).toBeDefined();
-    const getOptions = call![1] as { validateStatus?: (status: number) => boolean } | undefined;
-    expect(getOptions).toBeDefined();
-    expect(getOptions!.validateStatus!(200)).toBe(true);
-    expect(getOptions!.validateStatus!(299)).toBe(true);
-    expect(getOptions!.validateStatus!(199)).toBe(false);
-    expect(getOptions!.validateStatus!(300)).toBe(false);
+    if (!call || !call[1]) throw new Error("Expected axios.get call arguments");
+    const getOptions = call[1] as { validateStatus?: (status: number) => boolean };
+    const validateStatus = getOptions.validateStatus;
+    if (!validateStatus) throw new Error("Expected validateStatus function");
+
+    expect(validateStatus(200)).toBe(true);
+    expect(validateStatus(299)).toBe(true);
+    expect(validateStatus(199)).toBe(false);
+    expect(validateStatus(300)).toBe(false);
   });
 
   it('should handle write stream error', async () => {
@@ -154,11 +156,11 @@ describe('Downloader utility', () => {
       status: 200
     });
 
-    const mockWriteStream = new (require('stream').Writable)({
-      write(chunk: any, encoding: any, callback: any) {
+    const mockWriteStream = new Writable({
+      write(chunk: unknown, encoding: string, callback: (error?: Error | null) => void) {
         callback(null);
       }
-    }) as any;
+    }) as unknown as fs.WriteStream;
     mockWriteStream.close = jest.fn();
 
     const createWriteStreamSpy = jest.spyOn(fs, 'createWriteStream').mockReturnValueOnce(mockWriteStream);

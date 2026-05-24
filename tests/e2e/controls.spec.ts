@@ -1,4 +1,4 @@
-import { _electron as electron, test, expect } from '@playwright/test';
+import { _electron as electron, test, expect, type ElectronApplication, type Page } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
 
@@ -22,8 +22,8 @@ function findExecutable(): string {
 }
 
 test.describe('RomBox Controls E2E Suite', () => {
-  let electronApp: any;
-  let page: any;
+  let electronApp: ElectronApplication;
+  let page: Page;
   const tempUserDataDir = path.join(__dirname, '../../temp-e2e-controls-userdata');
 
   test.beforeAll(async () => {
@@ -35,13 +35,11 @@ test.describe('RomBox Controls E2E Suite', () => {
     const executablePath = findExecutable();
 
     if (executablePath) {
-      console.log(`[E2E-Controls] Executing E2E against production build: ${executablePath}`);
       electronApp = await electron.launch({
         executablePath,
         args: [`--user-data-dir=${tempUserDataDir}`, '--hidden-test-window']
       });
     } else {
-      console.log('[E2E-Controls] Executing E2E against development build via electron-forge.');
       electronApp = await electron.launch({
         args: [
           path.join(__dirname, '../../'),
@@ -52,7 +50,6 @@ test.describe('RomBox Controls E2E Suite', () => {
     }
 
     page = await electronApp.firstWindow();
-    page.on('console', (msg: any) => console.log(`[Controls E2E Console] ${msg.text()}`));
   });
 
   test.afterAll(async () => {

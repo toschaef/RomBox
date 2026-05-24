@@ -1,4 +1,5 @@
 jest.mock("os", () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const path = require("path");
   return {
     ...jest.requireActual("os"),
@@ -8,7 +9,8 @@ jest.mock("os", () => {
 
 import path from "path";
 import fs from "fs";
-const ipcMain = require("electron").ipcMain as any;
+import { ipcMain as electronIpcMain } from "electron";
+const ipcMain = electronIpcMain as unknown as typeof import("../__mocks__/electron").ipcMain;
 import { initDB } from "../../src/main/data/db";
 import registerControlsHandlers from "../../src/main/ipc/controlsHandler";
 
@@ -40,41 +42,41 @@ describe("IPC Controls Handler Integration Tests", () => {
 
   it("should create, list, rename, and delete profiles via IPC", async () => {
     // 1. Get default profile (created on init)
-    const defaultProfile = await ipcMain._invoke("controls:getDefaultProfile");
+    const defaultProfile = (await ipcMain._invoke("controls:getDefaultProfile")) as { id: string; name: string; isDefault: boolean };
     expect(defaultProfile).toBeDefined();
     expect(defaultProfile.isDefault).toBe(true);
 
     // 2. Create custom profile
-    const customProfile = await ipcMain._invoke("controls:createProfile", {
+    const customProfile = (await ipcMain._invoke("controls:createProfile", {
       name: "Custom Profile",
       makeDefault: false
-    });
+    })) as { id: string; name: string; isDefault: boolean };
     expect(customProfile.name).toBe("Custom Profile");
     expect(customProfile.isDefault).toBe(false);
 
     // 3. Rename custom profile
-    const renamedProfile = await ipcMain._invoke("controls:renameProfile", {
+    const renamedProfile = (await ipcMain._invoke("controls:renameProfile", {
       id: customProfile.id,
       name: "Custom Renamed"
-    });
+    })) as { id: string; name: string; isDefault: boolean };
     expect(renamedProfile.name).toBe("Custom Renamed");
 
     // Verify rename took place
-    const updatedProfile = await ipcMain._invoke("controls:getProfile", customProfile.id);
+    const updatedProfile = (await ipcMain._invoke("controls:getProfile", customProfile.id)) as { id: string; name: string; isDefault: boolean };
     expect(updatedProfile.name).toBe("Custom Renamed");
 
     // 4. Set as default profile
-    const setDefaultRes = await ipcMain._invoke("controls:setDefault", customProfile.id);
+    const setDefaultRes = (await ipcMain._invoke("controls:setDefault", customProfile.id)) as { id: string };
     expect(setDefaultRes.id).toBe(customProfile.id);
     
-    const newDefault = await ipcMain._invoke("controls:getDefaultProfile");
+    const newDefault = (await ipcMain._invoke("controls:getDefaultProfile")) as { id: string };
     expect(newDefault.id).toBe(customProfile.id);
 
     // 5. Delete profile
-    const deleteRes = await ipcMain._invoke("controls:deleteProfile", defaultProfile.id);
+    const deleteRes = (await ipcMain._invoke("controls:deleteProfile", defaultProfile.id)) as { ok: boolean };
     expect(deleteRes.ok).toBe(true);
 
-    const allProfiles = await ipcMain._invoke("controls:getProfiles");
+    const allProfiles = (await ipcMain._invoke("controls:getProfiles")) as { id: string }[];
     expect(allProfiles.length).toBe(1);
     expect(allProfiles[0].id).toBe(customProfile.id);
   });

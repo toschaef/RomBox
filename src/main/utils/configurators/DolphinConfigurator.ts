@@ -88,7 +88,7 @@ function applyPatches(patches: EmulatorPatch[]) {
 }
 
 function dolphinGameIdFromGame(game: Game): string | undefined {
-  return (game as any).dolphinGameId as string | undefined;
+  return (game as Game & { dolphinGameId?: string }).dolphinGameId;
 }
 
 export class DolphinConfigurator extends BaseConfigurator {
@@ -185,7 +185,7 @@ export class DolphinConfigurator extends BaseConfigurator {
           "Classic/Left Stick/Up",
         ] as const;
 
-        const verifyW: any = {};
+        const verifyW: Record<string, { value: string | null; count: number }> = {};
         for (const k of keys) {
           const vals = iniGetAll(wtxt, "Wiimote1", k);
           verifyW[k] = { value: vals.at(-1) ?? null, count: vals.length };
@@ -200,7 +200,7 @@ export class DolphinConfigurator extends BaseConfigurator {
 
     const keys = ["Device", "Buttons/A", "Buttons/Start", "Main Stick/Up"] as const;
 
-    const verify: any = {};
+    const verify: Record<string, { value: string | null; count: number }> = {};
     for (const k of keys) {
       const vals = iniGetAll(text, "GCPad1", k);
       verify[k] = { value: vals.at(-1) ?? null, count: vals.length };

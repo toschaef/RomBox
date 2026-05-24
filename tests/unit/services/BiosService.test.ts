@@ -1,5 +1,6 @@
 // Mock 'os' at the very top before any service/config imports are resolved
 jest.mock("os", () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const path = require("path");
   return {
     ...jest.requireActual("os"),
@@ -11,8 +12,6 @@ import path from "path";
 
 import fs from "fs";
 import { BiosService } from "../../../src/main/services/BiosService";
-import { CONSOLES } from "../../../src/main/config/consoles";
-import { app } from "electron";
 import AdmZip from "adm-zip";
 
 describe("BiosService", () => {

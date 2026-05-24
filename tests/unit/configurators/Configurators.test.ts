@@ -1,4 +1,5 @@
 jest.mock("os", () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const path = require("path");
   return {
     ...jest.requireActual("os"),
@@ -17,7 +18,7 @@ import { DolphinConfigurator } from "../../../src/main/utils/configurators/Dolph
 import { AresConfigurator } from "../../../src/main/utils/configurators/AresConfigurator";
 import { DuckStationConfigurator } from "../../../src/main/utils/configurators/DuckStationConfigurator";
 import { PCSX2Configurator } from "../../../src/main/utils/configurators/PCSX2Configurator";
-import type { Game } from "../../../src/shared/types";
+import type { Game, ConsoleID } from "../../../src/shared/types";
 
 describe("Configurator Lookup", () => {
   const tempDir = path.resolve(__dirname, "../../temp-userdata");
@@ -44,7 +45,7 @@ describe("Configurator Lookup", () => {
       engineId: "mesen",
       playtimeSeconds: 0,
       lastPlayedAt: 0,
-      consoleId: consoleId as any
+      consoleId: consoleId as ConsoleID
     });
 
     expect(getConfigurator(dummyGame("nes"))).toBeInstanceOf(MesenConfigurator);

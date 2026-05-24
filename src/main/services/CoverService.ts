@@ -106,8 +106,9 @@ async function downloadCover(url: string, destPath: string): Promise<boolean> {
       fs.renameSync(downloadedPath, destPath);
     }
     return fs.existsSync(destPath);
-  } catch (err: any) {
-    log.debug('Cover download failed', { url, error: err.message });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.debug('Cover download failed', { url, error: msg });
     return false;
   }
 }

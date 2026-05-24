@@ -1,7 +1,8 @@
 import { MacHandler } from "../../../src/main/platform/MacHandler";
-import { exec, execSync, spawn } from "child_process";
+import type { Game } from "../../../src/shared/types";
+import type { EngineID } from "../../../src/shared/types/engines";
+import { spawn } from "child_process";
 import fs from "fs";
-import { homedir } from "os";
 import path from "path";
 
 jest.mock("child_process", () => ({
@@ -58,7 +59,7 @@ describe("MacHandler", () => {
     });
 
     it("should throw for unsupported engines", () => {
-      expect(() => handler.getEmulatorConfigPath("unsupported" as any)).toThrow();
+      expect(() => handler.getEmulatorConfigPath("unsupported" as EngineID)).toThrow();
     });
   });
 
@@ -72,14 +73,14 @@ describe("MacHandler", () => {
 
   describe("getSavePath", () => {
     it("should return correct save path for mesen", () => {
-      const mockGame = { engineId: "mesen", filePath: "/roms/nes/game.nes", consoleId: "nes" } as any;
+      const mockGame = { engineId: "mesen", filePath: "/roms/nes/game.nes", consoleId: "nes", id: "dummy", title: "Dummy", playtimeSeconds: 0, lastPlayedAt: 0 } as Game;
       expect(handler.getSavePath(mockGame)).toBe(
         path.join("/mock/home", "Library", "Application Support", "Mesen2", "Saves")
       );
     });
 
     it("should return file parent folder for melonds", () => {
-      const mockGame = { engineId: "melonds", filePath: "/roms/ds/game.nds", consoleId: "ds" } as any;
+      const mockGame = { engineId: "melonds", filePath: "/roms/ds/game.nds", consoleId: "ds", id: "dummy", title: "Dummy", playtimeSeconds: 0, lastPlayedAt: 0 } as Game;
       expect(handler.getSavePath(mockGame)).toBe("/roms/ds");
     });
   });

@@ -24,7 +24,7 @@ describe("resolveConsoleBindings", () => {
       bindings: {
         a: { type: "key", code: "KeyA" }
       }
-    } as any;
+    } as unknown as AnyConsoleLayout;
 
     const result = await resolveConsoleBindings({
       consoleId: "nes",

@@ -63,10 +63,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       setNotifications((prev) => {
         const next = [...prev, n];
         if (next.length > MAX_VISIBLE) {
-          const removed = next.shift()!;
-          const t = timersRef.current.get(removed.id);
-          if (t) clearTimeout(t);
-          timersRef.current.delete(removed.id);
+          const removed = next.shift();
+          if (removed) {
+            const t = timersRef.current.get(removed.id);
+            if (t) clearTimeout(t);
+            timersRef.current.delete(removed.id);
+          }
         }
         return next;
       });

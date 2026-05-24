@@ -175,8 +175,9 @@ export const ScannerService = {
       }
 
       return await ScannerService.scanFile(inputPath);
-    } catch (err: any) {
-      log.warn('Error accessing path', { path: inputPath, error: err?.message ?? err });
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      log.warn('Error accessing path', { path: inputPath, error: errorMsg });
       return [];
     }
   },
@@ -259,8 +260,9 @@ export const ScannerService = {
 
               const nestedResults = await ScannerService.scanFile(tempNestedZip);
               results.push(...nestedResults);
-            } catch (nestedErr: any) {
-              log.warn('Failed to process nested archive', { entry: entry.name, error: nestedErr?.message });
+            } catch (nestedErr) {
+              const errorMsg = nestedErr instanceof Error ? nestedErr.message : String(nestedErr);
+              log.warn('Failed to process nested archive', { entry: entry.name, error: errorMsg });
             }
             continue;
           }
@@ -286,8 +288,9 @@ export const ScannerService = {
         }
 
         return results;
-      } catch (err: any) {
-        log.warn('Failed to inspect archive', { ext, error: err?.message });
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        log.warn('Failed to inspect archive', { ext, error: errorMsg });
         return [];
       }
     }
@@ -299,8 +302,9 @@ export const ScannerService = {
         const engineId = getEngineIdFromConsoleId(consoleId)
         return [{ type: 'game', consoleId, engineId, filePath }];
       }
-    } catch (err: any) {
-      log.warn('Error checking raw file', { error: err?.message });
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      log.warn('Error checking raw file', { error: errorMsg });
     }
 
     return [];
@@ -369,7 +373,7 @@ export const ScannerService = {
           consoleId: scanResult.consoleId,
           engineId: getEngineIdFromConsoleId(scanResult.consoleId),
         };
-      } catch (err: any) {
+      } catch (err) {
         log.error('Failed to import multi-file game', err);
         throw new Error("Could not import multi-file game from archive.");
       }
@@ -398,7 +402,7 @@ export const ScannerService = {
         }
 
         log.info('Copied game directory', { destDir });
-      } catch (err: any) {
+      } catch (err) {
         log.error('Failed to copy game directory', err);
         throw new Error("Could not import game directory.");
       }
@@ -423,7 +427,7 @@ export const ScannerService = {
 
     try {
       await Extractor.extractToFile(scanResult.filePath, newFilePath, scanResult.zipEntryName);
-    } catch (err: any) {
+    } catch (err) {
       log.error('Failed to import ROM', err);
       throw new Error("Could not import file into library.");
     }

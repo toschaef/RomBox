@@ -3,6 +3,16 @@ import path from 'path';
 import { app } from 'electron';
 import { initDB, getDB } from '../../src/main/data/db';
 
+interface GameRow {
+  id: string;
+  title: string;
+  filePath: string;
+  consoleId: string;
+  engineId: string;
+  playtime_seconds: number;
+  last_played_at: number;
+}
+
 describe('Database Integration', () => {
   const mockApp = app as jest.Mocked<typeof app>;
   let testUserDataPath: string;
@@ -72,7 +82,7 @@ describe('Database Integration', () => {
     insertStmt.run('mario-nes', 'Super Mario Bros.', '/roms/smb.nes', 'nes', 'mesen', 120, 1621234567);
 
     // Read / Query
-    const game = db.prepare('SELECT * FROM games WHERE id = ?').get('mario-nes') as any;
+    const game = db.prepare('SELECT * FROM games WHERE id = ?').get('mario-nes') as GameRow;
     expect(game).toBeDefined();
     expect(game.title).toBe('Super Mario Bros.');
     expect(game.filePath).toBe('/roms/smb.nes');
@@ -85,7 +95,7 @@ describe('Database Integration', () => {
     db.prepare('UPDATE games SET playtime_seconds = ?, last_played_at = ? WHERE id = ?')
       .run(150, 1621239999, 'mario-nes');
 
-    const updatedGame = db.prepare('SELECT * FROM games WHERE id = ?').get('mario-nes') as any;
+    const updatedGame = db.prepare('SELECT * FROM games WHERE id = ?').get('mario-nes') as GameRow;
     expect(updatedGame.playtime_seconds).toBe(150);
     expect(updatedGame.last_played_at).toBe(1621239999);
 

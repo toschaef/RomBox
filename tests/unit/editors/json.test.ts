@@ -134,7 +134,7 @@ describe("JsonEditor", () => {
 
     it("should successfully modify and write if valid", () => {
       fs.writeFileSync(testFile, '{"status": "old"}');
-      const res = JsonEditor.updateStrict<{ status: string }>(testFile, (curr) => {
+      const res = JsonEditor.updateStrict<{ status: string }>(testFile, () => {
         return { status: "new" };
       });
 

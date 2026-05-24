@@ -83,9 +83,9 @@ describe("LibraryService", () => {
 
   it("should delete a game and remove its rom file if it exists", () => {
     const tempRomPath = "/tmp/smb.nes";
-    jest.spyOn(fs, "writeFileSync").mockImplementation(() => {});
+    jest.spyOn(fs, "writeFileSync").mockImplementation(() => { /* mock */ });
     jest.spyOn(fs, "existsSync").mockReturnValue(true);
-    const unlinkSpy = jest.spyOn(fs, "unlinkSync").mockImplementation(() => {});
+    const unlinkSpy = jest.spyOn(fs, "unlinkSync").mockImplementation(() => { /* mock */ });
 
     const game = {
       ...mockGame,

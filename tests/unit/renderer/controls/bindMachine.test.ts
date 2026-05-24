@@ -87,17 +87,20 @@ describe("bindMachine", () => {
       expect(res1?.profile.player1.dpad.up).toEqual({ type: "key", code: "ArrowUp" });
 
       // Step 1: Down
-      const res2 = applyBindEvent(res1!.profile, res1!.state, { kind: "key", code: "ArrowDown", at: 300 });
+      if (!res1) throw new Error("Expected res1 to be defined");
+      const res2 = applyBindEvent(res1.profile, res1.state, { kind: "key", code: "ArrowDown", at: 300 });
       expect(res2?.state).toEqual({ ...state1, step: 2 });
       expect(res2?.profile.player1.dpad.down).toEqual({ type: "key", code: "ArrowDown" });
 
       // Step 2: Left
-      const res3 = applyBindEvent(res2!.profile, res2!.state, { kind: "key", code: "ArrowLeft", at: 400 });
+      if (!res2) throw new Error("Expected res2 to be defined");
+      const res3 = applyBindEvent(res2.profile, res2.state, { kind: "key", code: "ArrowLeft", at: 400 });
       expect(res3?.state).toEqual({ ...state1, step: 3 });
       expect(res3?.profile.player1.dpad.left).toEqual({ type: "key", code: "ArrowLeft" });
 
       // Step 3: Right (completes binding)
-      const res4 = applyBindEvent(res3!.profile, res3!.state, { kind: "key", code: "ArrowRight", at: 500 });
+      if (!res3) throw new Error("Expected res3 to be defined");
+      const res4 = applyBindEvent(res3.profile, res3.state, { kind: "key", code: "ArrowRight", at: 500 });
       expect(res4?.state).toEqual({ active: false });
       expect(res4?.profile.player1.dpad.right).toEqual({ type: "key", code: "ArrowRight" });
     });
@@ -110,7 +113,8 @@ describe("bindMachine", () => {
       expect(res1?.state).toEqual({ ...state1, step: 1 });
       
       // Step 1: Y axis (completes binding)
-      const res2 = applyBindEvent(res1!.profile, res1!.state, { kind: "gp_axis", stick: "left", axis: "y", value: 1.0, at: 300 });
+      if (!res1) throw new Error("Expected res1 to be defined");
+      const res2 = applyBindEvent(res1.profile, res1.state, { kind: "gp_axis", stick: "left", axis: "y", value: 1.0, at: 300 });
       expect(res2?.state).toEqual({ active: false });
       expect(res2?.profile.player1.move).toEqual({
         type: "stick",

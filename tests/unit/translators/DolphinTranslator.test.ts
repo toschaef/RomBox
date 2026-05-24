@@ -28,22 +28,30 @@ describe("DolphinTranslator", () => {
     // face.primary is 'KeyU' -> 'U'
     const buttonA = result.find(p => p.kind === "ini-set" && p.key === "Buttons/A");
     expect(buttonA).toBeDefined();
-    expect((buttonA as any).value).toBe("U");
+    if (buttonA && buttonA.kind === "ini-set") {
+      expect(buttonA.value).toBe("U");
+    }
 
     // system.start is 'KeyT' -> 'T'
     const buttonStart = result.find(p => p.kind === "ini-set" && p.key === "Buttons/Start");
     expect(buttonStart).toBeDefined();
-    expect((buttonStart as any).value).toBe("T");
+    if (buttonStart && buttonStart.kind === "ini-set") {
+      expect(buttonStart.value).toBe("T");
+    }
 
     // dpad.up is 'Digit3' -> '3'
     const buttonUp = result.find(p => p.kind === "ini-set" && p.key === "D-Pad/Up");
     expect(buttonUp).toBeDefined();
-    expect((buttonUp as any).value).toBe("3");
+    if (buttonUp && buttonUp.kind === "ini-set") {
+      expect(buttonUp.value).toBe("3");
+    }
 
     // move.up is 'KeyW' -> 'W'
     const stickUp = result.find(p => p.kind === "ini-set" && p.key === "Main Stick/Up");
     expect(stickUp).toBeDefined();
-    expect((stickUp as any).value).toBe("W");
+    if (stickUp && stickUp.kind === "ini-set") {
+      expect(stickUp.value).toBe("W");
+    }
   });
 
   it("should translate bindings via DolphinTranslator for Wii console correctly", () => {
@@ -57,13 +65,17 @@ describe("DolphinTranslator", () => {
 
     // Verify key mappings for Wii Classic Controller extension
     // face.primary is 'KeyU' -> 'U'
-    const buttonA = result.find(p => p.kind === "ini-set" && p.key === "Classic/Buttons/A");
-    expect(buttonA).toBeDefined();
-    expect((buttonA as any).value).toBe("U");
+    const buttonAWii = result.find(p => p.kind === "ini-set" && p.key === "Classic/Buttons/A");
+    expect(buttonAWii).toBeDefined();
+    if (buttonAWii && buttonAWii.kind === "ini-set") {
+      expect(buttonAWii.value).toBe("U");
+    }
 
     // system.start is 'KeyT' -> 'T' -> maps to '+' on classic controller
     const buttonPlus = result.find(p => p.kind === "ini-set" && p.key === "Classic/Buttons/+");
     expect(buttonPlus).toBeDefined();
-    expect((buttonPlus as any).value).toBe("T");
+    if (buttonPlus && buttonPlus.kind === "ini-set") {
+      expect(buttonPlus.value).toBe("T");
+    }
   });
 });

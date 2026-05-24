@@ -11,7 +11,7 @@ describe("consolePath", () => {
         bumperL: { type: "gp_button", token: "GP_L1" }
       }
     }
-  } as any;
+  } as unknown as AnyConsoleLayout;
 
   describe("getConsoleDigital", () => {
     it("should resolve flat bindings directly", () => {

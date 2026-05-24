@@ -55,7 +55,7 @@ describe("CoverService", () => {
 
   it("should fetch cover artwork and download successfully via Downloader", async () => {
     let callCount = 0;
-    jest.spyOn(fs, "existsSync").mockImplementation((p: PathLike) => {
+    jest.spyOn(fs, "existsSync").mockImplementation(() => {
       callCount++;
       // First is FAILED_CACHE_FILE check, second is hasCover check (returns false)
       if (callCount <= 2) return false;
@@ -63,7 +63,7 @@ describe("CoverService", () => {
       return true;
     });
 
-    jest.spyOn(fs, "renameSync").mockImplementation(() => {});
+    jest.spyOn(fs, "renameSync").mockImplementation(() => { /* mock */ });
     (Downloader.download as jest.Mock).mockResolvedValue("/mock/dest/file.png");
 
     const result = await CoverService.fetchCover(mockGame);

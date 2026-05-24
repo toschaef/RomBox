@@ -38,7 +38,7 @@ module.exports = {
       setupFilesAfterEnv: ['<rootDir>/tests/setupRenderer.ts']
     }
   ],
-  collectCoverage: true,
+  collectCoverage: false,
   coverageReporters: ['text-summary', 'lcov'],
   collectCoverageFrom: [
     'src/main/utils/downloader.ts',
@@ -49,7 +49,7 @@ module.exports = {
     'src/main/utils/configurators/**/*.ts',
     'src/main/utils/translators/**/*.ts'
   ],
-  coverageDirectory: '<rootDir>/coverage',
+  coverageDirectory: '<rootDir>/test-results/coverage',
   coverageThreshold: {
     './src/main/utils/downloader.ts': {
       branches: 80,

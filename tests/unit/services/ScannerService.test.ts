@@ -5,7 +5,6 @@ import { Extractor } from "../../../src/main/utils/extractor";
 import { scanZipEntries } from "../../../src/main/utils/fsUtils";
 import { detectConsoleFromHeader } from "../../../src/main/utils/identifier";
 import { BiosService } from "../../../src/main/services/BiosService";
-import { app } from "electron";
 
 jest.mock("../../../src/main/utils/extractor", () => ({
   Extractor: {

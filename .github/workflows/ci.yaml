@@ -39,8 +39,8 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: npx playwright install-deps
 
-      # - name: Run ESLint
-      #   run: npm run lint
+      - name: Run ESLint
+        run: npm run lint
 
       - name: Build and Package Application
         run: npm run package

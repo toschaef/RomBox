@@ -1,5 +1,5 @@
 import { applyBindEventConsole, bindLabelConsole } from "../../../../src/renderer/controls/consoleBindMachine";
-import type { AnyConsoleLayout } from "../../../../src/shared/types/controls";
+import type { AnyConsoleLayout, DpadBinding } from "../../../../src/shared/types/controls";
 
 describe("consoleBindMachine", () => {
   let mockLayout: AnyConsoleLayout;
@@ -12,7 +12,7 @@ describe("consoleBindMachine", () => {
         a: { type: "key", code: "KeyZ" },
         move: { type: "dpad" }
       }
-    } as any;
+    } as unknown as AnyConsoleLayout;
   });
 
   describe("bindLabelConsole", () => {
@@ -65,7 +65,7 @@ describe("consoleBindMachine", () => {
 
       expect(result).toBeDefined();
       expect(result?.state).toEqual({ active: false });
-      expect((result?.layout.bindings as any).b).toEqual({ type: "key", code: "KeyX" });
+      expect((result?.layout.bindings as unknown as Record<string, unknown>).b).toEqual({ type: "key", code: "KeyX" });
     });
 
     it("should handle multi-step dpad binding sequence on console layout", () => {
@@ -74,12 +74,13 @@ describe("consoleBindMachine", () => {
       // Step 0: Up
       const res1 = applyBindEventConsole(mockLayout, state1, { kind: "key", code: "ArrowUp", at: 200 });
       expect(res1?.state).toEqual({ ...state1, step: 1 });
-      expect((res1?.layout.bindings.move as any).up).toEqual({ type: "key", code: "ArrowUp" });
+      expect((res1?.layout.bindings.move as DpadBinding).up).toEqual({ type: "key", code: "ArrowUp" });
 
       // Step 1: Down
-      const res2 = applyBindEventConsole(res1!.layout, res1!.state, { kind: "key", code: "ArrowDown", at: 300 });
+      if (!res1) throw new Error("Expected res1 to be defined");
+      const res2 = applyBindEventConsole(res1.layout, res1.state, { kind: "key", code: "ArrowDown", at: 300 });
       expect(res2?.state).toEqual({ ...state1, step: 2 });
-      expect((res2?.layout.bindings.move as any).down).toEqual({ type: "key", code: "ArrowDown" });
+      expect((res2?.layout.bindings.move as DpadBinding).down).toEqual({ type: "key", code: "ArrowDown" });
     });
   });
 });

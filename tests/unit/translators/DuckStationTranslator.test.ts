@@ -29,21 +29,29 @@ describe("DuckStationTranslator", () => {
     // face.primary is 'KeyU' -> 'Keyboard/U'
     const buttonCross = result.find(p => p.kind === "ini-set" && p.key === "Cross");
     expect(buttonCross).toBeDefined();
-    expect((buttonCross as any).value).toBe("Keyboard/U");
+    if (buttonCross && buttonCross.kind === "ini-set") {
+      expect(buttonCross.value).toBe("Keyboard/U");
+    }
 
     // system.start is 'KeyT' -> 'Keyboard/T'
     const buttonStart = result.find(p => p.kind === "ini-set" && p.key === "Start");
     expect(buttonStart).toBeDefined();
-    expect((buttonStart as any).value).toBe("Keyboard/T");
+    if (buttonStart && buttonStart.kind === "ini-set") {
+      expect(buttonStart.value).toBe("Keyboard/T");
+    }
 
     // dpad.up is 'Digit3' -> 'Keyboard/3'
     const buttonUp = result.find(p => p.kind === "ini-set" && p.key === "Up");
     expect(buttonUp).toBeDefined();
-    expect((buttonUp as any).value).toBe("Keyboard/3");
+    if (buttonUp && buttonUp.kind === "ini-set") {
+      expect(buttonUp.value).toBe("Keyboard/3");
+    }
 
     // move.up is 'KeyW' -> 'Keyboard/W'
     const stickLUp = result.find(p => p.kind === "ini-set" && p.key === "LUp");
     expect(stickLUp).toBeDefined();
-    expect((stickLUp as any).value).toBe("Keyboard/W");
+    if (stickLUp && stickLUp.kind === "ini-set") {
+      expect(stickLUp.value).toBe("Keyboard/W");
+    }
   });
 });

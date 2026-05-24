@@ -60,7 +60,6 @@ export default function Engines() {
   const [engines, setEngines] = useState<EngineInfo[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [action, setAction] = useState<ActionState>({ kind: "idle" });
-  const [installStatus, setInstallStatus] = useState<string>("");
   const [menuOpenFor, setMenuOpenFor] = useState<EngineID | null>(null);
 
   const { setGlobalLoading, setGlobalStatus } = useOutletContext<LayoutContextType>();
@@ -117,7 +116,6 @@ export default function Engines() {
 
   useEffect(() => {
     engineClient.onInstallStatusUpdate((s) => {
-      setInstallStatus(s);
       if (s && s !== "complete") {
         setGlobalStatus(s);
       }
@@ -167,7 +165,6 @@ export default function Engines() {
     setAction({ kind: "working", engineId: row.engineId, action: "install" });
     setGlobalLoading(true);
     setGlobalStatus(`Installing ${row.displayName}...`);
-    setInstallStatus("");
 
     try {
       const r = await engineClient.installEngine(row.engineId);
@@ -186,7 +183,6 @@ export default function Engines() {
     setAction({ kind: "working", engineId: row.engineId, action: "delete" });
     setGlobalLoading(true);
     setGlobalStatus(`Deleting ${row.displayName}...`);
-    setInstallStatus("");
 
     try {
       const r = await engineClient.deleteEngine(row.engineId);
@@ -205,7 +201,6 @@ export default function Engines() {
     setAction({ kind: "working", engineId: row.engineId, action: "repair" });
     setGlobalLoading(true);
     setGlobalStatus(`Repairing ${row.displayName}...`);
-    setInstallStatus("");
 
     try {
       const del = await engineClient.deleteEngine(row.engineId);

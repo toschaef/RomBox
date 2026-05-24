@@ -28,20 +28,28 @@ describe("MelonDSTranslator", () => {
     // face.primary is 'KeyU' -> A is 'U' -> 85
     const keyA = result.find(p => p.kind === "ini-set" && p.section === "Instance0.Keyboard" && p.key === "A");
     expect(keyA).toBeDefined();
-    expect((keyA as any).value).toBe("85");
+    if (keyA && keyA.kind === "ini-set") {
+      expect(keyA.value).toBe("85");
+    }
 
     const keyKeyA = result.find(p => p.kind === "ini-set" && p.section === "" && p.key === "Key_A");
     expect(keyKeyA).toBeDefined();
-    expect((keyKeyA as any).value).toBe("85");
+    if (keyKeyA && keyKeyA.kind === "ini-set") {
+      expect(keyKeyA.value).toBe("85");
+    }
 
     // system.start is 'KeyT' -> Start is 'T' -> 84
     const keyStart = result.find(p => p.kind === "ini-set" && p.section === "Instance0.Keyboard" && p.key === "Start");
     expect(keyStart).toBeDefined();
-    expect((keyStart as any).value).toBe("84");
+    if (keyStart && keyStart.kind === "ini-set") {
+      expect(keyStart.value).toBe("84");
+    }
 
     // dpad.up is 'Digit3' -> Up is '3' -> 51
     const keyUp = result.find(p => p.kind === "ini-set" && p.section === "Instance0.Keyboard" && p.key === "Up");
     expect(keyUp).toBeDefined();
-    expect((keyUp as any).value).toBe("51");
+    if (keyUp && keyUp.kind === "ini-set") {
+      expect(keyUp.value).toBe("51");
+    }
   });
 });

@@ -17,8 +17,8 @@ function ensureDirForFile(filePath: string) {
 function readTextIfExists(filePath: string): string | null {
   try {
     return fs.readFileSync(filePath, "utf-8");
-  } catch (err: any) {
-    if (err?.code === "ENOENT") return null;
+  } catch (err) {
+    if (err && typeof err === "object" && "code" in err && (err as { code: string }).code === "ENOENT") return null;
     throw err;
   }
 }
@@ -58,12 +58,12 @@ export const JsonEditor = {
     const text = readTextIfExists(filePath);
 
     if (text == null) {
-      if (createIfMissing) return (fallback ?? ({} as any)) as T;
+      if (createIfMissing) return (fallback ?? ({} as unknown as T)) as T;
       throw new Error(`JSON file not found: ${filePath}`);
     }
 
     if (createIfMissing && text.trim() === "") {
-      return (fallback ?? ({} as any)) as T;
+      return (fallback ?? ({} as unknown as T)) as T;
     }
 
     const parsed = JsonEditor.safeParse(text);

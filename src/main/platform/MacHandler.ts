@@ -392,8 +392,9 @@ export class MacHandler implements PlatformHandler {
       await this.adHocSign(realBinaryPath);
 
       console.log("[Mac] Wrapper ok");
-    } catch (err: any) {
-      console.error(`[Mac] Wrapper failed: ${err?.message ?? err}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[Mac] Wrapper failed: ${msg}`);
     }
   }
 
@@ -442,8 +443,9 @@ export class MacHandler implements PlatformHandler {
   private async deepSign(appPath: string): Promise<void> {
     try {
       await execAsync(`codesign --force --deep --sign - "${appPath}"`);
-    } catch (err: any) {
-      console.error(`[Mac] Deep sign failed: ${err?.message ?? err}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[Mac] Deep sign failed: ${msg}`);
     }
   }
 }

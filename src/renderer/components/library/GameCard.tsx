@@ -30,7 +30,6 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
   const [biosModalOpen, setBiosModalOpen] = useState(false);
   const [biosMissing, setBiosMissing] = useState<string | null>(null);
   const [coverPath, setCoverPath] = useState<string | null>(null);
-  const [coverLoading, setCoverLoading] = useState(false);
   const [coverError, setCoverError] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { notify } = useNotifications();
@@ -167,13 +166,11 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
     let cancelled = false;
 
     const fetchCover = async () => {
-      setCoverLoading(true);
       try {
         const getResult = await gameClient.getCover(game);
         if (getResult.success && getResult.coverPath) {
           if (!cancelled) {
             setCoverPath(getResult.coverPath);
-            setCoverLoading(false);
           }
           return;
         }
@@ -183,13 +180,9 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
           if (fetchResult.success && fetchResult.coverPath) {
             setCoverPath(fetchResult.coverPath);
           }
-          setCoverLoading(false);
         }
       } catch (err) {
         console.error('Failed to fetch cover:', err);
-        if (!cancelled) {
-          setCoverLoading(false);
-        }
       }
     };
 

@@ -125,7 +125,7 @@ function setConsoleGroupMode(layout: AnyConsoleLayout, group: ConsoleGroupId, mo
   }
 
   const stick: "left" | "right" = (group === "c" || group === "look") ? "right" : "left";
-  next.bindings[group] = defaultStick(stick) as any;
+  (next.bindings as unknown as Record<string, unknown>)[group] = defaultStick(stick);
   return next as AnyConsoleLayout;
 }
 
@@ -134,9 +134,9 @@ function clearConsoleGroup(layout: AnyConsoleLayout, group: ConsoleGroupId): Any
 
   const current = next.bindings[group];
   if (current?.type === "stick") {
-    next.bindings[group] = { type: "stick", stick: current.stick, deadzone: current.deadzone } as any;
+    (next.bindings as unknown as Record<string, unknown>)[group] = { type: "stick", stick: current.stick, deadzone: current.deadzone };
   } else {
-    next.bindings[group] = { type: "dpad" } as any;
+    (next.bindings as unknown as Record<string, unknown>)[group] = { type: "dpad" };
   }
 
   return next;
@@ -158,7 +158,7 @@ function StandardControlsView(props: {
     props;
 
   const sectionItems = useMemo(() => {
-    const map = new Map<string, any[]>();
+    const map = new Map<string, Array<typeof STANDARD_LAYOUT[number]>>();
     for (const s of SECTION_ORDER) map.set(s.key, []);
     for (const item of STANDARD_LAYOUT) {
       const list = map.get(item.section);
@@ -294,7 +294,7 @@ function ConsoleControlsView(props: {
   const consoleItems = useMemo(() => getConsoleLayoutItems(layout.consoleId), [layout.consoleId]);
 
   const sectionMap = useMemo(() => {
-    const map = new Map<SectionKey, any[]>();
+    const map = new Map<SectionKey, Array<ReturnType<typeof getConsoleLayoutItems>[number]>>();
     for (const s of SECTION_ORDER) map.set(s.key, []);
     for (const item of consoleItems) {
       const list = map.get(item.section);
