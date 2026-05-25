@@ -2,6 +2,7 @@ import { _electron as electron, test, expect, type ElectronApplication, type Pag
 import path from 'path';
 import fs from 'fs';
 import AdmZip from 'adm-zip';
+import { LibraryPage } from './models/LibraryPage';
 
 function findExecutable(): string {
   if (!process.env.TEST_PACKAGED) {
@@ -67,15 +68,15 @@ test.describe('RomBox Library E2E Suite', () => {
   });
 
   test('should verify sidebar links and load library grid successfully', async () => {
-    await page.waitForSelector('#root');
-    const brand = page.locator('aside >> text=RomBox');
-    await expect(brand).toBeVisible();
-
-    const libraryLink = page.locator('nav >> text=Library');
-    await expect(libraryLink).toBeVisible();
+    const libraryPage = new LibraryPage(page);
+    await libraryPage.waitForRoot();
+    await expect(libraryPage.brand).toBeVisible();
+    await expect(libraryPage.libraryLink).toBeVisible();
   });
 
   test('should handle ROM drag and drop, search, and click-to-play launch', async () => {
+    const libraryPage = new LibraryPage(page);
+
     // 1. Mock the game:launch IPC handler in the main process
     await electronApp.evaluate(async (electronModule: unknown) => {
       const { ipcMain } = electronModule as typeof import('electron');
@@ -99,47 +100,17 @@ test.describe('RomBox Library E2E Suite', () => {
     });
 
     // 4. Simulate ROM drag and drop completely within browser context to preserve file path
-    await page.evaluate(({ fullPath }: { fullPath: string }) => {
-      const element = document.getElementById('root')?.firstElementChild || document.querySelector('#root');
-      if (!element) throw new Error('Root element not found');
-
-      Object.defineProperty(DragEvent.prototype, 'dataTransfer', {
-        get() { return (this as unknown as { _mockDataTransfer?: unknown })._mockDataTransfer || null; },
-        configurable: true
-      });
-
-      const file = Object.create(File.prototype);
-      Object.defineProperty(file, 'name', { value: 'mock-game.nes', enumerable: true });
-      Object.defineProperty(file, 'size', { value: 16, enumerable: true });
-      Object.defineProperty(file, 'type', { value: 'application/octet-stream', enumerable: true });
-      Object.defineProperty(file, 'path', { value: fullPath, enumerable: true, configurable: true });
-
-      const mockDataTransfer = {
-        files: Object.assign([file], { item: () => file }),
-        types: ['Files'],
-        getData: () => '',
-        setData: () => ''
-      };
-
-      const event = new DragEvent('drop', {
-        bubbles: true,
-        cancelable: true
-      });
-      (event as unknown as { _mockDataTransfer: unknown })._mockDataTransfer = mockDataTransfer;
-
-      element.dispatchEvent(event);
-    }, { fullPath: dummyRomPath });
+    await libraryPage.dragAndDropRom(dummyRomPath, 'mock-game.nes');
 
     // 5. Verify the game shows up in the library grid
-    const gameCard = page.locator('h3 >> text=mock-game').first();
+    const gameCard = libraryPage.getGameCard('mock-game');
     await expect(gameCard).toBeVisible({ timeout: 15000 });
 
     // 6. Test search bar filtering
-    const searchBar = page.locator('input[placeholder*="Search"]');
-    await searchBar.fill('non-existent-game-query');
+    await libraryPage.search('non-existent-game-query');
     await expect(gameCard).not.toBeVisible();
 
-    await searchBar.fill('mock-game');
+    await libraryPage.search('mock-game');
     await expect(gameCard).toBeVisible();
 
     // 7. Click the game card to trigger launch
@@ -148,15 +119,14 @@ test.describe('RomBox Library E2E Suite', () => {
   });
 
   test('should handle manual file and directory upload via native dialog', async () => {
+    const libraryPage = new LibraryPage(page);
+
     // 1. Create a dummy NES ROM file inside our isolated temporary directory
     const manualRomPath = path.join(tempUserDataDir, 'manual-game.nes');
     fs.writeFileSync(manualRomPath, 'NES\x1a\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00');
 
     // 2. Clear search bar to ensure new imports are not filtered out
-    const searchBar = page.locator('input[placeholder*="Search"]');
-    if (await searchBar.isVisible()) {
-      await searchBar.fill('');
-    }
+    await libraryPage.search('');
 
     // 3. Mock the select-files-or-directories IPC handler in the main process
     await electronApp.evaluate(async (electronModule: unknown, { testPath }) => {
@@ -168,14 +138,16 @@ test.describe('RomBox Library E2E Suite', () => {
     }, { testPath: manualRomPath });
 
     // 4. Click the manual import button to trigger selection and import
-    await page.locator('#manual-import-button').click();
+    await libraryPage.clickManualImport();
 
     // 5. Verify the game shows up in the library grid
-    const gameCard = page.locator('h3 >> text=manual-game').first();
+    const gameCard = libraryPage.getGameCard('manual-game');
     await expect(gameCard).toBeVisible({ timeout: 15000 });
   });
 
   test('should handle supported zip archive drag and drop', async () => {
+    const libraryPage = new LibraryPage(page);
+
     // 1. Create a valid zip archive inside our isolated temporary directory
     const zip = new AdmZip();
     zip.addFile('zipped-game.nes', Buffer.from('NES\x1a\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00'));
@@ -183,45 +155,13 @@ test.describe('RomBox Library E2E Suite', () => {
     zip.writeZip(zipPath);
 
     // 2. Clear search bar first to ensure it's visible
-    const searchBar = page.locator('input[placeholder*="Search"]');
-    if (await searchBar.isVisible()) {
-      await searchBar.fill('');
-    }
+    await libraryPage.search('');
 
     // 3. Simulate supported zip archive drag and drop completely within browser context
-    await page.evaluate(({ fullPath }: { fullPath: string }) => {
-      const element = document.getElementById('root')?.firstElementChild || document.querySelector('#root');
-      if (!element) throw new Error('Root element not found');
-
-      Object.defineProperty(DragEvent.prototype, 'dataTransfer', {
-        get() { return (this as unknown as { _mockDataTransfer?: unknown })._mockDataTransfer || null; },
-        configurable: true
-      });
-
-      const file = Object.create(File.prototype);
-      Object.defineProperty(file, 'name', { value: 'archive-game.zip', enumerable: true });
-      Object.defineProperty(file, 'size', { value: 100, enumerable: true });
-      Object.defineProperty(file, 'type', { value: 'application/zip', enumerable: true });
-      Object.defineProperty(file, 'path', { value: fullPath, enumerable: true, configurable: true });
-
-      const mockDataTransfer = {
-        files: Object.assign([file], { item: () => file }),
-        types: ['Files'],
-        getData: () => '',
-        setData: () => ''
-      };
-
-      const event = new DragEvent('drop', {
-        bubbles: true,
-        cancelable: true
-      });
-      (event as unknown as { _mockDataTransfer: unknown })._mockDataTransfer = mockDataTransfer;
-
-      element.dispatchEvent(event);
-    }, { fullPath: zipPath });
+    await libraryPage.dragAndDropZip(zipPath, 'archive-game.zip');
 
     // 4. Verify the game shows up in the library grid as "zipped-game"
-    const gameCard = page.locator('h3 >> text=zipped-game').first();
+    const gameCard = libraryPage.getGameCard('zipped-game');
     await expect(gameCard).toBeVisible({ timeout: 15000 });
   });
 });

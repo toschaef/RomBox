@@ -1,6 +1,7 @@
 import { _electron as electron, test, expect, type ElectronApplication, type Page } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
+import { BiosPage } from './models/BiosPage';
 
 function findExecutable(): string {
   if (!process.env.TEST_PACKAGED) {
@@ -66,10 +67,11 @@ test.describe('RomBox Bios E2E Suite', () => {
   });
 
   test('should handle BIOS drop and update status slots', async () => {
+    const biosPage = new BiosPage(page);
+
     // 1. Navigate to Bios page
-    await page.waitForSelector('#root');
-    const biosLink = page.locator('nav >> text=BIOS');
-    await biosLink.click();
+    await biosPage.waitForRoot();
+    await biosPage.navigateToBios();
     await expect(page.url()).toContain('/bios');
 
     // 2. Create a dummy BIOS file inside our isolated temporary directory
@@ -77,39 +79,10 @@ test.describe('RomBox Bios E2E Suite', () => {
     fs.writeFileSync(dummyBiosPath, 'dummy PS1 BIOS file');
 
     // 3. Simulate drag and drop completely within browser context to preserve file path
-    await page.evaluate(({ fullPath }: { fullPath: string }) => {
-      const element = document.getElementById('root')?.firstElementChild || document.querySelector('#root');
-      if (!element) throw new Error('Root element not found');
-
-      Object.defineProperty(DragEvent.prototype, 'dataTransfer', {
-        get() { return (this as unknown as { _mockDataTransfer?: unknown })._mockDataTransfer || null; },
-        configurable: true
-      });
-
-      const file = Object.create(File.prototype);
-      Object.defineProperty(file, 'name', { value: 'scph5501.bin', enumerable: true });
-      Object.defineProperty(file, 'size', { value: 16, enumerable: true });
-      Object.defineProperty(file, 'type', { value: 'application/octet-stream', enumerable: true });
-      Object.defineProperty(file, 'path', { value: fullPath, enumerable: true, configurable: true });
-
-      const mockDataTransfer = {
-        files: Object.assign([file], { item: () => file }),
-        types: ['Files'],
-        getData: () => '',
-        setData: () => ''
-      };
-
-      const event = new DragEvent('drop', {
-        bubbles: true,
-        cancelable: true
-      });
-      (event as unknown as { _mockDataTransfer: unknown })._mockDataTransfer = mockDataTransfer;
-
-      element.dispatchEvent(event);
-    }, { fullPath: dummyBiosPath });
+    await biosPage.dragAndDropBios(dummyBiosPath, 'scph5501.bin');
 
     // 4. Verify the status changes (e.g. state should reflect warning/missing resolution update)
-    const dropResultLabel = page.locator('text=scph5501.bin').first();
+    const dropResultLabel = biosPage.getDropResultLabel('scph5501.bin');
     await expect(dropResultLabel).toBeVisible({ timeout: 15000 });
   });
 });

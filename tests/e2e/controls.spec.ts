@@ -1,6 +1,7 @@
 import { _electron as electron, test, expect, type ElectronApplication, type Page } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
+import { ControlsPage } from './models/ControlsPage';
 
 function findExecutable(): string {
   if (!process.env.TEST_PACKAGED) {
@@ -66,37 +67,28 @@ test.describe('RomBox Controls E2E Suite', () => {
   });
 
   test('should support controls page remapping and profile management', async () => {
+    const controlsPage = new ControlsPage(page);
+
     // 1. Navigate to Controls Page
-    await page.waitForSelector('#root');
-    const controlsLink = page.locator('nav >> text=Controls');
-    await controlsLink.click();
+    await controlsPage.waitForRoot();
+    await controlsPage.navigateToControls();
     await expect(page.url()).toContain('/controls');
 
     // 2. Perform profile creation
-    const newProfileButton = page.locator('button[title="New Profile"]');
-    await expect(newProfileButton).toBeVisible();
-    await newProfileButton.click();
-
-    // Fill profile name in modal input
-    const nameInput = page.locator('input[placeholder="Profile Name"]');
-    await expect(nameInput).toBeVisible();
-    await nameInput.fill('E2E Profile');
-
-    const saveButton = page.locator('button >> text=Save');
-    await saveButton.click();
+    await expect(controlsPage.newProfileButton).toBeVisible();
+    await controlsPage.createProfile('E2E Profile');
 
     // 3. Verify profile is added and can be selected
-    const select = page.locator('select');
-    await expect(select).toBeVisible();
-    await select.selectOption({ label: 'E2E Profile' });
+    await expect(controlsPage.profileSelect).toBeVisible();
+    await controlsPage.selectProfile('E2E Profile');
 
     // 4. Map control bindings (remapping)
-    const cardA = page.locator('.relative.w-full.p-4').filter({ has: page.locator('span:text-is("A")') }).first();
+    const cardA = controlsPage.getControlCard('A');
     await expect(cardA).toBeVisible();
     await cardA.click();
 
     // Verify it enters the listening state
-    const listeningText = cardA.locator('text=Press input');
+    const listeningText = cardA.getByText('Press input');
     await expect(listeningText).toBeVisible();
 
     // Wait 500ms to satisfy startedAt threshold and press X
@@ -105,7 +97,7 @@ test.describe('RomBox Controls E2E Suite', () => {
 
     // Verify listening state ends and the bound key is visible
     await expect(listeningText).not.toBeVisible();
-    const boundText = cardA.locator('text=X');
+    const boundText = cardA.getByText('X', { exact: true });
     await expect(boundText).toBeVisible();
   });
 });

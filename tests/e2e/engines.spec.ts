@@ -2,6 +2,7 @@ import { _electron as electron, test, expect, type ElectronApplication, type Pag
 import findExecutable from './findExecutable';
 import path from 'path';
 import fs from 'fs';
+import { EnginesPage } from './models/EnginesPage';
 
 test.describe('RomBox Engines E2E Suite', () => {
   let electronApp: ElectronApplication;
@@ -48,6 +49,8 @@ test.describe('RomBox Engines E2E Suite', () => {
   });
 
   test('should handle engine installer UI with mock progress stubs', async () => {
+    const enginesPage = new EnginesPage(page);
+
     // Intercept engine IPC calls in the main process to mock installation progress
     await electronApp.evaluate(async (electronModule: unknown) => {
       const { ipcMain } = electronModule as typeof import('electron');
@@ -95,25 +98,20 @@ test.describe('RomBox Engines E2E Suite', () => {
     });
 
     // 1. Navigate to Engines Page
-    await page.waitForSelector('#root');
-    const enginesLink = page.locator('nav >> text=Engines');
-    await enginesLink.click();
+    await enginesPage.waitForRoot();
+    await enginesPage.navigateToEngines();
     await expect(page.url()).toContain('/engines');
 
     // 2. Click "Install" on the Mesen engine card
-    const installButton = page.locator('button >> text=Install').first();
+    const installButton = enginesPage.getInstallButton('Mesen');
     await expect(installButton).toBeVisible();
-    await installButton.click();
+    await enginesPage.installEngine('Mesen');
 
     // 3. Verify that progress state messages appear sequentially on the UI
-    const downloadingLabel = page.locator('text=Downloading emulator files...');
-    await expect(downloadingLabel).toBeVisible({ timeout: 5000 });
-
-    const extractingLabel = page.locator('text=Extracting files to directory...');
-    await expect(extractingLabel).toBeVisible({ timeout: 5000 });
+    await expect(enginesPage.downloadingLabel).toBeVisible({ timeout: 5000 });
+    await expect(enginesPage.extractingLabel).toBeVisible({ timeout: 5000 });
 
     // 4. Verify completion returns status to "Installed"
-    const installedLabel = page.locator('text=Installed').first();
-    await expect(installedLabel).toBeVisible({ timeout: 5000 });
+    await expect(enginesPage.installedLabel).toBeVisible({ timeout: 5000 });
   });
 });

@@ -1,6 +1,7 @@
 import { _electron as electron, test, expect, type ElectronApplication, type Page } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
+import { SettingsPage } from './models/SettingsPage';
 
 function findExecutable(): string {
   if (!process.env.TEST_PACKAGED) {
@@ -66,33 +67,30 @@ test.describe('RomBox Settings E2E Suite', () => {
   });
 
   test('should handle fullscreen toggles, resolution scale, state persistency, and resets', async () => {
+    const settingsPage = new SettingsPage(page);
+
     // 1. Navigate to Settings page
-    await page.waitForSelector('#root');
-    const settingsLink = page.locator('nav >> text=Settings');
-    await settingsLink.click();
+    await settingsPage.waitForRoot();
+    await settingsPage.navigateToSettings();
     await expect(page.url()).toContain('/settings');
 
     // 2. Locate and check the fullscreen switch
-    const fullscreenSwitch = page.locator('#launchFullscreen');
-    await expect(fullscreenSwitch).toBeVisible();
+    await expect(settingsPage.fullscreenSwitch).toBeVisible();
     
     // Toggle fullscreen to active
-    await fullscreenSwitch.click();
-    await expect(fullscreenSwitch).toBeChecked();
+    await settingsPage.toggleFullscreen();
+    await expect(settingsPage.fullscreenSwitch).toBeChecked();
 
     // 3. Locate and change the resolution dropdown
-    const resolutionSelect = page.locator('#launchResolution');
-    await expect(resolutionSelect).toBeVisible();
-    await resolutionSelect.selectOption('1080'); // e.g. 1080p resolution
+    await expect(settingsPage.resolutionSelect).toBeVisible();
+    await settingsPage.selectResolution('1080'); // e.g. 1080p resolution
 
     // 4. Verify persistency: navigate to Library and back
-    const libraryLink = page.locator('nav >> text=Library');
-    await libraryLink.click();
-    await settingsLink.click();
+    await settingsPage.navigateToLibrary();
+    await settingsPage.navigateToSettings();
 
     // Expect values to persist
-    await expect(fullscreenSwitch).toBeChecked();
-    await expect(resolutionSelect).toHaveValue('1080');
-
+    await expect(settingsPage.fullscreenSwitch).toBeChecked();
+    await expect(settingsPage.resolutionSelect).toHaveValue('1080');
   });
 });
