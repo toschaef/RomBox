@@ -1,11 +1,12 @@
 import {
   dpadDirBinding,
-  getDpadLike,
   digitalToGamepadToken,
   getDirFromMove,
   getStickDirFromMove,
   getDirUnion,
   getDirFromLook,
+  pickDir,
+  getDirFromBinding,
 } from "../../src/main/utils/profileRead";
 import type { ControlsProfile } from "../../src/shared/types/controls";
 import { createDefaultProfileShape } from "../../src/shared/controls/layoutDefaults";
@@ -33,28 +34,7 @@ describe("profileRead", () => {
     });
   });
 
-  describe("getDpadLike", () => {
-    it("should query move dpad binding first", () => {
-      mockProfile.player1.move = {
-        type: "dpad",
-        up: { type: "key", code: "KeyW" }
-      };
-      expect(getDpadLike(mockProfile, "up")).toEqual({ type: "key", code: "KeyW" });
-    });
 
-    it("should query standard dpad binding if move is a stick or undefined", () => {
-      mockProfile.player1.move = {
-        type: "stick",
-        stick: "left",
-        deadzone: 0.15
-      };
-      mockProfile.player1.dpad = {
-        type: "dpad",
-        down: { type: "key", code: "KeyS" }
-      };
-      expect(getDpadLike(mockProfile, "down")).toEqual({ type: "key", code: "KeyS" });
-    });
-  });
 
   describe("digitalToGamepadToken", () => {
     it("should return gp_button token directly", () => {
@@ -113,9 +93,9 @@ describe("profileRead", () => {
       expect((getDirFromMove(mockProfile, "left") as unknown as { dir?: string })?.dir).toBe("pos");
       expect((getDirFromMove(mockProfile, "right") as unknown as { dir?: string })?.dir).toBe("neg");
 
-      // invertY inverts up (normal: pos due to swap) to neg
-      expect((getDirFromMove(mockProfile, "up") as unknown as { dir?: string })?.dir).toBe("neg");
-      expect((getDirFromMove(mockProfile, "down") as unknown as { dir?: string })?.dir).toBe("pos");
+      // invertY inverts up (normal: neg) to pos
+      expect((getDirFromMove(mockProfile, "up") as unknown as { dir?: string })?.dir).toBe("pos");
+      expect((getDirFromMove(mockProfile, "down") as unknown as { dir?: string })?.dir).toBe("neg");
     });
   });
 
@@ -149,6 +129,59 @@ describe("profileRead", () => {
         axis: "y",
         dir: "neg",
         threshold: 0.65
+      });
+    });
+  });
+
+  describe("pickDir", () => {
+    it("should return the correct binding for each direction", () => {
+      const dpad = {
+        type: "dpad" as const,
+        up: { type: "key" as const, code: "ArrowUp" },
+        down: { type: "key" as const, code: "ArrowDown" },
+        left: { type: "key" as const, code: "ArrowLeft" },
+        right: { type: "key" as const, code: "ArrowRight" },
+      };
+      expect(pickDir(dpad, "up")).toEqual({ type: "key", code: "ArrowUp" });
+      expect(pickDir(dpad, "down")).toEqual({ type: "key", code: "ArrowDown" });
+      expect(pickDir(dpad, "left")).toEqual({ type: "key", code: "ArrowLeft" });
+      expect(pickDir(dpad, "right")).toEqual({ type: "key", code: "ArrowRight" });
+    });
+  });
+
+  describe("getDirFromBinding", () => {
+    it("should return undefined if binding is undefined", () => {
+      expect(getDirFromBinding(undefined, "up")).toBeUndefined();
+    });
+
+    it("should resolve dpad direction from dpad binding", () => {
+      const binding = {
+        type: "dpad" as const,
+        up: { type: "key" as const, code: "KeyW" },
+      };
+      expect(getDirFromBinding(binding, "up")).toEqual({ type: "key", code: "KeyW" });
+      expect(getDirFromBinding(binding, "down")).toBeUndefined();
+    });
+
+    it("should synthesize digital axis bindings from stick binding", () => {
+      const binding = {
+        type: "stick" as const,
+        stick: "left" as const,
+        deadzone: 0.15,
+      };
+      expect(getDirFromBinding(binding, "left")).toEqual({
+        type: "gp_axis_digital",
+        stick: "left",
+        axis: "x",
+        dir: "neg",
+        threshold: 0.65,
+      });
+      expect(getDirFromBinding(binding, "up")).toEqual({
+        type: "gp_axis_digital",
+        stick: "left",
+        axis: "y",
+        dir: "neg",
+        threshold: 0.65,
       });
     });
   });

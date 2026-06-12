@@ -1,6 +1,6 @@
 import type { EmulatorPatch, TranslateContext } from "./ITranslator";
 import type { DigitalBinding, PlayerBindings } from "../../../shared/types/controls";
-import { digitalToGamepadToken } from "../profileRead";
+import { digitalToGamepadToken, getDirFromBinding } from "../profileRead";
 import { AZAHAR, azProfileKey, azProfileDefaultKey, qtKeycodeFromDomCode } from "../schema/azahar";
 import type { AzaharLearnedSDL } from "../azahar/sdlprobe";
 
@@ -30,49 +30,66 @@ function profileValueForDigital(d: DigitalBinding | undefined, learned: AzaharLe
   return `"axis:${entry.axis},direction:${entry.direction},engine:sdl,guid:${guid},port:${port},threshold:${entry.threshold}"`;
 }
 
-function azKeyPart(which: "up" | "down" | "left" | "right" | "modifier", d: DigitalBinding): string | null {
-  if (d.type !== "key") return null;
-  const qt = qtKeycodeFromDomCode(d.code);
-  if (qt == null) return null;
-  return `${which}:code$0${qt}$1engine$0keyboard`;
+function azDigitalPart(
+  which: "up" | "down" | "left" | "right" | "modifier",
+  d: DigitalBinding,
+  learned: AzaharLearnedSDL | null,
+): string | null {
+  if (d.type === "key") {
+    const qt = qtKeycodeFromDomCode(d.code);
+    if (qt == null) return null;
+    return `${which}:code$0${qt}$1engine$0keyboard`;
+  }
+
+  const tok = digitalToGamepadToken(d);
+  if (!tok) return null;
+  if (!learned?.guid) return null;
+
+  const entry = learned.binds[tok];
+  if (!entry) return null;
+
+  const guid = learned.guid;
+  const port = learned.port ?? 0;
+
+  if (entry.kind === "button") {
+    return `${which}:button$0${entry.button}$1engine$0sdl$1guid$0${guid}$1port$0${port}`;
+  }
+  if (entry.kind === "hat") {
+    return `${which}:direction$0${entry.direction}$1engine$0sdl$1guid$0${guid}$1hat$0${entry.hat}$1port$0${port}`;
+  }
+  // axis
+  return `${which}:axis$0${entry.axis}$1direction$0${entry.direction}$1engine$0sdl$1guid$0${guid}$1port$0${port}$1threshold$0${entry.threshold}`;
 }
 
-function keyboardAnalogBlob(args: {
+function analogFromButtonsBlob(args: {
   up: DigitalBinding;
   down: DigitalBinding;
   left: DigitalBinding;
   right: DigitalBinding;
-  modifier: DigitalBinding;
+  modifier?: DigitalBinding;
   modifierScale?: string;
+  learned: AzaharLearnedSDL | null;
 }): string | null {
-  const up = azKeyPart("up", args.up);
-  const down = azKeyPart("down", args.down);
-  const left = azKeyPart("left", args.left);
-  const right = azKeyPart("right", args.right);
-  const mod = azKeyPart("modifier", args.modifier);
-  if (!up || !down || !left || !right || !mod) return null;
+  const up = azDigitalPart("up", args.up, args.learned);
+  const down = azDigitalPart("down", args.down, args.learned);
+  const left = azDigitalPart("left", args.left, args.learned);
+  const right = azDigitalPart("right", args.right, args.learned);
 
-  const scale = args.modifierScale ?? "0.500000";
-  return [down, "engine:analog_from_button", left, mod, `modifier_scale:${scale}`, right, up].join(",");
-}
+  if (!up || !down || !left || !right) return null;
 
-function isFourKeyDpad(x: unknown): x is { type: "dpad"; up: DigitalBinding; down: DigitalBinding; left: DigitalBinding; right: DigitalBinding } {
-  if (typeof x !== "object" || x === null) return false;
-  const obj = x as Record<string, unknown>;
-  const up = obj.up as Record<string, unknown> | undefined;
-  const down = obj.down as Record<string, unknown> | undefined;
-  const left = obj.left as Record<string, unknown> | undefined;
-  const right = obj.right as Record<string, unknown> | undefined;
-  return obj.type === "dpad" &&
-    up?.type === "key" &&
-    down?.type === "key" &&
-    left?.type === "key" &&
-    right?.type === "key";
-}
+  const parts = [down, "engine:analog_from_button", left];
 
-function isStickBinding(x: unknown): boolean {
-  if (typeof x !== "object" || x === null) return false;
-  return (x as Record<string, unknown>).type === "stick";
+  if (args.modifier) {
+    const mod = azDigitalPart("modifier", args.modifier, args.learned);
+    if (mod) {
+      parts.push(mod);
+      const scale = args.modifierScale ?? "0.500000";
+      parts.push(`modifier_scale:${scale}`);
+    }
+  }
+
+  parts.push(right, up);
+  return parts.join(",");
 }
 
 function pickModifierFromMove(): DigitalBinding {
@@ -95,82 +112,101 @@ export class AzaharTranslator {
     patches.push({ kind: "ini-set", section: AZAHAR.sections.controls, key: azProfileKey(idx, "name"), value: AZAHAR.profileName });
     patches.push({ kind: "ini-set", section: AZAHAR.sections.controls, key: azProfileDefaultKey(idx, "name"), value: "false" });
 
-    const b = bindings as unknown as {
-      move?: unknown;
-      look?: unknown;
-      dpad?: Record<string, DigitalBinding | undefined>;
-      face?: Record<string, DigitalBinding | undefined>;
-      shoulders?: Record<string, DigitalBinding | undefined>;
-      system?: Record<string, DigitalBinding | undefined>;
-    };
+    const move = bindings.move;
+    const look = bindings.look;
 
-    const move = b.move;
-    const look = b.look;
-
-    if (isFourKeyDpad(move)) {
-      const mod = pickModifierFromMove();
-      const blob = keyboardAnalogBlob({
-        up: move.up,
-        down: move.down,
-        left: move.left,
-        right: move.right,
-        modifier: mod,
-      });
-      if (blob) {
-        patches.push({ kind: "ini-set", section: AZAHAR.sections.controls, key: azProfileKey(idx, AZAHAR.keys.circle_pad), value: `"${blob}"` });
-        patches.push({ kind: "ini-set", section: AZAHAR.sections.controls, key: azProfileDefaultKey(idx, AZAHAR.keys.circle_pad), value: "false" });
-      }
-    } else if (isStickBinding(move)) {
+    // Circle Pad
+    let circlePadBlob: string | null = null;
+    if (move.type === "stick") {
       if (this.learned?.sticks?.circle_pad) {
-        patches.push({ kind: "ini-set", section: AZAHAR.sections.controls, key: azProfileKey(idx, AZAHAR.keys.circle_pad), value: `"${this.learned.sticks.circle_pad}"` });
-        patches.push({ kind: "ini-set", section: AZAHAR.sections.controls, key: azProfileDefaultKey(idx, AZAHAR.keys.circle_pad), value: "false" });
+        circlePadBlob = this.learned.sticks.circle_pad;
+      } else {
+        const up = getDirFromBinding(move, "up");
+        const down = getDirFromBinding(move, "down");
+        const left = getDirFromBinding(move, "left");
+        const right = getDirFromBinding(move, "right");
+        if (up && down && left && right) {
+          circlePadBlob = analogFromButtonsBlob({
+            up, down, left, right,
+            modifier: pickModifierFromMove(),
+            learned: this.learned,
+          });
+        }
       }
+    } else {
+      circlePadBlob = analogFromButtonsBlob({
+        up: move.up || { type: "key", code: "KeyW" },
+        down: move.down || { type: "key", code: "KeyS" },
+        left: move.left || { type: "key", code: "KeyA" },
+        right: move.right || { type: "key", code: "KeyD" },
+        modifier: pickModifierFromMove(),
+        learned: this.learned,
+      });
+    }
+
+    if (circlePadBlob) {
+      patches.push({ kind: "ini-set", section: AZAHAR.sections.controls, key: azProfileKey(idx, AZAHAR.keys.circle_pad), value: `"${circlePadBlob}"` });
+      patches.push({ kind: "ini-set", section: AZAHAR.sections.controls, key: azProfileDefaultKey(idx, AZAHAR.keys.circle_pad), value: "false" });
     } else {
       patches.push({ kind: "ini-set", section: AZAHAR.sections.controls, key: azProfileKey(idx, AZAHAR.keys.circle_pad), value: AZAHAR.paramEmpty });
       patches.push({ kind: "ini-set", section: AZAHAR.sections.controls, key: azProfileDefaultKey(idx, AZAHAR.keys.circle_pad), value: "false" });
     }
 
-    if (isFourKeyDpad(look)) {
-      const mod = pickModifierFromMove();
-      const blob = keyboardAnalogBlob({
-        up: look.up,
-        down: look.down,
-        left: look.left,
-        right: look.right,
-        modifier: mod,
-      });
-      if (blob) {
-        patches.push({ kind: "ini-set", section: AZAHAR.sections.controls, key: azProfileKey(idx, AZAHAR.keys.c_stick), value: `"${blob}"` });
-        patches.push({ kind: "ini-set", section: AZAHAR.sections.controls, key: azProfileDefaultKey(idx, AZAHAR.keys.c_stick), value: "false" });
-      }
-    } else if (isStickBinding(look)) {
+    // C-Stick
+    let cStickBlob: string | null = null;
+    if (look.type === "stick") {
       if (this.learned?.sticks?.c_stick) {
-        patches.push({ kind: "ini-set", section: AZAHAR.sections.controls, key: azProfileKey(idx, AZAHAR.keys.c_stick), value: `"${this.learned.sticks.c_stick}"` });
-        patches.push({ kind: "ini-set", section: AZAHAR.sections.controls, key: azProfileDefaultKey(idx, AZAHAR.keys.c_stick), value: "false" });
+        cStickBlob = this.learned.sticks.c_stick;
+      } else {
+        const up = getDirFromBinding(look, "up");
+        const down = getDirFromBinding(look, "down");
+        const left = getDirFromBinding(look, "left");
+        const right = getDirFromBinding(look, "right");
+        if (up && down && left && right) {
+          cStickBlob = analogFromButtonsBlob({
+            up, down, left, right,
+            modifier: pickModifierFromMove(),
+            learned: this.learned,
+          });
+        }
       }
+    } else {
+      cStickBlob = analogFromButtonsBlob({
+        up: look.up || { type: "key", code: "ArrowUp" },
+        down: look.down || { type: "key", code: "ArrowDown" },
+        left: look.left || { type: "key", code: "ArrowLeft" },
+        right: look.right || { type: "key", code: "ArrowRight" },
+        modifier: pickModifierFromMove(),
+        learned: this.learned,
+      });
+    }
+
+    if (cStickBlob) {
+      patches.push({ kind: "ini-set", section: AZAHAR.sections.controls, key: azProfileKey(idx, AZAHAR.keys.c_stick), value: `"${cStickBlob}"` });
+      patches.push({ kind: "ini-set", section: AZAHAR.sections.controls, key: azProfileDefaultKey(idx, AZAHAR.keys.c_stick), value: "false" });
     } else {
       patches.push({ kind: "ini-set", section: AZAHAR.sections.controls, key: azProfileKey(idx, AZAHAR.keys.c_stick), value: AZAHAR.paramEmpty });
       patches.push({ kind: "ini-set", section: AZAHAR.sections.controls, key: azProfileDefaultKey(idx, AZAHAR.keys.c_stick), value: "false" });
     }
 
     const kv: Array<[string, DigitalBinding | undefined]> = [
-      [AZAHAR.keys.button_up, b.dpad?.up],
-      [AZAHAR.keys.button_down, b.dpad?.down],
-      [AZAHAR.keys.button_left, b.dpad?.left],
-      [AZAHAR.keys.button_right, b.dpad?.right],
+      [AZAHAR.keys.button_up, bindings.dpad?.up],
+      [AZAHAR.keys.button_down, bindings.dpad?.down],
+      [AZAHAR.keys.button_left, bindings.dpad?.left],
+      [AZAHAR.keys.button_right, bindings.dpad?.right],
 
-      [AZAHAR.keys.button_a, b.face?.primary],
-      [AZAHAR.keys.button_b, b.face?.secondary],
-      [AZAHAR.keys.button_x, b.face?.tertiary],
-      [AZAHAR.keys.button_y, b.face?.quaternary],
+      [AZAHAR.keys.button_a, bindings.face?.primary],
+      [AZAHAR.keys.button_b, bindings.face?.secondary],
+      [AZAHAR.keys.button_x, bindings.face?.tertiary],
+      [AZAHAR.keys.button_y, bindings.face?.quaternary],
 
-      [AZAHAR.keys.button_l, b.shoulders?.bumperL],
-      [AZAHAR.keys.button_r, b.shoulders?.bumperR],
-      [AZAHAR.keys.button_zl, b.shoulders?.triggerL],
-      [AZAHAR.keys.button_zr, b.shoulders?.triggerR],
+      [AZAHAR.keys.button_l, bindings.shoulders?.bumperL],
+      [AZAHAR.keys.button_r, bindings.shoulders?.bumperR],
+      [AZAHAR.keys.button_zl, bindings.shoulders?.triggerL],
+      [AZAHAR.keys.button_zr, bindings.shoulders?.triggerR],
 
-      [AZAHAR.keys.button_start, b.system?.start],
-      [AZAHAR.keys.button_select, b.system?.select],
+      [AZAHAR.keys.button_start, bindings.system?.start],
+      [AZAHAR.keys.button_select, bindings.system?.select],
     ];
 
     for (const [key, bind] of kv) {

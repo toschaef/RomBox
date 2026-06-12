@@ -1,11 +1,11 @@
-import { type Locator } from '@playwright/test';
+import { type Page, type Locator } from '@playwright/test';
 import { BasePage } from './BasePage';
 
 export class SettingsPage extends BasePage {
   readonly fullscreenSwitch: Locator;
   readonly resolutionSelect: Locator;
 
-  constructor(page: any) {
+  constructor(page: Page) {
     super(page);
     this.fullscreenSwitch = this.page.locator('#launchFullscreen');
     this.resolutionSelect = this.page.getByRole('combobox');

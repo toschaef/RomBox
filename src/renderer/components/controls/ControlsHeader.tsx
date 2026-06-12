@@ -62,6 +62,7 @@ export default function ControlsHeader(props: {
                   if (!id) return;
                   onChangeProfile(id);
                   onSetDefault(id);
+                  e.target.blur();
                 }}
                 className="appearance-none pl-3 pr-8 py-1.5 text-sm font-medium bg-bg-secondary text-fg-primary border border-border-subtle hover:border-border-muted transition-colors min-w-32 rounded-none focus:outline-none focus:border-accent-primary"
               >

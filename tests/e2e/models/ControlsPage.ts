@@ -1,4 +1,4 @@
-import { type Locator } from '@playwright/test';
+import { type Page, type Locator } from '@playwright/test';
 import { BasePage } from './BasePage';
 
 export class ControlsPage extends BasePage {
@@ -7,7 +7,7 @@ export class ControlsPage extends BasePage {
   readonly saveButton: Locator;
   readonly profileSelect: Locator;
 
-  constructor(page: any) {
+  constructor(page: Page) {
     super(page);
     this.newProfileButton = this.page.getByRole('button', { name: 'New Profile' });
     this.nameInput = this.page.getByPlaceholder('Profile Name');

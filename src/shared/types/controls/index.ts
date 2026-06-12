@@ -6,7 +6,7 @@ export type InputDevice = "keyboard" | "gamepad" | "auto";
 export type N64SpecialBinding = {
   type: "n64";
 
-  c?: DpadBinding;
+  c?: DpadBinding | StickBinding;
   z?: DigitalBinding;
 };
 
@@ -101,9 +101,6 @@ export type PlayerBindings = {
   shoulders: ShoulderBinding;
   system: SystemBinding;
   sticks?: SticksBinding;
-
-  c?: DpadBinding;
-  z?: DigitalBinding;
 
   special?: SpecialBinding;
 };

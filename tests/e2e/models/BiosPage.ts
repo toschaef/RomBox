@@ -1,8 +1,8 @@
-import { type Locator } from '@playwright/test';
+import { type Page, type Locator } from '@playwright/test';
 import { BasePage } from './BasePage';
 
 export class BiosPage extends BasePage {
-  constructor(page: any) {
+  constructor(page: Page) {
     super(page);
   }
 

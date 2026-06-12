@@ -74,7 +74,27 @@ export class AresConfigurator extends BaseConfigurator {
     const consoleId = "n64" as const;
     const p1 = await svc.getEffectiveConsoleBindings(consoleId, profile.id);
 
-    const updates = this.translator.translateFromPlayer(p1);
+    const effectiveProfile = {
+      ...profile,
+      player1: p1,
+    };
+
+    const ctx = {
+      platform: osHandler.getPlatform(),
+      consoleId,
+      player: 1,
+      padPort: 1,
+      configDir: path.dirname(bmlPath),
+    };
+
+    const patches = this.translator.translate(effectiveProfile, ctx);
+
+    const updates: Record<string, string> = {};
+    for (const patch of patches) {
+      if (patch.kind === "ini-set" && patch.section === "VirtualPad1") {
+        updates[patch.key] = patch.value;
+      }
+    }
 
     BmlEditor.updateBml(bmlPath, ["VirtualPad1"], updates);
   }

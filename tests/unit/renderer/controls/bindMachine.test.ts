@@ -1,9 +1,10 @@
-import { applyBindEvent, bindLabel } from "../../../../src/renderer/controls/bindMachine";
-import type { ControlsProfile } from "../../../../src/shared/types/controls";
+import { applyBindEvent, bindLabel, profileAccessor, consoleAccessor } from "../../../../src/renderer/controls/bindMachine";
+import type { ControlsProfile, AnyConsoleLayout, DpadBinding } from "../../../../src/shared/types/controls";
 import { createDefaultProfileShape } from "../../../../src/shared/controls/layoutDefaults";
 
 describe("bindMachine", () => {
   let mockProfile: ControlsProfile;
+  let mockLayout: AnyConsoleLayout;
 
   beforeEach(() => {
     mockProfile = {
@@ -15,6 +16,15 @@ describe("bindMachine", () => {
       // preferredDevice: "keyboard",
       ...createDefaultProfileShape(),
     };
+
+    mockLayout = {
+      consoleId: "nes",
+      name: "Nintendo NES",
+      bindings: {
+        a: { type: "key", code: "KeyZ" },
+        move: { type: "dpad" }
+      }
+    } as unknown as AnyConsoleLayout;
   });
 
   describe("bindLabel", () => {
@@ -39,14 +49,15 @@ describe("bindMachine", () => {
     });
   });
 
-  describe("applyBindEvent", () => {
+  describe("applyBindEvent with profileAccessor", () => {
     it("should return null if state is inactive", () => {
-      const result = applyBindEvent(mockProfile, { active: false }, { kind: "key", code: "KeyX", at: 200 });
+      const result = applyBindEvent(profileAccessor, mockProfile, { active: false }, { kind: "key", code: "KeyX", at: 200 });
       expect(result).toBeNull();
     });
 
     it("should return null if event timestamp is older than startedAt", () => {
       const result = applyBindEvent(
+        profileAccessor,
         mockProfile,
         { active: true, plan: { kind: "digital", path: "face.primary" }, step: 0, startedAt: 200 },
         { kind: "key", code: "KeyX", at: 100 }
@@ -56,18 +67,20 @@ describe("bindMachine", () => {
 
     it("should cancel active binding and deactivate state on Escape key", () => {
       const result = applyBindEvent(
+        profileAccessor,
         mockProfile,
         { active: true, plan: { kind: "digital", path: "face.primary" }, step: 0, startedAt: 100 },
         { kind: "key", code: "Escape", at: 200 }
       );
       expect(result).toEqual({
-        profile: mockProfile,
+        data: mockProfile,
         state: { active: false }
       });
     });
 
     it("should bind digital key on standard digital plan", () => {
       const result = applyBindEvent(
+        profileAccessor,
         mockProfile,
         { active: true, plan: { kind: "digital", path: "face.primary" }, step: 0, startedAt: 100 },
         { kind: "key", code: "KeyX", at: 200 }
@@ -75,48 +88,48 @@ describe("bindMachine", () => {
 
       expect(result).toBeDefined();
       expect(result?.state).toEqual({ active: false });
-      expect(result?.profile.player1.face.primary).toEqual({ type: "key", code: "KeyX" });
+      expect(result?.data.player1.face.primary).toEqual({ type: "key", code: "KeyX" });
     });
 
     it("should handle multi-step dpad binding sequence", () => {
       const state1 = { active: true as const, plan: { kind: "dpad" as const, group: "dpad" as const }, step: 0, startedAt: 100 };
       
       // Step 0: Up
-      const res1 = applyBindEvent(mockProfile, state1, { kind: "key", code: "ArrowUp", at: 200 });
+      const res1 = applyBindEvent(profileAccessor, mockProfile, state1, { kind: "key", code: "ArrowUp", at: 200 });
       expect(res1?.state).toEqual({ ...state1, step: 1 });
-      expect(res1?.profile.player1.dpad.up).toEqual({ type: "key", code: "ArrowUp" });
+      expect(res1?.data.player1.dpad.up).toEqual({ type: "key", code: "ArrowUp" });
 
       // Step 1: Down
       if (!res1) throw new Error("Expected res1 to be defined");
-      const res2 = applyBindEvent(res1.profile, res1.state, { kind: "key", code: "ArrowDown", at: 300 });
+      const res2 = applyBindEvent(profileAccessor, res1.data, res1.state, { kind: "key", code: "ArrowDown", at: 300 });
       expect(res2?.state).toEqual({ ...state1, step: 2 });
-      expect(res2?.profile.player1.dpad.down).toEqual({ type: "key", code: "ArrowDown" });
+      expect(res2?.data.player1.dpad.down).toEqual({ type: "key", code: "ArrowDown" });
 
       // Step 2: Left
       if (!res2) throw new Error("Expected res2 to be defined");
-      const res3 = applyBindEvent(res2.profile, res2.state, { kind: "key", code: "ArrowLeft", at: 400 });
+      const res3 = applyBindEvent(profileAccessor, res2.data, res2.state, { kind: "key", code: "ArrowLeft", at: 400 });
       expect(res3?.state).toEqual({ ...state1, step: 3 });
-      expect(res3?.profile.player1.dpad.left).toEqual({ type: "key", code: "ArrowLeft" });
+      expect(res3?.data.player1.dpad.left).toEqual({ type: "key", code: "ArrowLeft" });
 
       // Step 3: Right (completes binding)
       if (!res3) throw new Error("Expected res3 to be defined");
-      const res4 = applyBindEvent(res3.profile, res3.state, { kind: "key", code: "ArrowRight", at: 500 });
+      const res4 = applyBindEvent(profileAccessor, res3.data, res3.state, { kind: "key", code: "ArrowRight", at: 500 });
       expect(res4?.state).toEqual({ active: false });
-      expect(res4?.profile.player1.dpad.right).toEqual({ type: "key", code: "ArrowRight" });
+      expect(res4?.data.player1.dpad.right).toEqual({ type: "key", code: "ArrowRight" });
     });
 
     it("should handle stick binding sequence", () => {
       const state1 = { active: true as const, plan: { kind: "stick" as const, group: "move" as const, stick: "left" as const }, step: 0, startedAt: 100 };
 
       // Step 0: X axis
-      const res1 = applyBindEvent(mockProfile, state1, { kind: "gp_axis", stick: "left", axis: "x", value: 1.0, at: 200 });
+      const res1 = applyBindEvent(profileAccessor, mockProfile, state1, { kind: "gp_axis", stick: "left", axis: "x", value: 1.0, at: 200 });
       expect(res1?.state).toEqual({ ...state1, step: 1 });
       
       // Step 1: Y axis (completes binding)
       if (!res1) throw new Error("Expected res1 to be defined");
-      const res2 = applyBindEvent(res1.profile, res1.state, { kind: "gp_axis", stick: "left", axis: "y", value: 1.0, at: 300 });
+      const res2 = applyBindEvent(profileAccessor, res1.data, res1.state, { kind: "gp_axis", stick: "left", axis: "y", value: 1.0, at: 300 });
       expect(res2?.state).toEqual({ active: false });
-      expect(res2?.profile.player1.move).toEqual({
+      expect(res2?.data.player1.move).toEqual({
         type: "stick",
         stick: "left",
         deadzone: 0.15
@@ -127,8 +140,38 @@ describe("bindMachine", () => {
       const state1 = { active: true as const, plan: { kind: "stick" as const, group: "move" as const, stick: "left" as const }, step: 0, startedAt: 100 };
 
       // Try binding Y axis when expecting X axis
-      const res = applyBindEvent(mockProfile, state1, { kind: "gp_axis", stick: "left", axis: "y", value: 1.0, at: 200 });
+      const res = applyBindEvent(profileAccessor, mockProfile, state1, { kind: "gp_axis", stick: "left", axis: "y", value: 1.0, at: 200 });
       expect(res).toBeNull();
+    });
+  });
+
+  describe("applyBindEvent with consoleAccessor", () => {
+    it("should bind digital key on console digital plan", () => {
+      const result = applyBindEvent(
+        consoleAccessor,
+        mockLayout,
+        { active: true, plan: { kind: "digital", path: "b" }, step: 0, startedAt: 100 },
+        { kind: "key", code: "KeyX", at: 200 }
+      );
+
+      expect(result).toBeDefined();
+      expect(result?.state).toEqual({ active: false });
+      expect((result?.data.bindings as unknown as Record<string, unknown>).b).toEqual({ type: "key", code: "KeyX" });
+    });
+
+    it("should handle multi-step dpad binding sequence on console layout", () => {
+      const state1 = { active: true as const, plan: { kind: "dpad" as const, group: "move" as const }, step: 0, startedAt: 100 };
+
+      // Step 0: Up
+      const res1 = applyBindEvent(consoleAccessor, mockLayout, state1, { kind: "key", code: "ArrowUp", at: 200 });
+      expect(res1?.state).toEqual({ ...state1, step: 1 });
+      expect((res1?.data.bindings.move as DpadBinding).up).toEqual({ type: "key", code: "ArrowUp" });
+
+      // Step 1: Down
+      if (!res1) throw new Error("Expected res1 to be defined");
+      const res2 = applyBindEvent(consoleAccessor, res1.data, res1.state, { kind: "key", code: "ArrowDown", at: 300 });
+      expect(res2?.state).toEqual({ ...state1, step: 2 });
+      expect((res2?.data.bindings.move as DpadBinding).down).toEqual({ type: "key", code: "ArrowDown" });
     });
   });
 });

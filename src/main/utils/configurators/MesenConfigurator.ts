@@ -6,47 +6,6 @@ import { MesenTranslator } from "../translators/MesenTranslator";
 import { getMesenBucket, getMesenControllerType } from "../schema/mesen";
 import type { ConsoleID } from "../../../shared/types";
 
-type JsonObject = Record<string, unknown>;
-type MappingSlot = "Mapping1" | "Mapping2" | "Mapping3" | "Mapping4";
-
-const ALL_SLOTS: readonly MappingSlot[] = ["Mapping1", "Mapping2", "Mapping3", "Mapping4"] as const;
-
-function isObject(v: unknown): v is JsonObject {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
-}
-
-function ensureObject(obj: JsonObject, key: string): JsonObject {
-  const existing = obj[key];
-  if (isObject(existing)) return existing;
-  const created: JsonObject = {};
-  obj[key] = created;
-  return created;
-}
-
-function ensureMappingNode(root: JsonObject, slot: MappingSlot): JsonObject {
-  return ensureObject(root, slot);
-}
-
-function preferredRootKey(consoleId: ConsoleID): "Port1" | "Controller" {
-  if (consoleId === "gb" || consoleId === "gba") return "Controller";
-  return "Port1";
-}
-
-function isRootKeyCandidate(k: string) {
-  return k === "Port1" || k.startsWith("Port1") || k === "Controller" || k.startsWith("Controller");
-}
-
-function collectRootKeysToWrite(bucketNode: JsonObject, consoleId: ConsoleID): { keys: string[]; preferred: string } {
-  const preferred = preferredRootKey(consoleId);
-
-  const existing = Object.keys(bucketNode)
-    .filter((k) => isRootKeyCandidate(k))
-    .filter((k) => isObject(bucketNode[k]));
-
-  const all = new Set<string>([...existing, preferred]);
-  return { keys: [...all], preferred };
-}
-
 export class MesenConfigurator extends BaseConfigurator {
   private translator = new MesenTranslator();
 
@@ -70,48 +29,43 @@ export class MesenConfigurator extends BaseConfigurator {
     const profile = svc.getDefaultProfile();
     const p1 = await svc.getEffectiveConsoleBindings(this.consoleId, profile.id);
 
-    const slotPlan: Record<MappingSlot, { device: "keyboard" | "gamepad"; dirSource: "move" | "dpad" }> = {
-      Mapping1: { device: "keyboard", dirSource: "move" },
-      Mapping2: { device: "keyboard", dirSource: "dpad" },
-      Mapping3: { device: "gamepad", dirSource: "move" },
-      Mapping4: { device: "gamepad", dirSource: "dpad" },
+    const effectiveProfile = {
+      ...profile,
+      player1: p1,
     };
 
-    const slotMaps = {
-      Mapping1: this.translator.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping1.device, slotPlan.Mapping1.dirSource),
-      Mapping2: this.translator.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping2.device, slotPlan.Mapping2.dirSource),
-      Mapping3: this.translator.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping3.device, slotPlan.Mapping3.dirSource),
-      Mapping4: this.translator.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping4.device, slotPlan.Mapping4.dirSource),
-    } satisfies Record<MappingSlot, Record<string, number>>;
+    const ctx = {
+      platform: osHandler.getPlatform(),
+      consoleId: this.consoleId,
+      player: 1,
+      padPort: 1,
+      configDir: configPath,
+    };
 
-    osHandler.updateJson<unknown>(
-      settingsFile,
-      (settingsUnknown) => {
-        const settings: JsonObject = isObject(settingsUnknown) ? settingsUnknown : {};
-        
-        const bucketNode = ensureObject(settings, bucket);
+    const patches = this.translator.translate(effectiveProfile, ctx);
 
-        const { keys: rootKeysToWrite } = collectRootKeysToWrite(bucketNode, this.consoleId);
-
-        for (const rootKey of rootKeysToWrite) {
-          const rootNode = ensureObject(bucketNode, rootKey);
-
-          if (rootNode["Type"] !== type) {
-            rootNode["Type"] = type;
-          }
-
-          for (const slot of ALL_SLOTS) {
-            const mapForSlot = slotMaps[slot];
-
-            if (Object.keys(mapForSlot).length === 0) {
-                continue;
+    for (const patch of patches) {
+      if (patch.kind === "json-merge") {
+        osHandler.updateJson<Record<string, unknown>>(
+          settingsFile,
+          (settings) => {
+            const root = settings && typeof settings === "object" ? settings : {};
+            const pathParts = patch.path;
+            let current = root as Record<string, unknown>;
+            for (let i = 0; i < pathParts.length - 1; i++) {
+              const part = pathParts[i];
+              if (!current[part] || typeof current[part] !== "object") {
+                current[part] = {};
+              }
+              current = current[part] as Record<string, unknown>;
             }
-            const node = ensureMappingNode(rootNode, slot);
-            Object.assign(node, mapForSlot);
-          }
-        }
-
-        return settings;
-    }, {});
+            const lastPart = pathParts[pathParts.length - 1];
+            current[lastPart] = patch.value;
+            return root;
+          },
+          {}
+        );
+      }
+    }
   }
 }

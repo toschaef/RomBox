@@ -78,4 +78,83 @@ describe("DolphinTranslator", () => {
       expect(buttonPlus.value).toBe("T");
     }
   });
+
+  it("should translate gamepad bindings and GC Z-button correctly", () => {
+    const gamepadProfile: ControlsProfile = {
+      ...profile,
+      preferredControllerId: "SDL/0/Controller",
+      player1: {
+        ...profile.player1,
+        face: {
+          type: "face",
+          primary: { type: "gp_button", token: "GP_A" },
+          secondary: { type: "gp_button", token: "GP_B" },
+          tertiary: { type: "gp_button", token: "GP_X" },
+          quaternary: { type: "gp_button", token: "GP_Y" },
+        },
+        system: {
+          type: "system",
+          start: { type: "gp_button", token: "GP_START" },
+        },
+        special: {
+          type: "gc",
+          z: { type: "gp_button", token: "GP_SELECT" },
+        }
+      }
+    };
+
+    const translator = new DolphinTranslator();
+    const result = translator.translate(gamepadProfile, context);
+    expect(result.length).toBeGreaterThan(0);
+
+    // Verify Device matches the preferredControllerId
+    const devicePatch = result.find(p => p.kind === "ini-set" && p.key === "Device");
+    expect(devicePatch).toBeDefined();
+    if (devicePatch && devicePatch.kind === "ini-set") {
+      expect(devicePatch.value).toBe("SDL/0/Controller");
+    }
+
+    // Buttons/A should be mapped to `Button A`
+    const buttonA = result.find(p => p.kind === "ini-set" && p.key === "Buttons/A");
+    expect(buttonA).toBeDefined();
+    if (buttonA && buttonA.kind === "ini-set") {
+      expect(buttonA.value).toBe("`Button A`");
+    }
+
+    // Buttons/Z should be mapped to `Back` (token GP_SELECT)
+    const buttonZ = result.find(p => p.kind === "ini-set" && p.key === "Buttons/Z");
+    expect(buttonZ).toBeDefined();
+    if (buttonZ && buttonZ.kind === "ini-set") {
+      expect(buttonZ.value).toBe("`Back`");
+    }
+  });
+
+  it("should handle Wii special home bindings and detect device correctly", () => {
+    const wiiContext: TranslateContext = {
+      platform: "darwin",
+      configDir: "/mock/config/dir",
+      consoleId: "wii",
+    };
+    const wiiProfile: ControlsProfile = {
+      ...profile,
+      preferredControllerId: "SDL/0/Controller",
+      player1: {
+        ...profile.player1,
+        special: {
+          type: "wii",
+          home: { type: "gp_button", token: "GP_START" },
+        }
+      }
+    };
+    const translator = new DolphinTranslator();
+    const result = translator.translate(wiiProfile, wiiContext);
+    expect(result.length).toBeGreaterThan(0);
+
+    // Verify Device matches the preferredControllerId because home is a gamepad button
+    const devicePatch = result.find(p => p.kind === "ini-set" && p.key === "Device");
+    expect(devicePatch).toBeDefined();
+    if (devicePatch && devicePatch.kind === "ini-set") {
+      expect(devicePatch.value).toBe("SDL/0/Controller");
+    }
+  });
 });

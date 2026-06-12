@@ -7,7 +7,6 @@ import { ControlsService } from "../../services/ControlsService";
 import type { Game } from "../../../shared/types";
 import { DolphinTranslator } from "../translators/DolphinTranslator";
 import type { EmulatorPatch, TranslateContext } from "../translators/ITranslator";
-import { resolveConsoleBindings } from "../resolveConsoleBindings";
 import type { PlayerBindings } from "../../../shared/types/controls";
 import { DOLPHIN } from "../schema/dolphin";
 import { SettingsService } from "../../services/SettingsService";
@@ -70,17 +69,20 @@ function ensureDirs(configDir: string) {
 function applyPatches(patches: EmulatorPatch[]) {
   for (const p of patches) {
     if (p.kind === "ini-set") {
+      if (!p.absPath) continue;
       IniEditor.updateIni(p.absPath, { [p.section]: { [p.key]: p.value } });
       continue;
     }
 
     if (p.kind === "file-write") {
+      if (!p.absPath) continue;
       fs.mkdirSync(path.dirname(p.absPath), { recursive: true });
       fs.writeFileSync(p.absPath, p.contents, "utf-8");
       continue;
     }
 
     if (p.kind === "ini-delete") {
+      if (!p.absPath) continue;
       IniEditor.deleteKeys(p.absPath, { [p.section]: [p.key] });
       continue;
     }
@@ -143,13 +145,8 @@ export class DolphinConfigurator extends BaseConfigurator {
 
     const svc = new ControlsService();
     const profile = svc.getDefaultProfile();
-    const consoleLayout = svc.getConsoleLayout(this.game.consoleId, profile.id);
 
-    const bindings: PlayerBindings = await resolveConsoleBindings({
-      consoleId: this.game.consoleId,
-      profile,
-      consoleLayout: consoleLayout,
-    });
+    const bindings: PlayerBindings = await svc.getEffectiveConsoleBindings(this.game.consoleId, profile.id);
 
     const detected = detectDolphinPadDevice(configDir);
     const effectiveProfile = {
@@ -191,7 +188,8 @@ export class DolphinConfigurator extends BaseConfigurator {
           verifyW[k] = { value: vals.at(-1) ?? null, count: vals.length };
         }
       } catch (err) {
-        console.log('[Dolphin] Could not read WiimoteNew.ini', err.message);
+        const msg = err instanceof Error ? err.message : String(err);
+        console.log('[Dolphin] Could not read WiimoteNew.ini', msg);
       }
     }
 

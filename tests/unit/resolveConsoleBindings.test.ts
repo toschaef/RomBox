@@ -1,49 +1,53 @@
-import { resolveConsoleBindings } from "../../src/main/utils/resolveConsoleBindings";
-import { createDefaultProfileShape } from "../../src/shared/controls/layoutDefaults";
-import type { ControlsProfile, AnyConsoleLayout } from "../../src/shared/types/controls";
+import { ControlsService } from "../../src/main/services/ControlsService";
+import { initDB, getDB } from "../../src/main/data/db";
 
-describe("resolveConsoleBindings", () => {
-  let mockProfile: ControlsProfile;
+describe("getEffectiveConsoleBindings", () => {
+  let service: ControlsService;
 
   beforeEach(() => {
-    mockProfile = {
-      id: "profile-id",
-      name: "Default Profile",
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      isDefault: true,
-      // preferredDevice: "keyboard",
-      ...createDefaultProfileShape(),
-    };
+    try {
+      const db = getDB();
+      db.prepare("DELETE FROM controller_profiles").run();
+      db.prepare("DELETE FROM console_layouts").run();
+    } catch {
+      initDB();
+      const db = getDB();
+      db.prepare("DELETE FROM controller_profiles").run();
+      db.prepare("DELETE FROM console_layouts").run();
+    }
+    service = new ControlsService();
   });
 
-  it("should return consoleLayout.bindings if they exist", async () => {
-    const mockConsoleLayout: AnyConsoleLayout = {
-      consoleId: "nes",
-      name: "NES",
-      bindings: {
-        a: { type: "key", code: "KeyA" }
+  it("should return saved consoleLayout bindings if they exist", async () => {
+    const profile = service.getDefaultProfile();
+    
+    // Save customized layout
+    const layout = service.getConsoleLayout("nes", profile.id);
+    const customBindings = {
+      ...layout.bindings,
+      face: {
+        ...layout.bindings.face,
+        primary: { type: "key" as const, code: "KeyZ" }
       }
-    } as unknown as AnyConsoleLayout;
-
-    const result = await resolveConsoleBindings({
+    };
+    
+    service.saveConsoleLayout({
       consoleId: "nes",
-      profile: mockProfile,
-      consoleLayout: mockConsoleLayout
+      profileId: profile.id,
+      bindings: customBindings
     });
 
-    expect(result).toEqual(mockConsoleLayout.bindings);
+    const result = await service.getEffectiveConsoleBindings("nes", profile.id);
+
+    expect(result.face?.primary).toEqual({ type: "key", code: "KeyZ" });
   });
 
-  it("should fall back to default console bindings if consoleLayout.bindings is missing or null", async () => {
-    const resultNull = await resolveConsoleBindings({
-      consoleId: "nes",
-      profile: mockProfile,
-      consoleLayout: null
-    });
+  it("should fall back to default console bindings if layout has no customized bindings or is new", async () => {
+    const profile = service.getDefaultProfile();
+    const result = await service.getEffectiveConsoleBindings("nes", profile.id);
 
-    expect(resultNull).toBeDefined();
+    expect(result).toBeDefined();
     // Default NES move bindings should be mapped as a dpad
-    expect(resultNull.move).toBeDefined();
+    expect(result.move).toBeDefined();
   });
 });

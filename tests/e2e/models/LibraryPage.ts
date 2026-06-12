@@ -1,11 +1,11 @@
-import { type Locator } from '@playwright/test';
+import { type Page, type Locator } from '@playwright/test';
 import { BasePage } from './BasePage';
 
 export class LibraryPage extends BasePage {
   readonly searchBar: Locator;
   readonly manualImportButton: Locator;
 
-  constructor(page: any) {
+  constructor(page: Page) {
     super(page);
     this.searchBar = this.page.getByPlaceholder('Search');
     this.manualImportButton = this.page.getByTestId('import-button');

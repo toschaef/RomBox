@@ -1,7 +1,11 @@
-import type { PlayerBindings, DigitalBinding } from "../../../shared/types/controls";
+import type { PlayerBindings, DigitalBinding, ControlsProfile } from "../../../shared/types/controls";
+import type { IEmulatorTranslator, EmulatorPatch, TranslateContext } from "./ITranslator";
 import { GP_FIXED_TO_INDEX, type GamepadToken } from "../../../shared/controls/gamepadTokens";
-import { BASE_GAMEPAD, MESEN_KEYCODE_MAP_128, APPLE_KEYCODE_BY_CODE } from "../schema/mesen";
-import { digitalToGamepadToken, type Dir } from "../profileRead";
+import { BASE_GAMEPAD, MESEN_KEYCODE_MAP_128, APPLE_KEYCODE_BY_CODE, getMesenBucket, getMesenControllerType } from "../schema/mesen";
+import { digitalToGamepadToken, pickDir, getDirFromBinding, type Dir } from "../profileRead";
+import type { ConsoleID } from "../../../shared/types";
+import path from "path";
+import fs from "fs";
 
 type Device = "keyboard" | "gamepad";
 type DirSource = "dpad" | "move";
@@ -28,32 +32,6 @@ function fixToken(tok: GamepadToken): GamepadToken {
   return tok;
 }
 
-function pickDir(
-  dpad: { up?: DigitalBinding; down?: DigitalBinding; left?: DigitalBinding; right?: DigitalBinding },
-  dir: Dir
-) {
-  if (dir === "up")   return dpad.up;
-  if (dir === "down") return dpad.down;
-  if (dir === "left") return dpad.left;
-
-  return dpad.right;
-}
-
-function getDirFromPlayer(p1: PlayerBindings, src: DirSource, dir: Dir): DigitalBinding | undefined {
-  if (src === "dpad") return pickDir(p1.dpad, dir);
-  const m = p1.move;
-  if (m.type === "dpad") return pickDir(m, dir);
-  const stick = m.stick;
-  const threshold = 0.65;
-  const invX = !!m.invertX;
-  const invY = !!m.invertY;
-  if (dir === "left")  return { type: "gp_axis_digital", stick, axis: "x", dir: invX ? "pos" : "neg", threshold };
-  if (dir === "right") return { type: "gp_axis_digital", stick, axis: "x", dir: invX ? "neg" : "pos", threshold };
-  if (dir === "up")    return { type: "gp_axis_digital", stick, axis: "y", dir: invY ? "neg" : "pos", threshold };
-
-  return { type: "gp_axis_digital", stick, axis: "y", dir: invY ? "pos" : "neg", threshold };
-}
-
 function translateDigital(d: DigitalBinding | undefined, player: number, device: Device | null): number | null {
   if (!d) return null;
 
@@ -72,7 +50,112 @@ function translateDigital(d: DigitalBinding | undefined, player: number, device:
   return mesenGamepadCode(fixToken(gpTok), player);
 }
 
-export class MesenTranslator {
+type JsonObject = Record<string, unknown>;
+type MappingSlot = "Mapping1" | "Mapping2" | "Mapping3" | "Mapping4";
+const ALL_SLOTS: readonly MappingSlot[] = ["Mapping1", "Mapping2", "Mapping3", "Mapping4"] as const;
+
+function isObject(v: unknown): v is JsonObject {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function ensureObject(obj: JsonObject, key: string): JsonObject {
+  const existing = obj[key];
+  if (isObject(existing)) return existing;
+  const created: JsonObject = {};
+  obj[key] = created;
+  return created;
+}
+
+function preferredRootKey(consoleId: ConsoleID): "Port1" | "Controller" {
+  if (consoleId === "gb" || consoleId === "gba") return "Controller";
+  return "Port1";
+}
+
+function isRootKeyCandidate(k: string) {
+  return k === "Port1" || k.startsWith("Port1") || k === "Controller" || k.startsWith("Controller");
+}
+
+function collectRootKeysToWrite(bucketNode: JsonObject, consoleId: ConsoleID): { keys: string[]; preferred: string } {
+  const preferred = preferredRootKey(consoleId);
+
+  const existing = Object.keys(bucketNode)
+    .filter((k) => isRootKeyCandidate(k))
+    .filter((k) => isObject(bucketNode[k]));
+
+  const all = new Set<string>([...existing, preferred]);
+  return { keys: [...all], preferred };
+}
+
+export class MesenTranslator implements IEmulatorTranslator {
+  id = "mesen";
+
+  translate(profile: ControlsProfile, ctx: TranslateContext): EmulatorPatch[] {
+    const consoleId = ctx.consoleId;
+    if (!consoleId) throw new Error("MesenTranslator requires ctx.consoleId");
+
+    const bucket = getMesenBucket(consoleId);
+    const type = getMesenControllerType(consoleId);
+    if (!bucket || !type) return [];
+
+    const p1 = profile.player1;
+    const slotPlan: Record<MappingSlot, { device: "keyboard" | "gamepad"; dirSource: "move" | "dpad" }> = {
+      Mapping1: { device: "keyboard", dirSource: "move" },
+      Mapping2: { device: "keyboard", dirSource: "dpad" },
+      Mapping3: { device: "gamepad", dirSource: "move" },
+      Mapping4: { device: "gamepad", dirSource: "dpad" },
+    };
+
+    const slotMaps = {
+      Mapping1: this.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping1.device, slotPlan.Mapping1.dirSource),
+      Mapping2: this.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping2.device, slotPlan.Mapping2.dirSource),
+      Mapping3: this.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping3.device, slotPlan.Mapping3.dirSource),
+      Mapping4: this.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping4.device, slotPlan.Mapping4.dirSource),
+    };
+
+    const configPath = ctx.configDir || "";
+    const settingsFile = path.join(configPath, "settings.json");
+
+    let settings: JsonObject = {};
+    try {
+      if (fs.existsSync(settingsFile)) {
+        settings = JSON.parse(fs.readFileSync(settingsFile, "utf-8"));
+      }
+    } catch {
+      // Ignored
+    }
+
+    const bucketNode = ensureObject(settings, bucket);
+    const { keys: rootKeysToWrite } = collectRootKeysToWrite(bucketNode, consoleId);
+
+    const bucketUpdates = structuredClone(bucketNode);
+
+    for (const rootKey of rootKeysToWrite) {
+      const rootNode = ensureObject(bucketUpdates, rootKey);
+
+      if (rootNode["Type"] !== type) {
+        rootNode["Type"] = type;
+      }
+
+      for (const slot of ALL_SLOTS) {
+        const mapForSlot = slotMaps[slot];
+
+        if (Object.keys(mapForSlot).length === 0) {
+            continue;
+        }
+        const node = ensureObject(rootNode, slot);
+        Object.assign(node, mapForSlot);
+      }
+    }
+
+    return [
+      {
+        kind: "json-merge",
+        path: [bucket],
+        value: bucketUpdates,
+      }
+    ];
+  }
+
   translateForDeviceFromPlayer(
     p1: PlayerBindings,
     player = 1,
@@ -82,7 +165,8 @@ export class MesenTranslator {
     const mapping: Record<string, number> = {};
 
     const setDir = (mesenKey: "Up" | "Down" | "Left" | "Right", dir: Dir) => {
-      const v = translateDigital(getDirFromPlayer(p1, dirSource, dir), player, device);
+      const binding = dirSource === "dpad" ? pickDir(p1.dpad, dir) : getDirFromBinding(p1.move, dir);
+      const v = translateDigital(binding, player, device);
       if (v !== null) mapping[mesenKey] = v;
     };
 

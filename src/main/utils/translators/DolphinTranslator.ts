@@ -181,7 +181,8 @@ export class DolphinTranslator implements IEmulatorTranslator {
     writeBinding(gcNew, "GCPad1", "Main Stick/Left", getDirFromMove(profile, "left"));
     writeBinding(gcNew, "GCPad1", "Main Stick/Right", getDirFromMove(profile, "right"));
 
-    const gcC = profile.player1.c;
+    const special = profile.player1.special;
+    const gcC = special?.type === "n64" ? special.c : undefined;
 
     const cUp = gcC?.type === "dpad" ? gcC.up : undefined;
     const cDown = gcC?.type === "dpad" ? gcC.down : undefined;
@@ -200,7 +201,8 @@ export class DolphinTranslator implements IEmulatorTranslator {
       writeBinding(gcNew, "GCPad1", "C-Stick/Right", getDirFromLook(profile, "right"));
     }
 
-    writeBinding(gcNew, "GCPad1", "Buttons/Z", profile.player1.z);
+    const zBinding = special?.type === "n64" || special?.type === "gc" ? special.z : undefined;
+    writeBinding(gcNew, "GCPad1", "Buttons/Z", zBinding);
 
     if (which === "wii") {
       addIniPatch(patches, wiiNew, "Wiimote1", "Device", effectiveDevice);

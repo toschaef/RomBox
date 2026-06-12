@@ -9,24 +9,6 @@ export function dpadDirBinding(dpad: DpadBinding, dir: Dir): DigitalBinding | un
   return dpad[dir];
 }
 
-export function getDpadLike(profile: ControlsProfile, dir: Dir): DigitalBinding | undefined {
-  const p1 = profile.player1;
-
-  const move = (p1 as unknown as { move?: unknown }).move as DpadBinding | StickBinding | undefined;
-  if (move && move.type === "dpad") {
-    const fromMove = pickDir(move, dir);
-    if (fromMove) return fromMove;
-  }
-
-  const dpad = (p1 as unknown as { dpad?: unknown }).dpad as DpadBinding | undefined;
-  if (dpad && dpad.type === "dpad") {
-    const fromDpad = pickDir(dpad, dir);
-    if (fromDpad) return fromDpad;
-  }
-
-  return undefined;
-}
-
 export function digitalToGamepadToken(d: DigitalBinding): GamepadToken | null {
   if (d.type === "gp_button") return d.token;
   if (d.type === "gp_axis_digital") {
@@ -39,7 +21,7 @@ export function digitalToGamepadToken(d: DigitalBinding): GamepadToken | null {
   return null;
 }
 
-function pickDir(d: DpadBinding, dir: Dir): DigitalBinding | undefined {
+export function pickDir(d: DpadBinding, dir: Dir): DigitalBinding | undefined {
   if (dir === "up") return d.up;
   if (dir === "down") return d.down;
   if (dir === "left") return d.left;
@@ -66,9 +48,8 @@ export function getDirFromMove(profile: ControlsProfile, dir: Dir): DigitalBindi
   if (dir === "left")  return { type: "gp_axis_digital", stick, axis: "x", dir: invX ? "pos" : "neg", threshold };
   if (dir === "right") return { type: "gp_axis_digital", stick, axis: "x", dir: invX ? "neg" : "pos", threshold };
 
-  // y is swapped!!!
-  if (dir === "up") return { type: "gp_axis_digital", stick, axis: "y", dir: invY ? "neg" : "pos", threshold };
-  return { type: "gp_axis_digital", stick, axis: "y", dir: invY ? "pos" : "neg", threshold };
+  if (dir === "up") return { type: "gp_axis_digital", stick, axis: "y", dir: invY ? "pos" : "neg", threshold };
+  return { type: "gp_axis_digital", stick, axis: "y", dir: invY ? "neg" : "pos", threshold };
 }
 
 export function getStickDirFromMove(profile: ControlsProfile, dir: "up" | "down" | "left" | "right"): DigitalBinding | undefined {

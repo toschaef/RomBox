@@ -33,4 +33,37 @@ describe("MesenTranslator", () => {
     // dpad.up is 'Digit3' -> 37
     expect(resultDpad["Up"]).toBe(37);
   });
+
+  it("should translate gamepad bindings via MesenTranslator correctly", () => {
+    const gamepadProfile: ControlsProfile = {
+      ...profile,
+      player1: {
+        ...profile.player1,
+        face: {
+          type: "face",
+          primary: { type: "gp_button", token: "GP_A" },
+          secondary: { type: "gp_button", token: "GP_B" },
+        },
+        move: {
+          type: "stick",
+          stick: "left",
+          deadzone: 0.15,
+        }
+      }
+    };
+
+    const translator = new MesenTranslator();
+
+    // Test translation with gamepad device and move source
+    const resultMove = translator.translateForDeviceFromPlayer(gamepadProfile.player1, 1, "gamepad", "move");
+    expect(Object.keys(resultMove).length).toBeGreaterThan(0);
+
+    // GP_A maps to 4096 (BASE_GAMEPAD + 0)
+    expect(resultMove["A"]).toBe(4096);
+    // GP_B maps to 4097 (BASE_GAMEPAD + 1)
+    expect(resultMove["B"]).toBe(4097);
+
+    // move.up maps to GP_LS_UP (index 19) -> 4096 + 19 = 4115
+    expect(resultMove["Up"]).toBe(4115);
+  });
 });

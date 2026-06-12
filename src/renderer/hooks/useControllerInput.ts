@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { GamepadToken } from "../../shared/controls/gamepadTokens";
 import { axisToDigitalToken } from "../../shared/controls/gamepadTokens";
-
-const AXIS_THRESHOLD = 0.65;
+import { AXIS_THRESHOLD } from "../../shared/controls/inputTypes";
 
 export type Detected =
   | { device: "keyboard"; input: string }
@@ -137,7 +136,21 @@ export function useControllerInput() {
         prevAxisToken.current.clear();
       }
 
-      setCurrentlyPressed(nextPressed);
+      let changed = false;
+      if (nextPressed.size !== prevPressed.current.size) {
+        changed = true;
+      } else {
+        for (const item of nextPressed) {
+          if (!prevPressed.current.has(item)) {
+            changed = true;
+            break;
+          }
+        }
+      }
+
+      if (changed) {
+        setCurrentlyPressed(nextPressed);
+      }
 
       if (detectedThisFrame) {
         setLastDetected({ input: detectedThisFrame, at: performance.now() });

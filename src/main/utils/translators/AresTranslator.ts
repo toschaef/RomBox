@@ -1,6 +1,8 @@
-import type { PlayerBindings, DigitalBinding, DpadBinding } from "../../../shared/types/controls";
-import type { Dir } from "../profileRead";
+import type { PlayerBindings, DigitalBinding, ControlsProfile } from "../../../shared/types/controls";
+import type { IEmulatorTranslator, EmulatorPatch, TranslateContext } from "./ITranslator";
 import { ARES, resolveQuartzKeyboardKeyIndex } from "../schema/ares";
+import { pickDir, getDirFromBinding } from "../profileRead";
+import path from "path";
 
 const KEYBOARD_DEVICE_ID = 0x1;
 
@@ -17,20 +19,25 @@ function encodeDigital(d?: DigitalBinding): string | null {
   return encodeKeyboard(d.code);
 }
 
-function pickDir(dpad: DpadBinding | undefined, dir: Dir): DigitalBinding | undefined {
-  if (!dpad || dpad.type !== "dpad") return undefined;
-  if (dir === "up") return dpad.up;
-  if (dir === "down") return dpad.down;
-  if (dir === "left") return dpad.left;
-  return dpad.right;
-}
+export class AresTranslator implements IEmulatorTranslator {
+  id = "ares";
 
-function dirFromMove(p1: PlayerBindings, dir: Dir): DigitalBinding | undefined {
-  const m = p1.move;
-  return m.type === "dpad" ? pickDir(m, dir) : undefined;
-}
+  translate(profile: ControlsProfile, ctx: TranslateContext): EmulatorPatch[] {
+    const updates = this.translateFromPlayer(profile.player1);
+    const patches: EmulatorPatch[] = [];
+    const settingsPath = path.join(ctx.configDir || "", ARES.settingsFile);
+    for (const [key, value] of Object.entries(updates)) {
+      patches.push({
+        kind: "ini-set",
+        absPath: settingsPath,
+        section: "VirtualPad1",
+        key,
+        value,
+      });
+    }
+    return patches;
+  }
 
-export class AresTranslator {
   translateFromPlayer(p1: PlayerBindings): Record<string, string> {
     const k = ARES.keys;
     const updates: Record<string, string> = {};
@@ -40,10 +47,10 @@ export class AresTranslator {
       if (v) updates[key] = v;
     };
 
-    set(k.lUp, dirFromMove(p1, "up"));
-    set(k.lDown, dirFromMove(p1, "down"));
-    set(k.lLeft, dirFromMove(p1, "left"));
-    set(k.lRight, dirFromMove(p1, "right"));
+    set(k.lUp, getDirFromBinding(p1.move, "up"));
+    set(k.lDown, getDirFromBinding(p1.move, "down"));
+    set(k.lLeft, getDirFromBinding(p1.move, "left"));
+    set(k.lRight, getDirFromBinding(p1.move, "right"));
 
     set(k.dpadUp, pickDir(p1.dpad, "up"));
     set(k.dpadDown, pickDir(p1.dpad, "down"));
@@ -62,12 +69,14 @@ export class AresTranslator {
     set(k.r, p1.shoulders?.bumperR);
     set(k.rTrigger, p1.shoulders?.triggerR);
 
-    set(k.z, p1.z);
+    const specialN64 = p1.special?.type === "n64" ? p1.special : undefined;
+    set(k.z, specialN64?.z);
 
-    set(k.rUp, pickDir(p1.c, "up"));
-    set(k.rDown, pickDir(p1.c, "down"));
-    set(k.rLeft, pickDir(p1.c, "left"));
-    set(k.rRight, pickDir(p1.c, "right"));
+    const cDpad = specialN64?.c;
+    set(k.rUp, getDirFromBinding(cDpad, "up") ?? getDirFromBinding(p1.look, "up"));
+    set(k.rDown, getDirFromBinding(cDpad, "down") ?? getDirFromBinding(p1.look, "down"));
+    set(k.rLeft, getDirFromBinding(cDpad, "left") ?? getDirFromBinding(p1.look, "left"));
+    set(k.rRight, getDirFromBinding(cDpad, "right") ?? getDirFromBinding(p1.look, "right"));
 
     return updates;
   }

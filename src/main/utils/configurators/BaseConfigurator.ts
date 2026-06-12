@@ -25,6 +25,7 @@ export abstract class BaseConfigurator implements EmulatorConfigurator {
         return line;
       }
 
+      // todo: think about if this is oeprator structure was intentional
       if (inSection && trimmed.startsWith(key + ' =') || trimmed.startsWith(key + '=')) {
         return `${key} = ${value}`;
       }

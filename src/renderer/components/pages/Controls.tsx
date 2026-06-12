@@ -1,426 +1,17 @@
 import { useMemo } from "react";
-
 import ControlsHeader from "../controls/ControlsHeader";
 import ListeningOverlay from "../controls/ListeningOverlay";
-import DigitalBindingCard from "../controls/DigitalBindingCard";
-import GroupBindingCard from "../controls/GroupBindingCard";
 import PageLayout from "../layout/PageLayout";
-
-import { SECTION_ORDER, STANDARD_LAYOUT, type SectionKey } from "../../controls/layout";
-import { getConsoleLayoutItems, CONSOLE_OPTIONS } from "../../controls/consoleLayouts";
-
+import { CONSOLE_OPTIONS } from "../../controls/consoleLayouts";
 import { useControlsProfiles, makeClearedProfile, makeResetProfile } from "../../hooks/useControlsProfiles";
 import { useControlsLayoutTarget } from "../../hooks/useControlsLayoutTarget";
 import { useControlsPressed } from "../../hooks/useControlsPressed";
 import { useControlsBinding } from "../../hooks/useControlsBinding";
-
 import type { ConsoleID } from "../../../shared/types";
-import type {
-  AnyConsoleLayout,
-  ControlsProfile,
-  DigitalBinding,
-  DpadBinding,
-  StickBinding,
-} from "../../../shared//types/controls";
-
-import {
-  getConsoleDigital as getConsoleDigitalById,
-  clearConsoleDigital as clearConsoleDigitalById,
-} from "../../controls/consolePath";
-
-import type { BindPlan } from "../../controls/bindMachine";
-import type { BindPlanConsole } from "../../controls/consoleBindMachine";
-
-type DigitalPath =
-  | "face.primary"
-  | "face.secondary"
-  | "face.tertiary"
-  | "face.quaternary"
-  | "shoulders.bumperL"
-  | "shoulders.bumperR"
-  | "shoulders.triggerL"
-  | "shoulders.triggerR"
-  | "sticks.l3"
-  | "sticks.r3"
-  | "system.start"
-  | "system.select";
-
-function getDigital(p: ControlsProfile, path: DigitalPath): DigitalBinding | undefined {
-  const [group, key] = path.split(".") as ["face" | "shoulders" | "system" | "sticks", string];
-  // @ts-expect-error dynamic keying
-  return p.player1[group]?.[key];
-}
-
-function clearDigital(p: ControlsProfile, path: DigitalPath): ControlsProfile {
-  const next = structuredClone(p);
-  const [group, key] = path.split(".") as ["face" | "shoulders" | "system" | "sticks", string];
-  // @ts-expect-error dynamic keying
-  if (next.player1[group]) delete next.player1[group][key];
-  return next;
-}
-
-function setGroupMode(p: ControlsProfile, group: "move" | "dpad" | "look", mode: "dpad" | "stick"): ControlsProfile {
-  const next = structuredClone(p);
-
-  const defaultStick = (stick: "left" | "right"): StickBinding => ({ type: "stick", stick, deadzone: 0.15 });
-  const defaultDpad = (): DpadBinding => ({ type: "dpad" });
-
-  if (group === "move") {
-    next.player1.move = mode === "dpad" ? defaultDpad() : defaultStick("left");
-  } else if (group === "dpad") {
-    next.player1.dpad = defaultDpad();
-  } else {
-    next.player1.look = mode === "dpad" ? defaultDpad() : defaultStick("right");
-  }
-
-  return next;
-}
-
-function clearGroup(p: ControlsProfile, group: "move" | "dpad" | "look"): ControlsProfile {
-  const next = structuredClone(p);
-
-  if (group === "move") {
-    next.player1.move =
-      next.player1.move.type === "stick"
-        ? { type: "stick", stick: next.player1.move.stick, deadzone: next.player1.move.deadzone }
-        : { type: "dpad" };
-  } else if (group === "dpad") {
-    next.player1.dpad = { type: "dpad" };
-  } else {
-    next.player1.look =
-      next.player1.look.type === "stick"
-        ? { type: "stick", stick: next.player1.look.stick, deadzone: next.player1.look.deadzone }
-        : { type: "dpad" };
-  }
-
-  return next;
-}
-
-type ConsoleGroupId = "move" | "dpad" | "c" | "look";
-
-function defaultStick(stick: "left" | "right"): StickBinding {
-  return { type: "stick", stick, deadzone: 0.15 };
-}
-function defaultDpad(): DpadBinding {
-  return { type: "dpad" };
-}
-
-function getConsoleGroupValue(layout: AnyConsoleLayout, group: ConsoleGroupId): DpadBinding | StickBinding {
-  const b = layout.bindings;
-  const v = b?.[group];
-
-  if (v && (v.type === "dpad" || v.type === "stick")) return v as DpadBinding | StickBinding;
-
-  if (group === "move") return defaultDpad();
-  if (group === "dpad") return defaultDpad();
-  return defaultDpad();
-}
-
-function setConsoleGroupMode(layout: AnyConsoleLayout, group: ConsoleGroupId, mode: "dpad" | "stick"): AnyConsoleLayout {
-  const next = structuredClone(layout);
-
-  if (mode === "dpad") {
-    next.bindings[group] = defaultDpad();
-    return next;
-  }
-
-  const stick: "left" | "right" = (group === "c" || group === "look") ? "right" : "left";
-  (next.bindings as unknown as Record<string, unknown>)[group] = defaultStick(stick);
-  return next as AnyConsoleLayout;
-}
-
-function clearConsoleGroup(layout: AnyConsoleLayout, group: ConsoleGroupId): AnyConsoleLayout {
-  const next = structuredClone(layout);
-
-  const current = next.bindings[group];
-  if (current?.type === "stick") {
-    (next.bindings as unknown as Record<string, unknown>)[group] = { type: "stick", stick: current.stick, deadzone: current.deadzone };
-  } else {
-    (next.bindings as unknown as Record<string, unknown>)[group] = { type: "dpad" };
-  }
-
-  return next;
-}
-
-function StandardControlsView(props: {
-  profile: ControlsProfile;
-  saveProfile: (p: ControlsProfile) => void;
-
-  bindStateActive: boolean;
-  startBind: (plan: BindPlan) => void;
-  planEquals: (p: BindPlan) => boolean;
-
-  isDigitalPressed: (d?: DigitalBinding) => boolean;
-  isDpadPressed: (d: DpadBinding) => boolean;
-  isStickPressed: (s: StickBinding) => boolean;
-}) {
-  const { profile, saveProfile, bindStateActive, startBind, planEquals, isDigitalPressed, isDpadPressed, isStickPressed } =
-    props;
-
-  const sectionItems = useMemo(() => {
-    const map = new Map<string, Array<typeof STANDARD_LAYOUT[number]>>();
-    for (const s of SECTION_ORDER) map.set(s.key, []);
-    for (const item of STANDARD_LAYOUT) {
-      const list = map.get(item.section);
-      if (list) list.push(item);
-    }
-    return map;
-  }, []);
-
-  return (
-    <>
-      {SECTION_ORDER.map((sec) => {
-        const items = sectionItems.get(sec.key) ?? [];
-
-        if (sec.key === "leftStick") {
-          const v = profile.player1.move;
-          const active = v.type === "stick" ? isStickPressed(v) : isDpadPressed(v);
-
-          return (
-            <div key={sec.key}>
-              <GroupBindingCard
-                title="Move"
-                value={v}
-                listening={
-                  planEquals({ kind: "dpad", group: "move" }) ||
-                  planEquals({ kind: "stick", group: "move", stick: "left" })
-                }
-                active={active}
-                isPressed={isDigitalPressed}
-                onSetMode={(mode) => void saveProfile(setGroupMode(profile, "move", mode))}
-                onBindDpad={() => startBind({ kind: "dpad", group: "move" })}
-                onBindStick={() => startBind({ kind: "stick", group: "move", stick: "left" })}
-                onClear={() => void saveProfile(clearGroup(profile, "move"))}
-                hint={v.type === "stick" ? "Binds X then Y" : "Binds Up, Down, Left, Right"}
-              />
-            </div>
-          );
-        }
-
-        if (sec.key === "dpad") {
-          const v = profile.player1.dpad;
-          const active = isDpadPressed(v);
-
-          return (
-            <div key={sec.key}>
-              <GroupBindingCard
-                title="D-Pad"
-                value={v}
-                listening={planEquals({ kind: "dpad", group: "dpad" })}
-                active={active}
-                isPressed={isDigitalPressed}
-                onSetMode={() => void 0}
-                onBindDpad={() => startBind({ kind: "dpad", group: "dpad" })}
-                onBindStick={() => void 0}
-                onClear={() => void saveProfile(clearGroup(profile, "dpad"))}
-                hint="Binds Up, Down, Left, Right"
-              />
-            </div>
-          );
-        }
-
-        if (sec.key === "rightStick") {
-          const v = profile.player1.look;
-          const active = v.type === "stick" ? isStickPressed(v) : isDpadPressed(v);
-
-          return (
-            <div key={sec.key}>
-              <GroupBindingCard
-                title="Look"
-                value={v}
-                listening={
-                  planEquals({ kind: "dpad", group: "look" }) ||
-                  planEquals({ kind: "stick", group: "look", stick: "right" })
-                }
-                active={active}
-                isPressed={isDigitalPressed}
-                onSetMode={(mode) => void saveProfile(setGroupMode(profile, "look", mode))}
-                onBindDpad={() => startBind({ kind: "dpad", group: "look" })}
-                onBindStick={() => startBind({ kind: "stick", group: "look", stick: "right" })}
-                onClear={() => void saveProfile(clearGroup(profile, "look"))}
-                hint={v.type === "stick" ? "Binds X then Y" : "Binds Up, Down, Left, Right"}
-              />
-            </div>
-          );
-        }
-
-        return (
-          <div key={sec.key} className="mb-10">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
-              {items
-                .filter((x) => x.kind === "digital")
-                .map((item) => {
-                  const path = item.id as DigitalPath;
-                  const binding = getDigital(profile, path);
-                  const active = isDigitalPressed(binding);
-                  const listening = bindStateActive && planEquals({ kind: "digital", path });
-
-                  return (
-                    <DigitalBindingCard
-                      key={item.id}
-                      title={item.label}
-                      iconSrc={item.icon}
-                      binding={binding}
-                      isActive={active}
-                      isListening={listening}
-                      onBind={() => startBind({ kind: "digital", path })}
-                      onClear={() => void saveProfile(clearDigital(profile, path))}
-                    />
-                  );
-                })}
-            </div>
-          </div>
-        );
-      })}
-    </>
-  );
-}
-
-function ConsoleControlsView(props: {
-  layout: AnyConsoleLayout;
-  saveLayout: (l: AnyConsoleLayout) => void;
-
-  bindStateActive: boolean;
-  startBind: (plan: BindPlanConsole) => void;
-  planEquals: (p: BindPlanConsole) => boolean;
-
-  isDigitalPressed: (d?: DigitalBinding) => boolean;
-  isDpadPressed: (d: DpadBinding) => boolean;
-  isStickPressed: (s: StickBinding) => boolean;
-}) {
-  const { layout, saveLayout, bindStateActive, startBind, planEquals, isDigitalPressed, isDpadPressed, isStickPressed } =
-    props;
-
-  const consoleItems = useMemo(() => getConsoleLayoutItems(layout.consoleId), [layout.consoleId]);
-
-  const sectionMap = useMemo(() => {
-    const map = new Map<SectionKey, Array<ReturnType<typeof getConsoleLayoutItems>[number]>>();
-    for (const s of SECTION_ORDER) map.set(s.key, []);
-    for (const item of consoleItems) {
-      const list = map.get(item.section);
-      if (list) list.push(item);
-    }
-    return map;
-  }, [consoleItems]);
-
-  return (
-    <>
-      {SECTION_ORDER.map((sec) => {
-        const items = sectionMap.get(sec.key) ?? [];
-
-        if (sec.key === "leftStick") {
-          const groupItem = items.find((x) => x.kind === "group" && x.id === "move");
-          if (!groupItem) return null;
-
-          const v = getConsoleGroupValue(layout, "move");
-          const active = v.type === "stick" ? isStickPressed(v) : isDpadPressed(v);
-
-          return (
-            <div key={sec.key}>
-              <GroupBindingCard
-                title={groupItem.label ?? "Move"}
-                value={v}
-                listening={
-                  planEquals({ kind: "dpad", group: "move" }) ||
-                  planEquals({ kind: "stick", group: "move", stick: "left" })
-                }
-                active={active}
-                isPressed={isDigitalPressed}
-                onSetMode={(mode) => void saveLayout(setConsoleGroupMode(layout, "move", mode))}
-                onBindDpad={() => startBind({ kind: "dpad", group: "move" })}
-                onBindStick={() => startBind({ kind: "stick", group: "move", stick: "left" })}
-                onClear={() => void saveLayout(clearConsoleGroup(layout, "move"))}
-                hint={v.type === "stick" ? "Binds X then Y" : "Binds Up, Down, Left, Right"}
-              />
-            </div>
-          );
-        }
-
-        if (sec.key === "dpad") {
-          const groupItem = items.find((x) => x.kind === "group" && x.id === "dpad");
-          if (!groupItem) return null;
-
-          const v = getConsoleGroupValue(layout, "dpad");
-          const active = v.type === "stick" ? isStickPressed(v) : isDpadPressed(v as DpadBinding);
-
-          return (
-            <div key={sec.key}>
-              <GroupBindingCard
-                title={groupItem.label ?? "D-Pad"}
-                value={v}
-                listening={planEquals({ kind: "dpad", group: "dpad" })}
-                active={active}
-                isPressed={isDigitalPressed}
-                onSetMode={() => void 0}
-                onBindDpad={() => startBind({ kind: "dpad", group: "dpad" })}
-                onBindStick={() => void 0}
-                onClear={() => void saveLayout(clearConsoleGroup(layout, "dpad"))}
-                hint="Binds Up, Down, Left, Right"
-              />
-            </div>
-          );
-        }
-
-        if (sec.key === "rightStick") {
-          const groupItem = items.find((x) => x.kind === "group" && (x.id === "c" || x.id === "look"));
-          if (!groupItem) return null;
-
-          const groupId = groupItem.id as "c" | "look";
-          const v = getConsoleGroupValue(layout, groupId);
-          const active = v.type === "stick" ? isStickPressed(v) : isDpadPressed(v);
-
-          return (
-            <div key={sec.key}>
-              <GroupBindingCard
-                title={groupItem.label ?? "C Buttons"}
-                value={v}
-                listening={
-                  planEquals({ kind: "dpad", group: groupId }) ||
-                  planEquals({ kind: "stick", group: groupId, stick: "right" })
-                }
-                active={active}
-                isPressed={isDigitalPressed}
-                onSetMode={(mode) => void saveLayout(setConsoleGroupMode(layout, groupId, mode))}
-                onBindDpad={() => startBind({ kind: "dpad", group: groupId })}
-                onBindStick={() => startBind({ kind: "stick", group: groupId, stick: "right" })}
-                onClear={() => void saveLayout(clearConsoleGroup(layout, groupId))}
-                hint={v.type === "stick" ? "Binds X then Y" : "Binds Up, Down, Left, Right"}
-              />
-            </div>
-          );
-        }
-
-        return (
-          <div key={sec.key} className="mb-10">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
-              {items
-                .filter((x) => x.kind === "digital")
-                .map((item) => {
-                  const id = item.id as string;
-                  const binding = getConsoleDigitalById(layout, id);
-                  const active = isDigitalPressed(binding);
-                  const listening = bindStateActive && planEquals({ kind: "digital", path: id });
-
-                  return (
-                    <DigitalBindingCard
-                      key={`${layout.consoleId}:${id}`}
-                      title={item.label}
-                      iconSrc={item.icon}
-                      binding={binding}
-                      isActive={active}
-                      isListening={listening}
-                      onBind={() => startBind({ kind: "digital", path: id })}
-                      onClear={() => void saveLayout(clearConsoleDigitalById(layout, id))}
-                    />
-                  );
-                })}
-            </div>
-          </div>
-        );
-      })}
-    </>
-  );
-}
+import type { AnyConsoleLayout, ControlsProfile } from "../../../shared/types/controls";
+import type { BindPlan, BindPlanConsole } from "../../controls/bindMachine";
+import StandardControlsView from "../controls/StandardControlsView";
+import ConsoleControlsView from "../controls/ConsoleControlsView";
 
 export default function Controls() {
   const {
@@ -428,7 +19,6 @@ export default function Controls() {
     activeProfileId,
     profile,
     saving,
-
     changeProfile,
     createProfile,
     renameProfile,
@@ -442,24 +32,27 @@ export default function Controls() {
     profileId: activeProfileId,
   });
 
-  const mode =
-    layoutApi.isConsoleMode && layoutApi.consoleLayout
-      ? ({
+  const mode = useMemo(() => {
+    if (layoutApi.isConsoleMode && layoutApi.consoleLayout) {
+      return {
         kind: "console" as const,
         layout: layoutApi.consoleLayout,
         onChange: (l: AnyConsoleLayout): void => {
           void layoutApi.saveConsoleLayout(l);
         },
-      })
-      : profile
-        ? ({
-          kind: "standard" as const,
-          profile,
-          onChange: (p: ControlsProfile): void => {
-            void saveProfile(p);
-          },
-        })
-        : null;
+      };
+    }
+    if (profile) {
+      return {
+        kind: "standard" as const,
+        profile,
+        onChange: (p: ControlsProfile): void => {
+          void saveProfile(p);
+        },
+      };
+    }
+    return null;
+  }, [layoutApi.isConsoleMode, layoutApi.consoleLayout, layoutApi.saveConsoleLayout, profile, saveProfile]);
 
   const fallbackMode = useMemo(() => {
     const noop = (): void => void 0;
@@ -499,7 +92,6 @@ export default function Controls() {
           saving={saving || layoutApi.layoutSaving}
           onChangeProfile={(id) => {
             cancelBind();
-
             void (async () => {
               await setAsDefault(id);
               await changeProfile(id);
@@ -539,10 +131,11 @@ export default function Controls() {
                 cancelBind();
                 layoutApi.setStandard();
               }}
-              className={`px-3 py-1.5 text-xs font-bold transition-colors border-r border-border-subtle ${layoutApi.isConsoleMode
+              className={`px-3 py-1.5 text-xs font-bold transition-colors border-r border-border-subtle ${
+                layoutApi.isConsoleMode
                   ? "text-fg-secondary hover:text-accent-secondary hover:bg-bg-muted"
                   : "bg-accent-secondary text-white"
-                }`}
+              }`}
             >
               Standard
             </button>
@@ -554,10 +147,11 @@ export default function Controls() {
                 const first = CONSOLE_OPTIONS[0]?.id ?? ("nes" as ConsoleID);
                 layoutApi.setConsole(layoutApi.consoleId ?? first);
               }}
-              className={`px-3 py-1.5 text-xs font-bold transition-colors ${layoutApi.isConsoleMode
+              className={`px-3 py-1.5 text-xs font-bold transition-colors ${
+                layoutApi.isConsoleMode
                   ? "bg-accent-secondary text-white"
                   : "text-fg-secondary hover:text-accent-secondary hover:bg-bg-muted"
-                }`}
+              }`}
             >
               Console
             </button>
@@ -570,6 +164,7 @@ export default function Controls() {
                 onChange={(e) => {
                   cancelBind();
                   layoutApi.setConsole(e.target.value as ConsoleID);
+                  e.target.blur();
                 }}
                 className="appearance-none pl-3 pr-8 py-1.5 text-xs font-bold bg-bg-secondary text-fg-primary border border-border-subtle hover:border-border-muted transition-colors rounded-none focus:outline-none focus:border-accent-primary"
               >
@@ -600,9 +195,7 @@ export default function Controls() {
               isDpadPressed={isDpadPressed}
               isStickPressed={isStickPressed}
             />
-          ) : (
-            <div className="px-4 text-fg-muted">Loading console layout</div>
-          )
+          ) : null
         ) : (
           <StandardControlsView
             profile={profile}

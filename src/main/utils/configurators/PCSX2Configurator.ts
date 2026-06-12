@@ -6,7 +6,6 @@ import { IniEditor } from "../editors/ini";
 import { ControlsService } from "../../services/ControlsService";
 import { PCSX2Translator } from "../translators/PCSX2Translator";
 import type { EmulatorPatch, TranslateContext } from "../translators/ITranslator";
-import { resolveConsoleBindings } from "../resolveConsoleBindings";
 import type { PlayerBindings } from "../../../shared/types/controls";
 import { PCSX2 } from "../schema/pcsx2";
 import { SettingsService } from "../../services/SettingsService";
@@ -21,17 +20,20 @@ function ensureDirs(configDir: string) {
 function applyPatches(patches: EmulatorPatch[]) {
   for (const p of patches) {
     if (p.kind === "ini-set") {
+      if (!p.absPath) continue;
       IniEditor.updateIni(p.absPath, { [p.section]: { [p.key]: p.value } });
       continue;
     }
 
     if (p.kind === "file-write") {
+      if (!p.absPath) continue;
       fs.mkdirSync(path.dirname(p.absPath), { recursive: true });
       fs.writeFileSync(p.absPath, p.contents, "utf-8");
       continue;
     }
 
     if (p.kind === "ini-delete") {
+      if (!p.absPath) continue;
       IniEditor.deleteKeys(p.absPath, { [p.section]: [p.key] });
       continue;
     }
@@ -128,13 +130,8 @@ export class PCSX2Configurator extends BaseConfigurator {
 
     const svc = new ControlsService();
     const profile = svc.getDefaultProfile();
-    const consoleLayout = svc.getConsoleLayout("ps2", profile.id);
 
-    const bindings: PlayerBindings = await resolveConsoleBindings({
-      consoleId: "ps2",
-      profile,
-      consoleLayout: consoleLayout,
-    });
+    const bindings: PlayerBindings = await svc.getEffectiveConsoleBindings("ps2", profile.id);
 
     const effectiveProfile = {
       ...profile,

@@ -59,7 +59,7 @@ export class BasePage {
         if (!element) throw new Error('Root element not found');
 
         Object.defineProperty(DragEvent.prototype, 'dataTransfer', {
-          get() { return (this as any)._mockDataTransfer || null; },
+          get() { return (this as unknown as { _mockDataTransfer?: unknown })._mockDataTransfer || null; },
           configurable: true
         });
 
@@ -80,7 +80,7 @@ export class BasePage {
           bubbles: true,
           cancelable: true
         });
-        (event as any)._mockDataTransfer = mockDataTransfer;
+        (event as unknown as { _mockDataTransfer: unknown })._mockDataTransfer = mockDataTransfer;
 
         element.dispatchEvent(event);
       },

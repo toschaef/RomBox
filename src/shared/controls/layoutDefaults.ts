@@ -16,7 +16,14 @@ export function makeDefaultConsoleBindings(consoleId: ConsoleID, profile: Contro
   };
 
   if (consoleId === "n64") {
-    return common;
+    return {
+      ...common,
+      special: {
+        type: "n64",
+        c: p1.look,
+        z: p1.shoulders?.triggerL,
+      },
+    };
   }
 
   return common;

@@ -15,7 +15,7 @@ import btnZR from "../assets/buttons/alt/T_S_RT_Alt.png";
 export type ConsoleControlItem =
   | {
     kind: "group";
-    id: "move" | "look" | "dpad" | "c" | "special";
+    id: "move" | "look" | "dpad" | "special.c" | "special";
     label: string;
     section: "leftStick" | "dpad" | "rightStick" | "special";
   }
@@ -34,7 +34,6 @@ export type ConsoleControlItem =
     | "sticks.r3"
     | "system.start"
     | "system.select"
-    | "z"
     | "1"
     | "2"
     | "special.c"
@@ -137,8 +136,8 @@ export const CONSOLE_LAYOUTS: Partial<Record<ConsoleID, ConsoleControlItem[]>> =
     { kind: "digital", id: "face.primary", label: "A", icon: btnA, section: "face" },
     { kind: "digital", id: "face.secondary", label: "B", icon: btnB, section: "face" },
 
-    { kind: "group", id: "c", label: "C Buttons", section: "rightStick" },
-    { kind: "digital", id: "z", label: "Z", icon: btnZL, section: "shoulders" },
+    { kind: "group", id: "special.c", label: "C Buttons", section: "rightStick" },
+    { kind: "digital", id: "special.z", label: "Z", icon: btnZL, section: "shoulders" },
 
     { kind: "digital", id: "shoulders.bumperL", label: "L", icon: btnL, section: "shoulders" },
     { kind: "digital", id: "shoulders.bumperR", label: "R", icon: btnR, section: "shoulders" },
@@ -166,7 +165,7 @@ export const CONSOLE_LAYOUTS: Partial<Record<ConsoleID, ConsoleControlItem[]>> =
     { kind: "group", id: "move", label: "Move", section: "leftStick" },
     { kind: "group", id: "dpad", label: "D-Pad", section: "dpad" },
 
-    { kind: "group", id: "c", label: "C-Stick", section: "rightStick" },
+    { kind: "group", id: "look", label: "C-Stick", section: "rightStick" },
 
     { kind: "digital", id: "face.primary", label: "A", icon: btnA, section: "face" },
     { kind: "digital", id: "face.secondary", label: "B", icon: btnB, section: "face" },
@@ -184,7 +183,7 @@ export const CONSOLE_LAYOUTS: Partial<Record<ConsoleID, ConsoleControlItem[]>> =
 
   gc: [
     { kind: "group", id: "move", label: "Move", section: "leftStick" },
-    { kind: "group", id: "c", label: "C-Stick", section: "rightStick" },
+    { kind: "group", id: "look", label: "C-Stick", section: "rightStick" },
     { kind: "group", id: "dpad", label: "D-Pad", section: "dpad" },
 
     { kind: "digital", id: "face.primary", label: "A", icon: btnA, section: "face" },
@@ -197,7 +196,7 @@ export const CONSOLE_LAYOUTS: Partial<Record<ConsoleID, ConsoleControlItem[]>> =
     { kind: "digital", id: "shoulders.triggerL", label: "L (Analog)", icon: btnL, section: "shoulders" },
     { kind: "digital", id: "shoulders.triggerR", label: "R (Analog)", icon: btnR, section: "shoulders" },
 
-    { kind: "digital", id: "z", label: "Z", icon: btnZL, section: "special" },
+    { kind: "digital", id: "special.z", label: "Z", icon: btnZL, section: "special" },
 
     { kind: "digital", id: "system.start", label: "Start", icon: btnStart, section: "system" },
   ],
