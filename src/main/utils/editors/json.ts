@@ -16,7 +16,8 @@ function ensureDirForFile(filePath: string) {
 
 function readTextIfExists(filePath: string): string | null {
   try {
-    return fs.readFileSync(filePath, "utf-8");
+    const raw = fs.readFileSync(filePath, "utf-8");
+    return raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw;
   } catch (err) {
     if (err && typeof err === "object" && "code" in err && (err as { code: string }).code === "ENOENT") return null;
     throw err;

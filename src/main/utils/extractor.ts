@@ -3,8 +3,12 @@ import sevenBin from '7zip-bin';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import AdmZip from 'adm-zip';
 import { app } from 'electron';
 import { extractZipEntry } from './fsUtils';
+import { Logger } from './logger';
+
+const log = Logger.create('Extractor');
 
 const pathTo7zip = sevenBin.path7za;
 
@@ -92,15 +96,15 @@ export const Extractor = {
         if (code === 0) {
           resolve();
         } else {
-          console.error(`[Extractor] 7z extraction failed with code ${code}`);
-          console.error(`[Extractor] stdout: ${stdout}`);
-          console.error(`[Extractor] stderr: ${stderr}`);
+          log.error(`7z extraction failed with code ${code}`);
+          log.error(`stdout: ${stdout}`);
+          log.error(`stderr: ${stderr}`);
           reject(new Error(`7-Zip exited with code ${code}: ${stderr || stdout}`));
         }
       });
 
       child.on('error', (err) => {
-        console.error(`[Extractor] 7z spawn error:`, err);
+        log.error('7z spawn error', err);
         reject(err);
       });
     });
@@ -147,5 +151,24 @@ export const Extractor = {
         resolve(entries);
       });
     });
+  },
+
+  extractArchive: async (filePath: string, destDir: string): Promise<void> => {
+    const ext = path.extname(filePath).toLowerCase();
+
+    if (ext === ".zip") {
+      log.info(`ZIP extract: ${path.basename(filePath)} -> ${destDir}`);
+      const zip = new AdmZip(filePath);
+      zip.extractAllTo(destDir, true);
+      return;
+    }
+
+    if ([".7z", ".tar", ".gz", ".xz", ".rar"].includes(ext)) {
+      log.info(`7z extract: ${path.basename(filePath)} -> ${destDir}`);
+      await Extractor.extract7z(filePath, destDir);
+      return;
+    }
+
+    throw new Error(`Unsupported archive format: ${ext}`);
   }
 };

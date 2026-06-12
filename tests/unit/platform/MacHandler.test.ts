@@ -85,39 +85,7 @@ describe("MacHandler", () => {
     });
   });
 
-  describe("readJson", () => {
-    it("should read and parse valid JSON files", () => {
-      const mockData = { a: 1 };
-      (fs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify(mockData));
 
-      const res = handler.readJson("/path.json", {});
-      expect(res).toEqual(mockData);
-    });
-
-    it("should return fallback on parse or read failures", () => {
-      (fs.readFileSync as jest.Mock).mockImplementation(() => {
-        throw new Error("Read error");
-      });
-
-      const res = handler.readJson("/path.json", { fallback: true });
-      expect(res).toEqual({ fallback: true });
-    });
-  });
-
-  describe("writeJson", () => {
-    it("should create directory and write JSON atomically via temp file", () => {
-      (fs.existsSync as jest.Mock).mockReturnValue(false);
-
-      handler.writeJson("/path/config.json", { active: true });
-
-      expect(fs.writeFileSync).toHaveBeenCalledWith(
-        "/path/config.json.tmp",
-        expect.stringContaining('"active": true'),
-        "utf-8"
-      );
-      expect(fs.renameSync).toHaveBeenCalledWith("/path/config.json.tmp", "/path/config.json");
-    });
-  });
 
   describe("launchProcess", () => {
     it("should spawn executable binary with correct arguments and environment", () => {

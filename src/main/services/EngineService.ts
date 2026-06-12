@@ -6,6 +6,7 @@ import type { Platform, ConsoleID } from "../../shared/types";
 import type { EngineID, EngineInfo, EngineStatus } from "../../shared/types/engines";
 
 import { osHandler } from "../platform";
+import { resolveBinaryPath } from "../utils/fsUtils";
 import { Downloader } from "../utils/downloader";
 import { Logger } from "../utils/logger";
 import { BiosService } from "./BiosService";
@@ -98,7 +99,7 @@ export const EngineService = {
     const installDirAbs = path.join(ENGINES_PATH, engineId);
 
     try {
-      const resolvedPath = await osHandler.resolveBinaryPath(installDirAbs, binaryConfigPath);
+      const resolvedPath = await resolveBinaryPath(installDirAbs, binaryConfigPath);
       log.debug('Engine path resolved', { engineId, resolvedPath });
       return resolvedPath;
     } catch {
@@ -135,7 +136,7 @@ export const EngineService = {
               resolvedBinaryPath = null;
               return;
             }
-            resolvedBinaryPath = await osHandler.resolveBinaryPath(installDirAbs, binaryConfigPath);
+            resolvedBinaryPath = await resolveBinaryPath(installDirAbs, binaryConfigPath);
             status = resolvedBinaryPath ? "installed" : "broken";
           } catch (err) {
             status = "broken";
@@ -315,7 +316,7 @@ export const EngineService = {
         installLog.warn('Binary config path not found', { engineId });
         return;
       }
-      const resolvedBinary = await osHandler.resolveBinaryPath(installDirAbs, binaryConfigPath);
+      const resolvedBinary = await resolveBinaryPath(installDirAbs, binaryConfigPath);
 
       const needsWrapper = !!cfg.dependencies?.length;
       await osHandler.finalizeInstall(resolvedBinary, needsWrapper);

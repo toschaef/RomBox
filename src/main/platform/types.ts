@@ -13,9 +13,6 @@ export interface PlatformHandler {
   /** extracts and installs a dependency */
   installDependency(filePath: string, targetDir: string, searchName: string, targetFilename: string): Promise<void>;
   
-  /** finds binary */
-  resolveBinaryPath(installDir: string, binaryConfigPath: string): Promise<string>;
-
   /** cleans up config files */
   clearPlatformData(): void;
 
@@ -31,8 +28,4 @@ export interface PlatformHandler {
 
   getPlatformId(): "macos" | "windows" | "linux";
   getPlatform(): Platform;
-
-  readJson<T = unknown>(filePath: string, fallback?: T): T;
-  writeJson(filePath: string, data: unknown): void;
-  updateJson<T = unknown>(filePath: string, updater: (current: T) => T, fallback?: T): void;
 }

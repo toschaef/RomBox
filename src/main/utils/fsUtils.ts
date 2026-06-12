@@ -116,3 +116,13 @@ export const extractZipEntry = (
     });
   });
 };
+
+export async function resolveBinaryPath(installDir: string, binaryConfigPath: string): Promise<string> {
+  const strictPath = path.join(installDir, binaryConfigPath);
+  if (fs.existsSync(strictPath)) return strictPath;
+
+  const binaryName = path.basename(binaryConfigPath);
+  const found = findFile(installDir, binaryName);
+  if (!found) throw new Error(`Binary ${binaryName} not found in ${installDir}`);
+  return found;
+}

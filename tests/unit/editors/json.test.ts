@@ -61,6 +61,12 @@ describe("JsonEditor", () => {
       expect(res.val).toBe(42);
     });
 
+    it("should strip UTF-8 BOM if present", () => {
+      fs.writeFileSync(testFile, "\ufeff" + '{"val": 42}', "utf-8");
+      const res = JsonEditor.read<{ val: number }>(testFile);
+      expect(res.val).toBe(42);
+    });
+
     it("should throw error if file is missing and createIfMissing is false", () => {
       expect(() => JsonEditor.read(testFile)).toThrow("JSON file not found");
     });
@@ -79,6 +85,12 @@ describe("JsonEditor", () => {
   describe("tryRead", () => {
     it("should return parsed value if valid", () => {
       fs.writeFileSync(testFile, '{"ok": true}');
+      const res = JsonEditor.tryRead(testFile, { ok: false });
+      expect(res.ok).toBe(true);
+    });
+
+    it("should strip UTF-8 BOM if present", () => {
+      fs.writeFileSync(testFile, "\ufeff" + '{"ok": true}', "utf-8");
       const res = JsonEditor.tryRead(testFile, { ok: false });
       expect(res.ok).toBe(true);
     });

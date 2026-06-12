@@ -2,9 +2,13 @@ import path from "path";
 import { BaseConfigurator } from "./BaseConfigurator";
 import { ControlsService } from "../../services/ControlsService";
 import { osHandler } from "../../platform";
+import { JsonEditor } from "../editors/json";
+import { Logger } from "../logger";
 import { MesenTranslator } from "../translators/MesenTranslator";
 import { getMesenBucket, getMesenControllerType } from "../schema/mesen";
 import type { ConsoleID } from "../../../shared/types";
+
+const log = Logger.create("MesenConfigurator");
 
 export class MesenConfigurator extends BaseConfigurator {
   private translator = new MesenTranslator();
@@ -18,7 +22,7 @@ export class MesenConfigurator extends BaseConfigurator {
     const type = getMesenControllerType(this.consoleId);
 
     if (!bucket || !type) {
-      console.error(`[MesenConfigurator] ABORTING: Bucket or Type missing for ${this.consoleId}`);
+      log.error(`ABORTING: Bucket or Type missing for ${this.consoleId}`);
       return;
     }
 
@@ -46,25 +50,29 @@ export class MesenConfigurator extends BaseConfigurator {
 
     for (const patch of patches) {
       if (patch.kind === "json-merge") {
-        osHandler.updateJson<Record<string, unknown>>(
-          settingsFile,
-          (settings) => {
-            const root = settings && typeof settings === "object" ? settings : {};
-            const pathParts = patch.path;
-            let current = root as Record<string, unknown>;
-            for (let i = 0; i < pathParts.length - 1; i++) {
-              const part = pathParts[i];
-              if (!current[part] || typeof current[part] !== "object") {
-                current[part] = {};
+        try {
+          JsonEditor.update<Record<string, unknown>>(
+            settingsFile,
+            (settings) => {
+              const root = settings && typeof settings === "object" ? settings : {};
+              const pathParts = patch.path;
+              let current = root as Record<string, unknown>;
+              for (let i = 0; i < pathParts.length - 1; i++) {
+                const part = pathParts[i];
+                if (!current[part] || typeof current[part] !== "object") {
+                  current[part] = {};
+                }
+                current = current[part] as Record<string, unknown>;
               }
-              current = current[part] as Record<string, unknown>;
-            }
-            const lastPart = pathParts[pathParts.length - 1];
-            current[lastPart] = patch.value;
-            return root;
-          },
-          {}
-        );
+              const lastPart = pathParts[pathParts.length - 1];
+              current[lastPart] = patch.value;
+              return root;
+            },
+            {}
+          );
+        } catch (err) {
+          log.warn(`updateJson aborted: parse failed for ${settingsFile}`, (err as Error).message);
+        }
       }
     }
   }

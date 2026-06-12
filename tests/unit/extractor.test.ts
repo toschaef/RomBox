@@ -1,10 +1,17 @@
 import { Extractor } from "../../src/main/utils/extractor";
 import { spawn } from "child_process";
 import fs from "fs";
+import AdmZip from "adm-zip";
 
 jest.mock("child_process", () => ({
   spawn: jest.fn()
 }));
+
+jest.mock("adm-zip", () => {
+  return jest.fn().mockImplementation(() => ({
+    extractAllTo: jest.fn()
+  }));
+});
 
 jest.mock("fs", () => {
   const actual = jest.requireActual("fs");
@@ -124,6 +131,31 @@ Attributes = A
         size: "40960",
         attr: "A"
       });
+    });
+  });
+
+  describe("extractArchive", () => {
+    it("should extract zip archive using AdmZip", async () => {
+      const mockExtractAllTo = jest.fn();
+      (AdmZip as unknown as jest.Mock).mockImplementation(() => ({
+        extractAllTo: mockExtractAllTo
+      }));
+
+      await Extractor.extractArchive("/path/file.zip", "/path/out");
+      expect(AdmZip).toHaveBeenCalledWith("/path/file.zip");
+      expect(mockExtractAllTo).toHaveBeenCalledWith("/path/out", true);
+    });
+
+    it("should extract 7z/rar/tar archives using extract7z", async () => {
+      const extract7zSpy = jest.spyOn(Extractor, "extract7z").mockResolvedValue(undefined);
+
+      await Extractor.extractArchive("/path/file.7z", "/path/out");
+      expect(extract7zSpy).toHaveBeenCalledWith("/path/file.7z", "/path/out");
+      extract7zSpy.mockRestore();
+    });
+
+    it("should throw error for unsupported formats", async () => {
+      await expect(Extractor.extractArchive("/path/file.txt", "/path/out")).rejects.toThrow("Unsupported archive format");
     });
   });
 });

@@ -2,8 +2,10 @@ import fs from "fs";
 import path from "path";
 import { EngineService } from "../../../src/main/services/EngineService";
 
-jest.mock("../../../src/main/platform", () => ({
-  osHandler: {
+jest.mock("../../../src/main/utils/fsUtils", () => {
+  const actual = jest.requireActual("../../../src/main/utils/fsUtils");
+  return {
+    ...actual,
     resolveBinaryPath: jest.fn().mockImplementation((dir: string) => {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const fs = require("fs");
@@ -11,7 +13,12 @@ jest.mock("../../../src/main/platform", () => ({
         return "/mock/path/to/binary";
       }
       throw new Error("Not installed");
-    }),
+    })
+  };
+});
+
+jest.mock("../../../src/main/platform", () => ({
+  osHandler: {
     extractArchive: jest.fn().mockResolvedValue(true),
     installDependency: jest.fn().mockResolvedValue(true),
     finalizeInstall: jest.fn().mockResolvedValue(true),

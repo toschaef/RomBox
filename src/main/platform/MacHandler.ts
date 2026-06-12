@@ -2,13 +2,15 @@ import { execSync, exec, spawn, type ChildProcess } from "child_process";
 import { promisify } from "util";
 import path from "path";
 import fs from "fs";
-import AdmZip from "adm-zip";
 import { homedir } from "os";
 import type { PlatformHandler } from "./types";
 import { findFile } from "../utils/fsUtils";
 import { Extractor } from "../utils/extractor";
+import { Logger } from "../utils/logger";
 import type { Platform, Game } from "../../shared/types";
 import type { EngineID } from "../../shared/types/engines";
+
+const log = Logger.create("MacHandler");
 
 type FinalizeOptions = {
   resetMesenSupportDir?: boolean;
@@ -23,25 +25,12 @@ export class MacHandler implements PlatformHandler {
     const ext = path.extname(filePath).toLowerCase();
 
     if (ext === ".dmg") {
-      console.log(`[Mac] DMG detected: ${path.basename(filePath)}`);
+      log.info(`DMG detected: ${path.basename(filePath)}`);
       await this.extractDmg(filePath, destDir);
       return;
     }
 
-    if (ext === ".zip") {
-      console.log(`[Mac] ZIP extract: ${path.basename(filePath)} -> ${destDir}`);
-      const zip = new AdmZip(filePath);
-      zip.extractAllTo(destDir, true);
-      return;
-    }
-
-    if ([".7z", ".tar", ".gz", ".xz", ".rar"].includes(ext)) {
-      console.log(`[Mac] 7z extract: ${path.basename(filePath)} -> ${destDir}`);
-      await Extractor.extract7z(filePath, destDir);
-      return;
-    }
-
-    throw new Error(`Unsupported archive format for macOS: ${ext}`);
+    await Extractor.extractArchive(filePath, destDir);
   }
 
   async installDependency(
@@ -50,7 +39,7 @@ export class MacHandler implements PlatformHandler {
     searchName: string,
     targetFilename: string
   ): Promise<void> {
-    console.log(`[Mac] Installing dependency: ${searchName} from ${path.basename(dmgPath)}`);
+    log.info(`Installing dependency: ${searchName} from ${path.basename(dmgPath)}`);
 
     const mountPoint = await this.mountDmgReadonly(dmgPath);
     try {
@@ -72,7 +61,7 @@ export class MacHandler implements PlatformHandler {
       await this.tryExecAsync(`install_name_tool -id "@executable_path/${targetFilename}" "${destPath}"`, true);
 
       await this.removeQuarantine(destPath);
-      console.log(`[Mac] Dependency installed: ${destPath}`);
+      log.info(`Dependency installed: ${destPath}`);
     } finally {
       await this.unmountDmg(mountPoint);
     }
@@ -88,11 +77,11 @@ export class MacHandler implements PlatformHandler {
 
     let targetBinary = binaryPath;
     if (isAppBundle) {
-      console.log(`[Mac] App bundle detected: ${appPath}`);
+      log.info(`App bundle detected: ${appPath}`);
       targetBinary = this.resolveBundleBinary(binaryPath);
     }
 
-    console.log(`[Mac] Finalizing: ${targetBinary}`);
+    log.info(`Finalizing: ${targetBinary}`);
 
     await this.removeQuarantine(targetBinary);
     await this.adHocSign(targetBinary);
@@ -106,17 +95,6 @@ export class MacHandler implements PlatformHandler {
       await this.deepSign(appPath);
     }
   }
-
-  async resolveBinaryPath(installDir: string, binaryConfigPath: string): Promise<string> {
-    const strictPath = path.join(installDir, binaryConfigPath);
-    if (fs.existsSync(strictPath)) return strictPath;
-
-    const binaryName = path.basename(binaryConfigPath);
-    const found = findFile(installDir, binaryName);
-    if (!found) throw new Error(`Binary ${binaryName} not found in ${installDir}`);
-    return found;
-  }
-
   // rework this eventually
   async clearPlatformData(): Promise<void> {
     const home = homedir();
@@ -133,14 +111,14 @@ export class MacHandler implements PlatformHandler {
 
     for (const p of pathsToDelete) {
       if (fs.existsSync(p)) {
-        console.log(`[Mac] Cleaning config: ${p}`);
+        log.info(`Cleaning config: ${p}`);
         await fs.promises.rm(p, { recursive: true, force: true });
       }
     }
   }
 
   launchProcess(binaryPath: string, args: string[]): ChildProcess {
-    console.log(`[Mac] Launch: ${binaryPath}`);
+    log.info(`Launch: ${binaryPath}`);
 
     const env = {
       ...process.env,
@@ -159,7 +137,7 @@ export class MacHandler implements PlatformHandler {
         executablePath = path.join(appPath, "Contents", "MacOS", bundleName);
       }
 
-      console.log(`[Mac] Launch app executable: ${executablePath}`);
+      log.info(`Launch app executable: ${executablePath}`);
       return spawn(executablePath, args, { detached: true, stdio: ["ignore", "pipe", "pipe"], env });
     }
 
@@ -247,57 +225,6 @@ export class MacHandler implements PlatformHandler {
     return "darwin";
   }
 
-  // json helpers
-
-  readJson<T>(filePath: string, fallback: T): T {
-    try {
-      const raw = fs.readFileSync(filePath, "utf-8");
-      const text = raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw;
-      return JSON.parse(text) as T;
-    } catch (err) {
-      console.warn(`[osHandler] JSON parse failed for ${filePath}:`, (err as Error).message);
-      return fallback;
-    }
-  }
-
-  updateJson<T>(
-    filePath: string,
-    updater: (current: T) => T,
-    fallback: T
-  ) {
-    const exists = fs.existsSync(filePath);
-
-    if (exists) {
-      const raw = fs.readFileSync(filePath, "utf-8");
-      const text = raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw;
-
-      try {
-        const current = JSON.parse(text) as T;
-        const next = updater(current);
-        this.writeJson(filePath, next);
-      } catch (err) {
-        console.warn(`[osHandler] updateJson aborted: parse failed for ${filePath}:`, (err as Error).message);
-        return;
-      }
-    } else {
-      const next = updater(fallback);
-      this.writeJson(filePath, next);
-    }
-  }
-
-  writeJson(filePath: string, data: unknown): void {
-    const dir = path.dirname(filePath);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-
-    if (fs.existsSync(filePath)) {
-      fs.copyFileSync(filePath, `${filePath}.bak`);
-    }
-
-    const tmp = `${filePath}.tmp`;
-    fs.writeFileSync(tmp, JSON.stringify(data, null, 2), "utf-8");
-    fs.renameSync(tmp, filePath);
-  }
-
   // helpers
 
   private findAllAppBundles(dir: string): string[] {
@@ -330,7 +257,7 @@ export class MacHandler implements PlatformHandler {
       if (appBundles.length === 0) throw new Error("No .app bundle found inside DMG.");
 
       for (const appPath of appBundles) {
-        console.log(`[Mac] Copy app: ${path.basename(appPath)} -> ${destDir}`);
+        log.info(`Copy app: ${path.basename(appPath)} -> ${destDir}`);
         await this.tryExecAsync(`cp -R "${appPath}" "${destDir}/"`);
       }
     } finally {
@@ -368,11 +295,11 @@ export class MacHandler implements PlatformHandler {
     const realBinaryPath = path.join(binaryDir, realBinaryName);
 
     if (fs.existsSync(realBinaryPath)) {
-      if (verbose) console.log("[Mac] Wrapper already present; skipping");
+      if (verbose) log.info("Wrapper already present; skipping");
       return;
     }
 
-    console.log(`[Mac] Create wrapper for: ${binaryName}`);
+    log.info(`Create wrapper for: ${binaryName}`);
 
     try {
       await fs.promises.rename(targetBinary, realBinaryPath);
@@ -391,10 +318,10 @@ export class MacHandler implements PlatformHandler {
       await this.removeQuarantine(realBinaryPath);
       await this.adHocSign(realBinaryPath);
 
-      console.log("[Mac] Wrapper ok");
+      log.info("Wrapper ok");
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[Mac] Wrapper failed: ${msg}`);
+      log.error(`Wrapper failed: ${msg}`);
     }
   }
 
@@ -425,7 +352,7 @@ export class MacHandler implements PlatformHandler {
   private async removeQuarantine(filePath: string): Promise<void> {
     try {
       await execAsync(`xattr -r -d com.apple.quarantine "${filePath}"`);
-      console.log(`[Mac] Unquarantine: ${path.basename(filePath)}`);
+      log.info(`Unquarantine: ${path.basename(filePath)}`);
     } catch (err) {
       void err;
     }
@@ -445,7 +372,7 @@ export class MacHandler implements PlatformHandler {
       await execAsync(`codesign --force --deep --sign - "${appPath}"`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[Mac] Deep sign failed: ${msg}`);
+      log.error(`Deep sign failed: ${msg}`);
     }
   }
 }
