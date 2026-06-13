@@ -63,8 +63,28 @@ describe("BiosService", () => {
 
     // Check status
     const status = BiosService.getConsoleBiosStatus("ps1");
-    expect(status.biosState).toBe("warning");
+    expect(status.biosState).toBe("ok");
     expect(status.missingRequiredFiles).not.toContain("scph1001.bin");
+  });
+
+  it("should respect onlyNeedOne configuration for ps1", async () => {
+    // Before installing any, it should be missing and show all files as missing required
+    const statusBefore = BiosService.getConsoleBiosStatus("ps1");
+    expect(statusBefore.onlyNeedOne).toBe(true);
+    expect(statusBefore.biosState).toBe("missing");
+    expect(statusBefore.missingRequiredFiles).toContain("scph1001.bin");
+    expect(statusBefore.missingRequiredFiles).toContain("scph5500.bin");
+
+    // Let's create a dummy source BIOS file for scph5500.bin (which was warning level in config)
+    const biosSource = path.join(tempDir, "scph5500.bin");
+    fs.writeFileSync(biosSource, "dummy-ps1-bios-data-japan");
+
+    // Install scph5500.bin
+    await BiosService.installBios("ps1", biosSource);
+    const statusAfter = BiosService.getConsoleBiosStatus("ps1");
+    expect(statusAfter.biosState).toBe("ok");
+    expect(statusAfter.missingRequiredFiles.length).toBe(0);
+    expect(statusAfter.missingWarningFiles.length).toBe(0);
   });
 
   it("should fail to install BIOS if filename is invalid", async () => {
@@ -112,6 +132,6 @@ describe("BiosService", () => {
     expect(result.copied).toContain("scph1001.bin");
 
     const status = BiosService.getConsoleBiosStatus("ps1");
-    expect(status.biosState).toBe("warning");
+    expect(status.biosState).toBe("ok");
   });
 });

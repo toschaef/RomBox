@@ -102,6 +102,7 @@ export const BiosService = {
     }
 
     const required = c.bios.required ?? true;
+    const onlyNeedOne = c.bios.onlyNeedOne ?? false;
 
     const files = c.bios.files ?? [];
 
@@ -111,27 +112,70 @@ export const BiosService = {
     const effectiveReqFiles = required ? reqFiles : [];
     const effectiveWarnFiles = required ? warnFiles : files;
 
-    const missingRequiredFiles = effectiveReqFiles
-      .filter((f) => !fs.existsSync(path.join(firmwareDir, f.filename)))
-      .map((f) => f.filename);
+    const hasAnyInstalled = files.some((f) => fs.existsSync(path.join(firmwareDir, f.filename)));
+    const hasAnyCached = files.some((f) => fs.existsSync(path.join(cacheDir, f.filename)));
 
-    const missingWarningFiles = effectiveWarnFiles
-      .filter((f) => !fs.existsSync(path.join(firmwareDir, f.filename)))
-      .map((f) => f.filename);
+    let missingRequiredFiles: string[] = [];
+    let missingWarningFiles: string[] = [];
+    let cacheMissingFiles: string[] = [];
 
-    const cacheMissingFiles = effectiveReqFiles
-      .filter((f) => !fs.existsSync(path.join(cacheDir, f.filename)))
-      .map((f) => f.filename);
+    if (onlyNeedOne) {
+      if (hasAnyInstalled) {
+        missingRequiredFiles = [];
+        missingWarningFiles = [];
+      } else {
+        if (required) {
+          missingRequiredFiles = files.map((f) => f.filename);
+          missingWarningFiles = [];
+        } else {
+          missingRequiredFiles = [];
+          missingWarningFiles = files.map((f) => f.filename);
+        }
+      }
+
+      if (hasAnyCached) {
+        cacheMissingFiles = [];
+      } else {
+        if (required) {
+          cacheMissingFiles = files.map((f) => f.filename);
+        } else {
+          cacheMissingFiles = [];
+        }
+      }
+    } else {
+      missingRequiredFiles = effectiveReqFiles
+        .filter((f) => !fs.existsSync(path.join(firmwareDir, f.filename)))
+        .map((f) => f.filename);
+
+      missingWarningFiles = effectiveWarnFiles
+        .filter((f) => !fs.existsSync(path.join(firmwareDir, f.filename)))
+        .map((f) => f.filename);
+
+      cacheMissingFiles = effectiveReqFiles
+        .filter((f) => !fs.existsSync(path.join(cacheDir, f.filename)))
+        .map((f) => f.filename);
+    }
 
     const cachedFiles = files
       .filter((f) => fs.existsSync(path.join(cacheDir, f.filename)))
       .map((f) => f.filename);
 
     let biosState: "ok" | "warning" | "missing" | "none" = "ok";
-    if (!files.length) biosState = "none";
-    else if (missingRequiredFiles.length > 0) biosState = "missing";
-    else if (missingWarningFiles.length > 0) biosState = "warning";
-    else biosState = "ok";
+    if (!files.length) {
+      biosState = "none";
+    } else if (onlyNeedOne) {
+      if (hasAnyInstalled) {
+        biosState = "ok";
+      } else {
+        biosState = required ? "missing" : "warning";
+      }
+    } else if (missingRequiredFiles.length > 0) {
+      biosState = "missing";
+    } else if (missingWarningFiles.length > 0) {
+      biosState = "warning";
+    } else {
+      biosState = "ok";
+    }
 
     return {
       consoleId,
@@ -146,6 +190,7 @@ export const BiosService = {
       cachedComplete: cacheMissingFiles.length === 0,
       cacheMissingFiles,
       required,
+      onlyNeedOne,
 
       firmwareDir,
       cacheDir,
@@ -195,6 +240,7 @@ export const BiosService = {
     }
 
     const required = c.bios.required ?? true;
+    const onlyNeedOne = c.bios.onlyNeedOne ?? false;
     const files = c.bios.files ?? [];
 
     let reqFiles = files.filter((f) => (f.level ?? "required") === "required" && !f.gameSpecific);
@@ -221,6 +267,7 @@ export const BiosService = {
           cachedComplete: true,
           cacheMissingFiles: [],
           required,
+          onlyNeedOne,
           firmwareDir, cacheDir,
         };
       }
@@ -231,31 +278,81 @@ export const BiosService = {
     const effectiveReqFiles = forceRequiredForThisGame ? reqFiles : (required ? reqFiles : []);
     const effectiveWarnFiles = forceRequiredForThisGame ? warnFiles : (required ? warnFiles : files);
 
-    const missingRequiredFiles = effectiveReqFiles
-      .filter((f) => !fs.existsSync(path.join(firmwareDir, f.filename)))
-      .map((f) => f.filename);
+    const hasAnyInstalled = files.some((f) => fs.existsSync(path.join(firmwareDir, f.filename)));
+    const hasAnyCached = files.some((f) => fs.existsSync(path.join(cacheDir, f.filename)));
 
-    const missingWarningFiles = effectiveWarnFiles
-      .filter((f) => !fs.existsSync(path.join(firmwareDir, f.filename)))
-      .map((f) => f.filename);
+    let missingRequiredFiles: string[] = [];
+    let missingWarningFiles: string[] = [];
+    let cacheMissingFiles: string[] = [];
 
-    const cacheMissingFiles = effectiveReqFiles
-      .filter((f) => !fs.existsSync(path.join(cacheDir, f.filename)))
-      .map((f) => f.filename);
+    if (onlyNeedOne) {
+      if (hasAnyInstalled) {
+        missingRequiredFiles = [];
+        missingWarningFiles = [];
+      } else {
+        if (required) {
+          missingRequiredFiles = files.map((f) => f.filename);
+          missingWarningFiles = [];
+        } else {
+          missingRequiredFiles = [];
+          missingWarningFiles = files.map((f) => f.filename);
+        }
+      }
+
+      if (hasAnyCached) {
+        cacheMissingFiles = [];
+      } else {
+        if (required) {
+          cacheMissingFiles = files.map((f) => f.filename);
+        } else {
+          cacheMissingFiles = [];
+        }
+      }
+    } else {
+      missingRequiredFiles = effectiveReqFiles
+        .filter((f) => !fs.existsSync(path.join(firmwareDir, f.filename)))
+        .map((f) => f.filename);
+
+      missingWarningFiles = effectiveWarnFiles
+        .filter((f) => !fs.existsSync(path.join(firmwareDir, f.filename)))
+        .map((f) => f.filename);
+
+      cacheMissingFiles = effectiveReqFiles
+        .filter((f) => !fs.existsSync(path.join(cacheDir, f.filename)))
+        .map((f) => f.filename);
+    }
 
     const cachedFiles = files
       .filter((f) => fs.existsSync(path.join(cacheDir, f.filename)))
       .map((f) => f.filename);
 
     let biosState: "ok" | "warning" | "missing" | "none" = "ok";
-    if (!files.length) biosState = "none";
-    else if (missingRequiredFiles.length > 0) biosState = "missing";
-    else if (missingWarningFiles.length > 0) biosState = "warning";
-    else biosState = "ok";
+    if (!files.length) {
+      biosState = "none";
+    } else if (onlyNeedOne) {
+      if (hasAnyInstalled) {
+        biosState = "ok";
+      } else {
+        biosState = required ? "missing" : "warning";
+      }
+    } else if (missingRequiredFiles.length > 0) {
+      biosState = "missing";
+    } else if (missingWarningFiles.length > 0) {
+      biosState = "warning";
+    } else {
+      biosState = "ok";
+    }
+
+    let needsBios = false;
+    if (onlyNeedOne) {
+      needsBios = required;
+    } else {
+      needsBios = forceRequiredForThisGame ? true : (effectiveReqFiles.length > 0 ? true : false);
+    }
 
     return {
       consoleId, engineId,
-      needsBios: forceRequiredForThisGame? true : effectiveReqFiles.length > 0? true : false,
+      needsBios,
       biosState,
       missingRequiredFiles,
       missingWarningFiles,
@@ -263,6 +360,7 @@ export const BiosService = {
       cachedComplete: cacheMissingFiles.length === 0,
       cacheMissingFiles,
       required,
+      onlyNeedOne,
       firmwareDir, cacheDir,
     };
   },

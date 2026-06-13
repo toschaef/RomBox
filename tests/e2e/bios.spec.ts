@@ -74,6 +74,11 @@ test.describe('RomBox Bios E2E Suite', () => {
     await biosPage.navigateToBios();
     await expect(page.url()).toContain('/bios');
 
+    // Verify initial state for PS1 when engine is not installed
+    const ps1Container = page.locator('div.rounded-sm').filter({ hasText: 'PS1' }).first();
+    await expect(ps1Container.getByText('Not set up yet')).toBeVisible();
+    await expect(ps1Container.getByText('Installed: None')).toBeVisible();
+
     // 2. Create a dummy BIOS file inside our isolated temporary directory
     const dummyBiosPath = path.join(tempUserDataDir, 'scph5501.bin');
     fs.writeFileSync(dummyBiosPath, 'dummy PS1 BIOS file');
@@ -81,8 +86,8 @@ test.describe('RomBox Bios E2E Suite', () => {
     // 3. Simulate drag and drop completely within browser context to preserve file path
     await biosPage.dragAndDropBios(dummyBiosPath, 'scph5501.bin');
 
-    // 4. Verify the status changes (e.g. state should reflect warning/missing resolution update)
-    const dropResultLabel = biosPage.getDropResultLabel('scph5501.bin');
-    await expect(dropResultLabel).toBeVisible({ timeout: 15000 });
+    // 4. Verify that the status changed to "Saved in cache" and lists scph5501.bin as installed
+    await expect(ps1Container.getByText('Saved in cache')).toBeVisible({ timeout: 15000 });
+    await expect(ps1Container.getByText('Installed: scph5501.bin')).toBeVisible();
   });
 });

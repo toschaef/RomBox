@@ -246,17 +246,30 @@ export default function Bios() {
                     ) : null}
                   </div>
 
-                  {showReq ? (
-                    <div className="mt-3 text-xs text-fg-muted">
-                      Missing required: <span className="text-fg-secondary">{missingReq.join(", ")}</span>
-                    </div>
-                  ) : null}
+                  {b.onlyNeedOne ? (
+                    (showReq || showWarn) && (
+                      <div className="mt-3 text-xs text-fg-muted">
+                        {showReq ? "Required (provide any one): " : "Optional (provide any one): "}
+                        <span className="text-fg-secondary">
+                          {(showReq ? missingReq : missingWarn).join(", ")}
+                        </span>
+                      </div>
+                    )
+                  ) : (
+                    <>
+                      {showReq ? (
+                        <div className="mt-3 text-xs text-fg-muted">
+                          Missing required: <span className="text-fg-secondary">{missingReq.join(", ")}</span>
+                        </div>
+                      ) : null}
 
-                  {showWarn ? (
-                    <div className="mt-3 text-xs text-fg-muted">
-                      Missing optional: <span className="text-fg-secondary">{missingWarn.join(", ")}</span>
-                    </div>
-                  ) : null}
+                      {showWarn ? (
+                        <div className="mt-3 text-xs text-fg-muted">
+                          Missing optional: <span className="text-fg-secondary">{missingWarn.join(", ")}</span>
+                        </div>
+                      ) : null}
+                    </>
+                  )}
 
                   {b.needsBios ? (
                     <div className="mt-2 text-xs text-fg-muted">

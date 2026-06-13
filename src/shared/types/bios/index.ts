@@ -16,6 +16,7 @@ export interface BiosConfig {
   installDir?: string;
   required?: boolean;
   label?: string;
+  onlyNeedOne?: boolean;
 }
 
 export type BiosFileRuntime = BiosFile & {
@@ -41,6 +42,7 @@ export type BiosStatus = {
   required: boolean;
   firmwareDir: string;
   cacheDir: string;
+  onlyNeedOne?: boolean;
 };
 
 

@@ -128,6 +128,7 @@ export const CONSOLES: Record<ConsoleID, ConsoleDefinition> = {
     },
     bios: {
       required: true,
+      onlyNeedOne: true,
       label: "PS1 BIOS (required for emulation)",
       installDir: path.join(osHandler.getEmulatorBasePath('duckstation'), "bios"),
       files: [
@@ -151,6 +152,7 @@ export const CONSOLES: Record<ConsoleID, ConsoleDefinition> = {
     },
     bios: {
       required: true,
+      onlyNeedOne: true,
       label: "PS2 BIOS (required for emulation)",
       installDir: path.join(osHandler.getEmulatorBasePath('pcsx2'), "bios"),
       files: [
