@@ -31,18 +31,47 @@ export const Downloader = {
       const writer = fs.createWriteStream(destPath);
       
       return new Promise((resolve, reject) => {
-        response.data.pipe(writer);
         let error: Error | null = null;
-        
+        const idleTimeoutMs = 10000; // 10 seconds of no data received
+        let timeoutTimer: NodeJS.Timeout;
+
+        const resetTimeout = () => {
+          clearTimeout(timeoutTimer);
+          timeoutTimer = setTimeout(() => {
+            const err = new Error('Connection timed out due to inactivity');
+            error = err;
+            response.data.destroy(err);
+            writer.close();
+            reject(err);
+          }, idleTimeoutMs);
+        };
+
+        resetTimeout();
+
+        response.data.on('data', () => {
+          resetTimeout();
+        });
+
+        response.data.on('error', (err: Error) => {
+          clearTimeout(timeoutTimer);
+          error = err;
+          writer.close();
+          reject(err);
+        });
+
         writer.on('error', (err) => {
+          clearTimeout(timeoutTimer);
           error = err;
           writer.close();
           reject(err);
         });
 
         writer.on('close', () => {
+          clearTimeout(timeoutTimer);
           if (!error) resolve(destPath);
         });
+
+        response.data.pipe(writer);
       });
 
     } catch (err) {

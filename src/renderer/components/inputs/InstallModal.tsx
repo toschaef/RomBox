@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
 import type { Game } from '../../../shared/types';
-import { getConsoleNameFromId, getEngineIdFromConsoleId } from '../../../shared/constants';
+import { getConsoleNameFromId, getEngineIdFromConsoleId, getEmulatorNameFromEngineId } from '../../../shared/constants';
 import { engineClient } from '../../clients/engineClient';
+import { useNotifications } from '../../hooks/useNotifications';
 
 interface Props {
   game: Game;
@@ -10,35 +10,26 @@ interface Props {
 }
 
 export default function InstallModal({ game, onClose, onSuccess }: Props) {
-  const [status, setStatus] = useState<'idle' | 'installing' | 'error'>('idle');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [progressText, setProgressText] = useState('Initializing');
   const engineId = getEngineIdFromConsoleId(game.consoleId);
+  const { notify, durations } = useNotifications();
 
-  useEffect(() => {
-    const removeListener = engineClient.onInstallStatusUpdate((msg: string) => {
-      setProgressText(msg);
-    });
-    return () => { if (removeListener) removeListener(); };
-  }, []);
+  const handleInstall = () => {
+    const emulatorName = getEmulatorNameFromEngineId(engineId);
 
-  const handleInstall = async () => {
-    setStatus('installing');
-    setErrorMessage('');
+    engineClient.installEngine(engineId)
+      .then((result) => {
+        if (result.success) {
+          notify(`${emulatorName} installed successfully`, { type: 'success', duration: durations.short });
+          onSuccess();
+        } else {
+          notify(`Failed to install ${emulatorName}: ${result.error || result.message || 'Unknown error occurred'}`, { type: 'error', duration: durations.long });
+        }
+      })
+      .catch((err) => {
+        notify(`Failed to install ${emulatorName}: ${err.message || 'IPC failure'}`, { type: 'error', duration: durations.long });
+      });
 
-    try {
-      const result = await engineClient.installEngine(engineId);
-      
-      if (result.success) {
-        onSuccess();
-      } else {
-        setStatus('error');
-        setErrorMessage(result.error || 'Unknown error occurred');
-      }
-    } catch (err) {
-      setStatus('error');
-      setErrorMessage(err.message || 'IPC failure');
-    }
+    onClose();
   };
 
   return (
@@ -54,42 +45,22 @@ export default function InstallModal({ game, onClose, onSuccess }: Props) {
           </p>
         </div>
 
-        {/* error */}
-        {status === 'error' && (
-          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded text-red-200 text-xs">
-            <strong>Installation Failed:</strong> {errorMessage}
-          </div>
-        )}
-
-        {/* spinner */}
-        {status === 'installing' && (
-          <div className="flex flex-col items-center justify-center py-6 gap-3">
-            <div className="w-8 h-8 border-4 border-accent-secondary border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-xs text-accent-secondary font-bold animate-pulse">
-              {progressText}
-            </p>
-          </div>
-        )}
-
-        {/* cancel / install */}
-        {status !== 'installing' && (
-          <div className="flex justify-end gap-3 mt-2">
-            <button 
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-semibold text-fg-muted hover:text-fg-primary transition-colors"
-            >
-              Cancel
-            </button>
-            <button 
-              type="button"
-              onClick={handleInstall}
-              className="px-4 py-2 bg-accent-primary hover:bg-accent-primary/90 text-white text-sm font-bold rounded shadow-lg shadow-accent-primary/20 transition-all hover:scale-105 active:scale-95"
-            >
-              Install Now
-            </button>
-          </div>
-        )}
+        <div className="flex justify-end gap-3 mt-2">
+          <button 
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-semibold text-fg-muted hover:text-fg-primary transition-colors"
+          >
+            Cancel
+          </button>
+          <button 
+            type="button"
+            onClick={handleInstall}
+            className="px-4 py-2 bg-accent-primary hover:bg-accent-primary/90 text-white text-sm font-bold rounded shadow-lg shadow-accent-primary/20 transition-all hover:scale-105 active:scale-95"
+          >
+            Install Now
+          </button>
+        </div>
       </div>
     </div>
   );

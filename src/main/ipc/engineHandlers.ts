@@ -15,7 +15,14 @@ export default function registerEngineHandlers() {
     const progressCallback = (status: string) => {
       event.sender.send('install-status-update', status);
     };
-    return await EngineService.installEngine(engineId, progressCallback);
+    try {
+      const result = await EngineService.installEngine(engineId, progressCallback);
+      event.sender.send('install-status-update', 'complete');
+      return result;
+    } catch (err) {
+      event.sender.send('install-status-update', 'complete');
+      return { success: false, message: err.message || String(err) };
+    }
   });
 
   ipcMain.handle('engine:delete-engine', async (event, consoleId) => {
