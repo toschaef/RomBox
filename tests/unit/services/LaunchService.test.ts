@@ -9,7 +9,8 @@ import { initDB } from "../../../src/main/data/db";
 
 jest.mock("../../../src/main/services/EngineService", () => ({
   EngineService: {
-    getEnginePath: jest.fn()
+    getEnginePath: jest.fn(),
+    isEngineInstalling: jest.fn()
   }
 }));
 
@@ -75,6 +76,7 @@ describe("LaunchService", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (EngineService.isEngineInstalling as jest.Mock).mockReturnValue(false);
     existsSpy = jest.spyOn(fs, "existsSync").mockReturnValue(true);
     initDB();
   });
@@ -89,6 +91,16 @@ describe("LaunchService", () => {
     const result = await LaunchService.launch(mockGame);
     expect(result.success).toBe(false);
     expect(result.code).toBe("MISSING_ENGINE");
+  });
+
+  it("should fail launch with ENGINE_INSTALLING if engine is currently installing", async () => {
+    (EngineService.getEnginePath as jest.Mock).mockResolvedValue(null);
+    (EngineService.isEngineInstalling as jest.Mock).mockReturnValue(true);
+
+    const result = await LaunchService.launch(mockGame);
+    expect(result.success).toBe(false);
+    expect(result.code).toBe("ENGINE_INSTALLING");
+    expect(result.message).toContain("currently installing");
   });
 
   it("should fail launch if game file does not exist", async () => {

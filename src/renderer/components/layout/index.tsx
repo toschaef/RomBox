@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useDragAndDrop } from '../../hooks/useDragAndDrop';
 import { useNotifications } from '../../hooks/useNotifications';
+import { engineClient } from '../../clients/engineClient';
 import type { DropResult } from '../../../shared/types';
 
 export interface LayoutContextType {
@@ -25,12 +26,38 @@ export default function Layout() {
   const [lastBiosUpdate, setLastBiosUpdate] = useState<string | null>(null);
   const [refreshLibraryTrigger, setRefreshLibraryTrigger] = useState(0);
 
-  const { notify, setLoadingMessage } = useNotifications();
+  const { notify, setLoadingMessage, durations } = useNotifications();
+
+  const activeInstalls = useRef(0);
+
+  useEffect(() => {
+    const removeListener = engineClient.onInstallStatusUpdate((status: string) => {
+      if (status === 'complete') {
+        activeInstalls.current = Math.max(0, activeInstalls.current - 1);
+        if (activeInstalls.current === 0) {
+          setLoadingMessage(null);
+        }
+      } else {
+        if (activeInstalls.current === 0) {
+          activeInstalls.current = 1;
+          setLoadingMessage(status);
+        } else if (status === 'Installing emulator\u2026') {
+          activeInstalls.current += 1;
+          setLoadingMessage(status);
+        } else {
+          setLoadingMessage(status);
+        }
+      }
+    });
+
+    return () => { if (removeListener) removeListener(); };
+  }, [setLoadingMessage]);
 
   const setGlobalLoadingState = (l: boolean) => setLoadingMessage(l ? "Processing" : null);
   const setGlobalStatus = (s: string) => setLoadingMessage(s);
+
   const importFilePaths = async (filePaths: string[]) => {
-    setLoadingMessage("Installing");
+    setLoadingMessage("Importing\u2026");
 
     let anyGames = false;
     let anyBios = false;
@@ -41,7 +68,7 @@ export default function Layout() {
 
     for (let i = 0; i < filePaths.length; i++) {
         const filePath = filePaths[i];
-        if (filePaths.length > 1) setLoadingMessage(`Processing ${i + 1} of ${filePaths.length}...`);
+        if (filePaths.length > 1) setLoadingMessage(`Importing ${i + 1} of ${filePaths.length}\u2026`);
         
         try {
           const result = await window.electron.invoke('process-file-drop', filePath) as DropResult;
@@ -70,19 +97,22 @@ export default function Layout() {
 
     if (anyGames) setRefreshLibraryTrigger(prev => prev + 1);
     if (anyBios) setLastBiosUpdate(Date.now().toString());
-    setLoadingMessage(null);
+
+    if (activeInstalls.current === 0) {
+      setLoadingMessage(null);
+    }
 
     const totalItems = allGameTitles.length + BiosLabels.length + errors.length;
 
     if (totalItems <= 3) {
       for (const title of allGameTitles) {
-        notify(`Installed ${title}`, { type: 'success' });
+        notify(`${title} installed`, { type: 'success', duration: durations.short });
       }
       for (const label of BiosLabels) {
-        notify(`Installed ${label}`, { type: 'success' });
+        notify(`${label} installed`, { type: 'success', duration: durations.short });
       }
       for (const err of errors) {
-        notify(err, { type: 'error' });
+        notify(err, { type: 'error', duration: durations.long });
       }
     } else {
       const successCount = allGameTitles.length + BiosLabels.length;
@@ -90,10 +120,10 @@ export default function Layout() {
         const parts: string[] = [];
         if (allGameTitles.length > 0) parts.push(`${allGameTitles.length} game${allGameTitles.length > 1 ? 's' : ''}`);
         if (BiosLabels.length > 0) parts.push(`${BiosLabels.length} BIOS file${BiosLabels.length > 1 ? 's' : ''}`);
-        notify(`Installed ${parts.join(' and ')}`, { type: 'success' });
+        notify(`${parts.join(' and ')} installed`, { type: 'success', duration: durations.medium });
       }
       if (errors.length > 0) {
-        notify(`${errors.length} file${errors.length > 1 ? 's' : ''} failed: ${errors.slice(0, 3).join(', ')}${errors.length > 3 ? '…' : ''}`, { type: 'error' });
+        notify(`${errors.length} file${errors.length > 1 ? 's' : ''} failed`, { type: 'error', duration: durations.long });
       }
     }
   };

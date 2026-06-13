@@ -33,4 +33,9 @@ export interface NotificationContext {
   createBulkCollector: (operationLabel?: string) => BulkCollector;
   /** dismiss notification by id */
   dismiss: (id: string) => void;
+  durations: {
+    short: number;
+    medium: number;
+    long: number;
+  };
 }

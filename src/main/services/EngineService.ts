@@ -11,11 +11,13 @@ import { Downloader } from "../utils/downloader";
 import { Logger } from "../utils/logger";
 import { BiosService } from "./BiosService";
 import { ENGINES } from "../config/engines";
+import { getEmulatorNameFromEngineId } from "../../shared/constants";
 
 const log = Logger.create('EngineService');
 
 const USERDATA = app.getPath("userData");
 const ENGINES_PATH = path.join(USERDATA, "engines");
+const installingEngines = new Set<EngineID>();
 
 function ensureDir(p: string) {
   if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
@@ -88,6 +90,10 @@ function dirMtimeMs(p: string): number | null {
 }
 
 export const EngineService = {
+  isEngineInstalling: (engineId: EngineID): boolean => {
+    return installingEngines.has(engineId);
+  },
+
   getEnginePath: async (engineId: EngineID) => {
     const cfg = ENGINES[engineId];
     if (!cfg) return null;
@@ -248,6 +254,11 @@ export const EngineService = {
     const installLog = log.child({ engineId });
     installLog.info('Starting engine installation');
     
+    if (installingEngines.has(engineId)) {
+        installLog.warn(`${getEmulatorNameFromEngineId(engineId)} is already installing`);
+      return { success: false, message: 'Engine installation is already in progress' };
+    }
+
     const cfg = ENGINES[engineId];
     if (!cfg) throw new Error("Invalid Engine");
 
@@ -258,6 +269,7 @@ export const EngineService = {
     const installDirAbs = path.join(ENGINES_PATH, engineId);
     installLog.info('Installation directory', { installDirAbs });
 
+    installingEngines.add(engineId);
     if (fs.existsSync(installDirAbs)) fs.rmSync(installDirAbs, { recursive: true, force: true });
     fs.mkdirSync(installDirAbs, { recursive: true });
 
@@ -337,6 +349,8 @@ export const EngineService = {
       return { success: true };
     } catch (err) {
       return { success: false, message: err.message ?? err };
+    } finally {
+      installingEngines.delete(engineId);
     }
   },
 

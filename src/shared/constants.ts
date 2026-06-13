@@ -151,6 +151,14 @@ export const ENGINE_MAP: Record<ConsoleID, string> = {
   'ps2': 'PCSX2',
 };
 
+export const getEmulatorNameFromConsoleID = (consoleID: ConsoleID): string => {
+  return ENGINE_MAP[consoleID];
+};
+
+export const getEmulatorNameFromEngineId = (engineId: EngineID): string => {
+  return ENGINE_MAP[ENGINEID_CONSOLEID_MAP[engineId]];
+};
+
 interface Signature {
   id: ConsoleID;
   offset: number;

@@ -63,7 +63,7 @@ export default function Engines() {
   const [menuOpenFor, setMenuOpenFor] = useState<EngineID | null>(null);
 
   const { setGlobalLoading, setGlobalStatus } = useOutletContext<LayoutContextType>();
-  const { notify } = useNotifications();
+  const { notify, durations } = useNotifications();
 
   console.log("[Engines] engines:", engines);
 
@@ -103,7 +103,7 @@ export default function Engines() {
       setEngines(list);
     } catch (err) {
       console.error("[Engines] getEngines failed", err);
-      notify((err as Error).message, { type: 'error' });
+      notify((err as Error).message, { type: 'error', duration: durations.long });
       setEngines([]);
     } finally {
       setLoading(false);
@@ -169,9 +169,9 @@ export default function Engines() {
     try {
       const r = await engineClient.installEngine(row.engineId);
       if (!r.success) throw new Error(r.message || r.error || "Install failed");
-      notify(`${row.displayName} installed.`, { type: 'success' });
+      notify(`${row.displayName} installed`, { type: 'success', duration: durations.short });
     } catch (err) {
-      notify((err as Error).message, { type: 'error' });
+      notify((err as Error).message, { type: 'error', duration: durations.long });
     } finally {
       setAction({ kind: "idle" });
       setGlobalLoading(false);
@@ -187,9 +187,9 @@ export default function Engines() {
     try {
       const r = await engineClient.deleteEngine(row.engineId);
       if (!r.success) throw new Error(r.message || r.error || "Uninstall failed");
-      notify(`Uninstalled ${row.displayName}`, { type: 'success' });
+      notify(`${row.displayName} uninstalled`, { type: 'success', duration: durations.short });
     } catch (err) {
-      notify((err as Error).message, { type: 'error' });
+      notify((err as Error).message, { type: 'error', duration: durations.long });
     } finally {
       setAction({ kind: "idle" });
       setGlobalLoading(false);
@@ -209,9 +209,9 @@ export default function Engines() {
       const ins = await engineClient.installEngine(row.engineId);
       if (!ins.success) throw new Error(ins.message || ins.error || "Install failed during repair");
 
-      notify(`${row.displayName} repaired.`, { type: 'success' });
+      notify(`${row.displayName} repaired`, { type: 'success', duration: durations.short });
     } catch (err) {
-      notify((err as Error).message, { type: 'error' });
+      notify((err as Error).message, { type: 'error', duration: durations.long });
     } finally {
       setAction({ kind: "idle" });
       setGlobalLoading(false);

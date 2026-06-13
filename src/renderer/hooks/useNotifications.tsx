@@ -18,7 +18,13 @@ const NotificationContext = createContext<NotificationContext | null>(null);
 let _nextId = 0;
 const uid = () => `notif-${++_nextId}-${Date.now()}`;
 
-const DEFAULT_DURATION = 15_000;
+const DURATIONS = {
+  short: 3000,
+  medium: 6000,
+  long: 10000,
+};
+
+const DEFAULT_DURATION = DURATIONS.medium;
 const MAX_VISIBLE = 6;
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
@@ -79,7 +85,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   );
 
   const createBulkCollector = useCallback(
-    (operationLabel = 'Operation'): BulkCollector => {
+    (): BulkCollector => {
       const successes: string[] = [];
       const failures: string[] = [];
 
@@ -94,29 +100,31 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
           if (total === 1) {
             if (successes.length === 1) {
-              notify(`${operationLabel}: ${successes[0]}`, { type: 'success' });
+              notify(`${successes[0]} succeeded`, { type: 'success', duration: DURATIONS.medium });
             } else {
-              notify(`${operationLabel} failed: ${failures[0]}`, { type: 'error' });
+              notify(`${failures[0]} failed`, { type: 'error', duration: DURATIONS.medium });
             }
             return;
           }
 
           if (failures.length === 0) {
-            notify(`${operationLabel}: ${successes.length} items processed successfully`, {
+            notify(`${successes.length} items processed`, {
               type: 'success',
+              duration: DURATIONS.long,
             });
           } else if (successes.length === 0) {
-            notify(`${operationLabel}: all ${failures.length} items failed`, {
+            notify(`${failures.length} items failed`, {
               type: 'error',
+              duration: DURATIONS.long,
             });
           } else {
             notify(
-              `${operationLabel}: ${successes.length} succeeded`,
-              { type: 'success' },
+              `${successes.length} succeeded`,
+              { type: 'success', duration: DURATIONS.long },
             );
             notify(
-              `${operationLabel}: ${failures.length} failed`,
-              { type: 'error' },
+              `${failures.length} failed`,
+              { type: 'error', duration: DURATIONS.long },
             );
           }
         },
@@ -125,9 +133,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     [notify],
   );
 
+  const durations = DURATIONS;
+
   return (
     <NotificationContext.Provider
-      value={{ notifications, loadingMessage, setLoadingMessage, notify, createBulkCollector, dismiss }}
+      value={{ notifications, loadingMessage, setLoadingMessage, notify, createBulkCollector, dismiss, durations }}
     >
       {children}
     </NotificationContext.Provider>

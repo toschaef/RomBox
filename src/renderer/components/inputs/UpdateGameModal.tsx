@@ -12,7 +12,7 @@ interface Props {
 export default function UpdateGameModal({ game, onClose, onSave }: Props) {
   const [title, setTitle] = useState(game.title);
   const [isSaving, setIsSaving] = useState(false);
-  const { notify } = useNotifications();
+  const { notify, durations } = useNotifications();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +28,7 @@ export default function UpdateGameModal({ game, onClose, onSave }: Props) {
       }
     } catch (err) {
       console.error("Failed to update", err);
-      notify(`Error renaming ${game.title}`, { type: 'error' });
+      notify(`Failed to rename ${game.title}`, { type: 'error', duration: durations.medium });
     } finally {
       setIsSaving(false);
     }

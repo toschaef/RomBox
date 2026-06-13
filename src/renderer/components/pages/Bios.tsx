@@ -56,7 +56,7 @@ export default function Bios() {
   const [action, setAction] = useState<ActionState>({ kind: "idle" });
   const [engineInstalled, setEngineInstalled] = useState<Record<ConsoleID, boolean>>({} as Record<ConsoleID, boolean>);
   const { lastBiosUpdate } = useOutletContext<LayoutContextType>();
-  const { notify } = useNotifications();
+  const { notify, durations } = useNotifications();
 
   const [menuOpenFor, setMenuOpenFor] = useState<ConsoleID | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -102,7 +102,7 @@ export default function Bios() {
       setEngineInstalled(Object.fromEntries(pairs) as Record<ConsoleID, boolean>);
     } catch (err) {
       console.error("[BiosPage] refresh failed:", err);
-      notify((err as Error).message, { type: 'error' });
+      notify((err as Error).message, { type: 'error', duration: durations.long });
       setItems([]);
       setEngineInstalled({} as Record<ConsoleID, boolean>);
     } finally {
@@ -127,9 +127,9 @@ export default function Bios() {
     try {
       const r = await biosClient.deleteBios({ consoleId, fileName });
       if (!r.success) throw new Error(r.message || r.error || "Delete failed");
-      notify(`${getConsoleNameFromId(consoleId)}: removed ${fileName}.`, { type: 'success' });
+      notify(`${fileName} removed`, { type: 'success', duration: durations.short });
     } catch (err) {
-      notify((err as Error).message, { type: 'error' });
+      notify((err as Error).message, { type: 'error', duration: durations.long });
     } finally {
       setAction({ kind: "idle" });
       await refresh();

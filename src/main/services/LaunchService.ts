@@ -22,6 +22,10 @@ export const LaunchService = {
     gameLog.info('Checking engine path', { engineId: game.engineId });
     const enginePath = await EngineService.getEnginePath(game.engineId);
     if (!enginePath) {
+      if (EngineService.isEngineInstalling(game.engineId)) {
+        gameLog.warn('Engine is currently installing', { engineId: game.engineId });
+        return { success: false, code: 'ENGINE_INSTALLING', message: `Emulator for ${game.consoleId} is currently installing. Please wait.` };
+      }
       gameLog.warn('Engine not installed', { consoleId: game.consoleId });
       return { success: false, code: 'MISSING_ENGINE', message: `Emulator for ${game.consoleId} not installed.` };
     }
