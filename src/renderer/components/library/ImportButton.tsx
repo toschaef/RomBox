@@ -1,5 +1,3 @@
-import * as React from 'react';
-
 interface ImportButtonProps {
   onImport: (filePaths: string[]) => void;
 }
@@ -23,7 +21,7 @@ export default function ImportButton({ onImport }: ImportButtonProps) {
       id="manual-import-button"
       className="
         bg-accent-secondary
-        text-white text-xs font-semibold uppercase tracking-wider
+        text-white text-xs font-semibold uppercase tracking-wide
         border border-accent-secondary rounded-none
         px-3 py-1.5 h-fit self-center shrink-0
         hover:bg-accent-primary
@@ -31,7 +29,7 @@ export default function ImportButton({ onImport }: ImportButtonProps) {
         transition-all cursor-pointer
       "
     >
-      + Add File(s)
+      + Import
     </button>
   );
 }
