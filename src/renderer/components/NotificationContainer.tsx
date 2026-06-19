@@ -22,10 +22,9 @@ function Toast({ n, onDismiss }: { n: Notification; onDismiss: () => void }) {
         flex items-center gap-2.5 px-3.5 py-3
         min-w-70 max-w-100
         ${isSuccess
-          ? 'border border-green-900 bg-linear-to-br from-green-900/25 to-bg-primary/95'
-          : 'border border-red-900 bg-linear-to-br from-red-900/25 to-bg-primary/95'
+          ? 'border border-green-900 bg-bg-secondary'
+          : 'border border-red-900 bg-bg-secondary'
         }
-        backdrop-blur-xl
         text-fg-primary text-[13px] font-semibold leading-snug
         pointer-events-auto relative overflow-hidden
       `}
@@ -63,8 +62,7 @@ function LoadingToast({ message }: { message: string }) {
         notification-toast notification-enter
         flex items-center gap-2.5 px-3.5 py-3
         min-w-70 max-w-100
-        border border-accent-primary bg-linear-to-br from-accent-primary/25 to-bg-primary/95
-        backdrop-blur-xl
+        border border-accent-primary bg-bg-secondary
         text-fg-primary text-[13px] font-semibold leading-snug
         pointer-events-auto relative overflow-hidden
       `}

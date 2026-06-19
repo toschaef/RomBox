@@ -146,5 +146,5 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
 export function useNotifications() {
   const ctx = useContext(NotificationContext);
-  return ctx;
+  return ctx as NotificationContext;
 }
