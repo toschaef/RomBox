@@ -212,7 +212,7 @@ export const NOTIFICATION_MESSAGES = {
   ITEMS_FAILED: (count: number) => `${count} items failed`,
   BULK_SUCCEEDED: (count: number) => `${count} succeeded`,
   BULK_FAILED: (count: number) => `${count} failed`,
-  sGAMES_AND_BIOS_INSTALLED: (parts: string) => `${parts} installed`,
+  GAMES_AND_BIOS_INSTALLED: (parts: string) => `${parts} installed`,
   FILES_FAILED: (count: number) => `Error installing${count} file${count > 1 ? 's' : ''}`,
 
   ERROR_MESSAGE: (message: string) => message,
