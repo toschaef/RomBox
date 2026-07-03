@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 import path from "path";
 import fs from "fs";
 import { initDB } from "../../src/main/data/db";
@@ -141,7 +142,7 @@ describe("Emulator Installation and Binary Path Integration Tests", () => {
             expect(resolvedPath).not.toBeNull();
 
             // Verify the executable file actually exists on disk
-            expect(fs.existsSync(resolvedPath!)).toBe(true);
+            expect(fs.existsSync(resolvedPath as string)).toBe(true);
 
             // Verify that the resolved path contains the expected binary configuration path structure
             const expectedBinaryConfigPath = cfg.binaries[platform];
