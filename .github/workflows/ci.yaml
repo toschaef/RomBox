@@ -14,14 +14,66 @@ permissions:
   contents: read
 
 jobs:
-  lint-and-test:
-    name: Test (${{ matrix.os }})
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+  build:
+    name: Build (${{ matrix.os }})
+    needs: lint
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         # os: [macos-latest, windows-latest, ubuntu-latest]
-        os: [macos-latest] 
+        os: [macos-latest]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build and Package Application
+        run: npm run package
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: packaged-app-${{ matrix.os }}
+          path: out/
+          retention-days: 1
+
+  test:
+    name: Test (${{ matrix.os }})
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [macos-latest]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -39,11 +91,11 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: npx playwright install-deps
 
-      - name: Run ESLint
-        run: npm run lint
-
-      - name: Build and Package Application
-        run: npm run package
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: packaged-app-${{ matrix.os }}
+          path: out/
 
       - name: Run Tests (Linux with Xvfb)
         if: matrix.os == 'ubuntu-latest'
