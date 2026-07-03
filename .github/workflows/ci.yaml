@@ -97,6 +97,14 @@ jobs:
           name: packaged-app-${{ matrix.os }}
           path: out/
 
+      - name: Fix App Permissions (macOS & Linux)
+        if: matrix.os != 'windows-latest'
+        run: |
+          if [ "${{ matrix.os }}" = "macos-latest" ]; then
+            xattr -cr out/ || true
+          fi
+          find out -type f \( -name "rombox" -o -name "rombox Helper*" -o -name "chrome_crashpad_handler" -o -name "ShipIt" \) -exec chmod +x {} +
+
       - name: Run Tests (Linux with Xvfb)
         if: matrix.os == 'ubuntu-latest'
         run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npm test
