@@ -12,6 +12,7 @@ import type {
   BulkCollector,
   NotificationContext,
 } from '../../shared/types';
+import { NOTIFICATION_MESSAGES } from '../../shared/constants';
 
 const NotificationContext = createContext<NotificationContext | null>(null);
 
@@ -100,30 +101,30 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
           if (total === 1) {
             if (successes.length === 1) {
-              notify(`${successes[0]} succeeded`, { type: 'success', duration: DURATIONS.medium });
+              notify(NOTIFICATION_MESSAGES.ITEM_SUCCEEDED(successes[0]), { type: 'success', duration: DURATIONS.medium });
             } else {
-              notify(`${failures[0]} failed`, { type: 'error', duration: DURATIONS.medium });
+              notify(NOTIFICATION_MESSAGES.ITEM_FAILED(failures[0]), { type: 'error', duration: DURATIONS.medium });
             }
             return;
           }
 
           if (failures.length === 0) {
-            notify(`${successes.length} items processed`, {
+            notify(NOTIFICATION_MESSAGES.ITEMS_PROCESSED(successes.length), {
               type: 'success',
               duration: DURATIONS.long,
             });
           } else if (successes.length === 0) {
-            notify(`${failures.length} items failed`, {
+            notify(NOTIFICATION_MESSAGES.ITEMS_FAILED(failures.length), {
               type: 'error',
               duration: DURATIONS.long,
             });
           } else {
             notify(
-              `${successes.length} succeeded`,
+              NOTIFICATION_MESSAGES.BULK_SUCCEEDED(successes.length),
               { type: 'success', duration: DURATIONS.long },
             );
             notify(
-              `${failures.length} failed`,
+              NOTIFICATION_MESSAGES.BULK_FAILED(failures.length),
               { type: 'error', duration: DURATIONS.long },
             );
           }

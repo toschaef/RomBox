@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import type { ConsoleID } from "../../../shared/types";
 import type { EngineID, EngineInfo, EngineStatus } from "../../../shared/types/engines";
 import { engineClient } from "../../clients/engineClient";
-import { getConsoleNameFromId, ENGINE_MAP } from "../../../shared/constants";
+import { getConsoleNameFromId, ENGINE_MAP, NOTIFICATION_MESSAGES } from "../../../shared/constants";
 import PageLayout from "../layout/PageLayout";
 import { useOutletContext } from "react-router-dom";
 import type { LayoutContextType } from "../layout";
@@ -103,7 +103,7 @@ export default function Engines() {
       setEngines(list);
     } catch (err) {
       console.error("[Engines] getEngines failed", err);
-      notify((err as Error).message, { type: 'error', duration: durations.long });
+      notify(NOTIFICATION_MESSAGES.ERROR_MESSAGE((err as Error).message), { type: 'error', duration: durations.long });
       setEngines([]);
     } finally {
       setLoading(false);
@@ -169,9 +169,9 @@ export default function Engines() {
     try {
       const r = await engineClient.installEngine(row.engineId);
       if (!r.success) throw new Error(r.message || r.error || "Install failed");
-      notify(`${row.displayName} installed`, { type: 'success', duration: durations.short });
+      notify(NOTIFICATION_MESSAGES.ENGINE_INSTALLED(row.displayName), { type: 'success', duration: durations.short });
     } catch (err) {
-      notify((err as Error).message, { type: 'error', duration: durations.long });
+      notify(NOTIFICATION_MESSAGES.ERROR_MESSAGE((err as Error).message), { type: 'error', duration: durations.long });
     } finally {
       setAction({ kind: "idle" });
       setGlobalLoading(false);
@@ -187,9 +187,9 @@ export default function Engines() {
     try {
       const r = await engineClient.deleteEngine(row.engineId);
       if (!r.success) throw new Error(r.message || r.error || "Uninstall failed");
-      notify(`${row.displayName} uninstalled`, { type: 'success', duration: durations.short });
+      notify(NOTIFICATION_MESSAGES.ENGINE_UNINSTALLED(row.displayName), { type: 'success', duration: durations.short });
     } catch (err) {
-      notify((err as Error).message, { type: 'error', duration: durations.long });
+      notify(NOTIFICATION_MESSAGES.ERROR_MESSAGE((err as Error).message), { type: 'error', duration: durations.long });
     } finally {
       setAction({ kind: "idle" });
       setGlobalLoading(false);
@@ -209,9 +209,9 @@ export default function Engines() {
       const ins = await engineClient.installEngine(row.engineId);
       if (!ins.success) throw new Error(ins.message || ins.error || "Install failed during repair");
 
-      notify(`${row.displayName} repaired`, { type: 'success', duration: durations.short });
+      notify(NOTIFICATION_MESSAGES.ENGINE_REPAIRED(row.displayName), { type: 'success', duration: durations.short });
     } catch (err) {
-      notify((err as Error).message, { type: 'error', duration: durations.long });
+      notify(NOTIFICATION_MESSAGES.ERROR_MESSAGE((err as Error).message), { type: 'error', duration: durations.long });
     } finally {
       setAction({ kind: "idle" });
       setGlobalLoading(false);

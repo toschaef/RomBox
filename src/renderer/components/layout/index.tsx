@@ -4,6 +4,7 @@ import { useDragAndDrop } from '../../hooks/useDragAndDrop';
 import { useNotifications } from '../../hooks/useNotifications';
 import { engineClient } from '../../clients/engineClient';
 import type { DropResult } from '../../../shared/types';
+import { NOTIFICATION_MESSAGES } from '../../../shared/constants';
 
 export interface LayoutContextType {
   lastBiosUpdate: string | null;
@@ -106,13 +107,13 @@ export default function Layout() {
 
     if (totalItems <= 3) {
       for (const title of allGameTitles) {
-        notify(`${title} installed`, { type: 'success', duration: durations.short });
+        notify(NOTIFICATION_MESSAGES.GAME_INSTALLED(title), { type: 'success', duration: durations.short });
       }
       for (const label of BiosLabels) {
-        notify(`${label} installed`, { type: 'success', duration: durations.short });
+        notify(NOTIFICATION_MESSAGES.BIOS_INSTALLED(label), { type: 'success', duration: durations.short });
       }
       for (const err of errors) {
-        notify(err, { type: 'error', duration: durations.long });
+        notify(NOTIFICATION_MESSAGES.ERROR_MESSAGE(err), { type: 'error', duration: durations.long });
       }
     } else {
       const successCount = allGameTitles.length + BiosLabels.length;
@@ -120,10 +121,10 @@ export default function Layout() {
         const parts: string[] = [];
         if (allGameTitles.length > 0) parts.push(`${allGameTitles.length} game${allGameTitles.length > 1 ? 's' : ''}`);
         if (BiosLabels.length > 0) parts.push(`${BiosLabels.length} BIOS file${BiosLabels.length > 1 ? 's' : ''}`);
-        notify(`${parts.join(' and ')} installed`, { type: 'success', duration: durations.medium });
+        notify(NOTIFICATION_MESSAGES.GAMES_AND_BIOS_INSTALLED(parts.join(' and ')), { type: 'success', duration: durations.medium });
       }
       if (errors.length > 0) {
-        notify(`${errors.length} file${errors.length > 1 ? 's' : ''} failed`, { type: 'error', duration: durations.long });
+        notify(NOTIFICATION_MESSAGES.FILES_FAILED(errors.length), { type: 'error', duration: durations.long });
       }
     }
   };

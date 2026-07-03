@@ -6,7 +6,7 @@ import { gameClient } from '../../clients/gameClient';
 import { saveClient } from '../../clients/saveClient';
 import { IpcResponse } from '../../../shared/types';
 import { useNotifications } from '../../hooks/useNotifications';
-import { getEmulatorNameFromEngineId } from '../../../shared/constants';
+import { getEmulatorNameFromEngineId, NOTIFICATION_MESSAGES } from '../../../shared/constants';
 
 function formatPlaytime(seconds: number): string {
   if (seconds < 60) return `${seconds}s`;
@@ -201,7 +201,7 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
       if (result.success) {
         console.log("Game launched without electron error");
       } else if (result.code === 'ENGINE_INSTALLING') {
-        notify(`${getEmulatorNameFromEngineId(game.engineId)} still installing`, { type: 'error', duration: durations.medium });
+        notify(NOTIFICATION_MESSAGES.EMULATOR_INSTALLING(getEmulatorNameFromEngineId(game.engineId)), { type: 'error', duration: durations.medium });
       } else if (result.code === 'MISSING_ENGINE') {
         setInstallModalOpen(true);
       } else if (result.code === 'MISSING_BIOS') {
@@ -209,11 +209,11 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
         setBiosModalOpen(true);
       } else {
         console.error("Launch error:", result.message);
-        notify(`Failed to launch ${game.title}`, { type: 'error', duration: durations.medium });
+        notify(NOTIFICATION_MESSAGES.LAUNCH_FAILED(game.title), { type: 'error', duration: durations.medium });
       }
     } catch (err) {
       console.error("IPC Error", err);
-      notify(`Failed to launch ${game.title}`, { type: 'error', duration: durations.medium });
+      notify(NOTIFICATION_MESSAGES.LAUNCH_FAILED(game.title), { type: 'error', duration: durations.medium });
     }
   };
 
@@ -228,11 +228,11 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
     if (confirm(`Delete ${game.title}?`)) {
       try {
         await window.electron.invoke('game:delete', game.id);
-        notify(`${game.title} deleted`, { type: 'success', duration: durations.short });
+        notify(NOTIFICATION_MESSAGES.GAME_DELETED(game.title), { type: 'success', duration: durations.short });
         onDelete();
       } catch (err) {
         console.error(err);
-        notify(`Failed to delete ${game.title}`, { type: 'error', duration: durations.medium });
+        notify(NOTIFICATION_MESSAGES.DELETE_FAILED(game.title), { type: 'error', duration: durations.medium });
       }
     }
     setShowMenu(false);
@@ -248,16 +248,16 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
       
       if (result.success && result.exportedTo) {
         console.log(`[GameCard] Save exported to: ${result.exportedTo}`);
-        notify(`${game.title} save exported`, { type: 'success', duration: durations.short });
+        notify(NOTIFICATION_MESSAGES.SAVE_EXPORTED(game.title), { type: 'success', duration: durations.short });
       } else if (result.error === 'Export cancelled') {
         console.log('[GameCard] Export cancelled by user');
       } else {
         console.warn(`[GameCard] Export failed: ${result.error}`);
-        notify(`Failed to export save for ${game.title}`, { type: 'error', duration: durations.medium });
+        notify(NOTIFICATION_MESSAGES.SAVE_EXPORT_FAILED(game.title), { type: 'error', duration: durations.medium });
       }
     } catch (err) {
       console.error('[GameCard] Export error:', err);
-      notify(`Failed to export save for ${game.title}`, { type: 'error', duration: durations.medium });
+      notify(NOTIFICATION_MESSAGES.SAVE_EXPORT_FAILED(game.title), { type: 'error', duration: durations.medium });
     }
   };
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Game } from '../../../shared/types';
 import { gameClient } from '../../clients/gameClient';
 import { useNotifications } from '../../hooks/useNotifications';
+import { NOTIFICATION_MESSAGES } from '../../../shared/constants';
 
 interface Props {
   game: Game;
@@ -28,7 +29,7 @@ export default function UpdateGameModal({ game, onClose, onSave }: Props) {
       }
     } catch (err) {
       console.error("Failed to update", err);
-      notify(`Failed to rename ${game.title}`, { type: 'error', duration: durations.medium });
+      notify(NOTIFICATION_MESSAGES.RENAME_FAILED(game.title), { type: 'error', duration: durations.medium });
     } finally {
       setIsSaving(false);
     }

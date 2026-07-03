@@ -1,5 +1,5 @@
 import type { Game } from '../../../shared/types';
-import { getConsoleNameFromId, getEngineIdFromConsoleId, getEmulatorNameFromEngineId } from '../../../shared/constants';
+import { getConsoleNameFromId, getEngineIdFromConsoleId, getEmulatorNameFromEngineId, NOTIFICATION_MESSAGES } from '../../../shared/constants';
 import { engineClient } from '../../clients/engineClient';
 import { useNotifications } from '../../hooks/useNotifications';
 
@@ -19,14 +19,14 @@ export default function InstallModal({ game, onClose, onSuccess }: Props) {
     engineClient.installEngine(engineId)
       .then((result) => {
         if (result.success) {
-          notify(`${emulatorName} installed successfully`, { type: 'success', duration: durations.short });
+          notify(NOTIFICATION_MESSAGES.INSTALL_SUCCESS(emulatorName), { type: 'success', duration: durations.short });
           onSuccess();
         } else {
-          notify(`Failed to install ${emulatorName}: ${result.error || result.message || 'Unknown error occurred'}`, { type: 'error', duration: durations.long });
+          notify(NOTIFICATION_MESSAGES.INSTALL_FAILED(emulatorName, result.error || result.message || 'Unknown error occurred'), { type: 'error', duration: durations.long });
         }
       })
       .catch((err) => {
-        notify(`Failed to install ${emulatorName}: ${err.message || 'IPC failure'}`, { type: 'error', duration: durations.long });
+        notify(NOTIFICATION_MESSAGES.INSTALL_FAILED(emulatorName, err.message || 'IPC failure'), { type: 'error', duration: durations.long });
       });
 
     onClose();

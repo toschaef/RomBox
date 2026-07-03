@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ConsoleID } from "../../../shared/types";
 import { biosClient } from "../../clients/biosClient";
-import { getConsoleNameFromId } from "../../../shared/constants";
+import { getConsoleNameFromId, NOTIFICATION_MESSAGES } from "../../../shared/constants";
 import { engineClient } from "../../clients/engineClient";
 import type { BiosStatus } from "../../../shared/types/bios";
 import { useOutletContext } from "react-router-dom";
@@ -102,7 +102,7 @@ export default function Bios() {
       setEngineInstalled(Object.fromEntries(pairs) as Record<ConsoleID, boolean>);
     } catch (err) {
       console.error("[BiosPage] refresh failed:", err);
-      notify((err as Error).message, { type: 'error', duration: durations.long });
+      notify(NOTIFICATION_MESSAGES.ERROR_MESSAGE((err as Error).message), { type: 'error', duration: durations.long });
       setItems([]);
       setEngineInstalled({} as Record<ConsoleID, boolean>);
     } finally {
@@ -127,9 +127,9 @@ export default function Bios() {
     try {
       const r = await biosClient.deleteBios({ consoleId, fileName });
       if (!r.success) throw new Error(r.message || r.error || "Delete failed");
-      notify(`${fileName} removed`, { type: 'success', duration: durations.short });
+      notify(NOTIFICATION_MESSAGES.BIOS_REMOVED(fileName), { type: 'success', duration: durations.short });
     } catch (err) {
-      notify((err as Error).message, { type: 'error', duration: durations.long });
+      notify(NOTIFICATION_MESSAGES.ERROR_MESSAGE((err as Error).message), { type: 'error', duration: durations.long });
     } finally {
       setAction({ kind: "idle" });
       await refresh();
