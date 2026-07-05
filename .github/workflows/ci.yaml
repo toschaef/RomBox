@@ -58,11 +58,22 @@ jobs:
       - name: Build and Package Application
         run: npm run package
 
+      - name: Prepare Artifact
+        id: prep
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            echo "artifact_path=out/" >> $GITHUB_OUTPUT
+          else
+            tar -czf packaged-app.tar.gz out/
+            echo "artifact_path=packaged-app.tar.gz" >> $GITHUB_OUTPUT
+          fi
+
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
           name: packaged-app-${{ matrix.os }}
-          path: out/
+          path: ${{ steps.prep.outputs.artifact_path }}
           retention-days: 1
 
   test:
@@ -91,19 +102,26 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: npx playwright install-deps
 
-      - name: Download Build Artifact
+      - name: Download Build Artifact (macOS & Linux)
+        if: matrix.os != 'windows-latest'
+        uses: actions/download-artifact@v4
+        with:
+          name: packaged-app-${{ matrix.os }}
+
+      - name: Extract Packaged Application (macOS & Linux)
+        if: matrix.os != 'windows-latest'
+        run: |
+          tar -xzf packaged-app.tar.gz
+          if [ "${{ matrix.os }}" = "macos-latest" ]; then
+            xattr -cr out/ || true
+          fi
+
+      - name: Download Build Artifact (Windows)
+        if: matrix.os == 'windows-latest'
         uses: actions/download-artifact@v4
         with:
           name: packaged-app-${{ matrix.os }}
           path: out/
-
-      - name: Fix App Permissions (macOS & Linux)
-        if: matrix.os != 'windows-latest'
-        run: |
-          if [ "${{ matrix.os }}" = "macos-latest" ]; then
-            xattr -cr out/ || true
-          fi
-          find out -type f \( -name "rombox" -o -name "rombox Helper*" -o -name "chrome_crashpad_handler" -o -name "ShipIt" \) -exec chmod +x {} +
 
       - name: Run Tests (Linux with Xvfb)
         if: matrix.os == 'ubuntu-latest'
