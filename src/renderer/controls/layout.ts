@@ -52,9 +52,12 @@ import stickRDown from "../assets/controls/Nintendo Switch/Vector/switch_stick_r
 import stickRLeft from "../assets/controls/Nintendo Switch/Vector/switch_stick_r_left.svg";
 import stickRRight from "../assets/controls/Nintendo Switch/Vector/switch_stick_r_right.svg";
 
-// @ts-expect-error webpack require.context
-const svgContext = require.context("../assets/controls", true, /\.svg$/);
-svgContext.keys().forEach(svgContext);
+const hasContext = typeof (require as any).context === 'function';
+if (hasContext) {
+  // @ts-expect-error webpack require.context
+  const svgContext = require.context("../assets/controls", true, /\.svg$/);
+  svgContext.keys().forEach(svgContext);
+}
 
 export const DIR_ICONS = { up: dpadUp, down: dpadDown, left: dpadLeft, right: dpadRight } as const;
 
