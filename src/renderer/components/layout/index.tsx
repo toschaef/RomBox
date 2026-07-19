@@ -178,6 +178,7 @@ export default function Layout() {
             <NavLink 
               to={`/${p.toLowerCase()}`}
               key={p}
+              draggable={false}
               className={({ isActive }) => `
                 flex items-center gap-3 px-4 py-3 border-l-2 transition-all font-semibold
                 ${isActive 
@@ -191,7 +192,7 @@ export default function Layout() {
         </nav>
 
         <div className="p-6 text-xs text-fg-muted opacity-50 text-center">
-          <a href="https://github.com/toschaef/RomBox" target="_blank" rel="noreferrer" className="underline hover:text-fg-primary">
+          <a href="https://github.com/toschaef/RomBox" target="_blank" rel="noreferrer" draggable={false} className="underline hover:text-fg-primary">
             Codebase
           </a>  
         </div>
