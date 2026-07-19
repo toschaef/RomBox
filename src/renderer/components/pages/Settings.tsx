@@ -13,6 +13,16 @@ export default function Settings() {
   const [settings, setSettings] = useState<Partial<SettingsShape>>({});
   const { setGlobalLoading, setGlobalStatus } = useOutletContext<LayoutContextType>();
 
+  const [alignGames, setAlignGames] = useState(() => {
+    const saved = localStorage.getItem('rombox:library:alignGames');
+    return saved ? saved === 'true' : false;
+  });
+
+  const handleAlignGamesChange = (checked: boolean) => {
+    setAlignGames(checked);
+    localStorage.setItem('rombox:library:alignGames', String(checked));
+  };
+
   useEffect(() => {
     settingsClient.getMany(["setup.autoInstallEngines", "launch.fullscreen", "launch.resolution"]).then(setSettings);
   }, []);
@@ -71,6 +81,22 @@ export default function Settings() {
                   id="launchFullscreen"
                   checked={settings["launch.fullscreen"] ?? false}
                   onChange={(checked) => updateSetting("launch.fullscreen", checked)}
+                />
+              </div>
+            </div>
+            <div className="h-px bg-border-subtle" />
+
+            <div>
+              <div className="flex justify-between items-center">
+                <div>
+                   <h3 className="font-bold text-fg-primary">Align Games</h3>
+                   <p className="text-sm text-fg-muted">Align library game cards vertically in rows or stack them organically</p>
+                </div>
+              
+                <ToggleSwitch
+                  id="alignGames"
+                  checked={alignGames}
+                  onChange={handleAlignGamesChange}
                 />
               </div>
             </div>
