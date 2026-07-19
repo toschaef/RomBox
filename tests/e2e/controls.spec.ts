@@ -100,4 +100,29 @@ test.describe('RomBox Controls E2E Suite', () => {
     const boundText = cardA.getByText('X', { exact: true });
     await expect(boundText).toBeVisible();
   });
+
+  test('should display console-specific SVGs when switching console layouts', async () => {
+    const controlsPage = new ControlsPage(page);
+
+    // 1. Navigate to Controls Page
+    await controlsPage.waitForRoot();
+    await controlsPage.navigateToControls();
+
+    // 2. Switch to Console mode
+    await page.getByRole('button', { name: 'Console' }).click();
+
+    // 3. Select PlayStation 1 and verify Cross button image
+    await page.locator('select').nth(1).selectOption({ label: 'PlayStation 1' });
+    const crossCard = controlsPage.getControlCard('Cross');
+    await expect(crossCard).toBeVisible();
+    const crossImg = crossCard.locator('img');
+    await expect(crossImg).toHaveAttribute('src', /playstation_button_cross_outline.*\.svg/);
+
+    // 4. Select GameCube and verify A button image
+    await page.locator('select').nth(1).selectOption({ label: 'GameCube' });
+    const gcA_Card = controlsPage.getControlCard('A');
+    await expect(gcA_Card).toBeVisible();
+    const gcA_Img = gcA_Card.locator('img');
+    await expect(gcA_Img).toHaveAttribute('src', /gamecube_button_a_outline.*\.svg/);
+  });
 });

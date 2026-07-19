@@ -29,6 +29,7 @@ const STORAGE_KEYS = {
   sortBy: 'rombox:library:sortBy',
   groupBy: 'rombox:library:groupBy',
   gridSize: 'rombox:library:gridSize',
+  alignGames: 'rombox:library:alignGames',
 };
 
 export default function Library() {
@@ -48,6 +49,10 @@ export default function Library() {
   const [gridSize, setGridSizeState] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.gridSize);
     return saved ? parseInt(saved, 10) : 3;
+  });
+  const [alignGames] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.alignGames);
+    return saved ? saved === 'true' : false;
   });
 
   const setSortBy = (value: SortOption) => {
@@ -219,6 +224,7 @@ export default function Library() {
             onUpdate={(game: Game) => setEditingGame(game)}
             lastBiosUpdate={lastBiosUpdate}
             gridSize={gridSize}
+            alignGames={alignGames}
           />
         </div>
       ))}

@@ -1,5 +1,16 @@
 import { useMemo } from "react";
 import type { DpadBinding, StickBinding, DigitalBinding } from "../../../shared/types/controls";
+import genericUp from "../../assets/controls/Nintendo Switch/Vector/switch_dpad_up_outline.svg";
+import genericDown from "../../assets/controls/Nintendo Switch/Vector/switch_dpad_down_outline.svg";
+import genericLeft from "../../assets/controls/Nintendo Switch/Vector/switch_dpad_left_outline.svg";
+import genericRight from "../../assets/controls/Nintendo Switch/Vector/switch_dpad_right_outline.svg";
+
+const GENERIC_DIR_ICONS = {
+  up: genericUp,
+  down: genericDown,
+  left: genericLeft,
+  right: genericRight,
+};
 
 function fmtStick(s: StickBinding) {
   return `${s.stick === "left" ? "Left Stick" : "Right Stick"}`;
@@ -30,12 +41,21 @@ interface Props {
 
   stickChoice?: "left" | "right";
   onSetMode: (mode: "dpad" | "stick") => void;
-
-  hint?: string;
   isPressed?: (d?: DigitalBinding) => boolean;
+  dirIcons?: { up: string; down: string; left: string; right: string };
 }
 
-function Cell({ label, value, isPressed }: { label: string; value?: DigitalBinding; isPressed?: (d?: DigitalBinding) => boolean }) {
+function Cell({
+  label,
+  value,
+  isPressed,
+  iconSrc,
+}: {
+  label: string;
+  value?: DigitalBinding;
+  isPressed?: (d?: DigitalBinding) => boolean;
+  iconSrc?: string;
+}) {
   const mapped = !!value;
   const active = isPressed?.(value) ?? false;
   const transitionClass = active ? "duration-75 ease-out" : "duration-1000 ease-out";
@@ -45,7 +65,7 @@ function Cell({ label, value, isPressed }: { label: string; value?: DigitalBindi
       flex flex-col items-center justify-center 
       rounded-sm border p-1
       min-h-14
-      h-24
+      h-36
       flex-1
       transition-all ${transitionClass}
       ${active 
@@ -57,6 +77,11 @@ function Cell({ label, value, isPressed }: { label: string; value?: DigitalBindi
       <div className={`text-[9px] uppercase tracking-wider font-bold mb-0.5 transition-colors ${transitionClass} ${active ? "text-accent-secondary" : "text-fg-muted"}`}>
         {label}
       </div>
+      {iconSrc && (
+        <div className={`my-1 p-1 rounded-sm border transition-colors ${transitionClass} ${active ? "bg-accent-muted border-accent-secondary shadow-inner" : "border-border-subtle bg-bg-primary"}`}>
+          <img src={iconSrc} alt={label} className="w-12 h-12 object-contain" />
+        </div>
+      )}
       <div className={`
         text-xs font-mono font-bold truncate max-w-full px-1 transition-colors ${transitionClass}
         ${active ? "text-accent-highlight" : (mapped ? "text-accent-primary" : "text-fg-muted/50")}
@@ -67,19 +92,27 @@ function Cell({ label, value, isPressed }: { label: string; value?: DigitalBindi
   );
 }
 
-function DpadGrid({ d, isPressed }: { d: DpadBinding; isPressed?: (d?: DigitalBinding) => boolean }) {
+function DpadGrid({
+  d,
+  isPressed,
+  dirIcons,
+}: {
+  d: DpadBinding;
+  isPressed?: (d?: DigitalBinding) => boolean;
+  dirIcons: { up: string; down: string; left: string; right: string };
+}) {
   return (
     <div className="mt-4 flex gap-2 pointer-events-none mx-auto w-full">
-      <Cell label="Left" value={d.left} isPressed={isPressed} />
-      <Cell label="Down" value={d.down} isPressed={isPressed} />
-      <Cell label="Up" value={d.up} isPressed={isPressed} />
-      <Cell label="Right" value={d.right} isPressed={isPressed} />
+      <Cell label="Left" value={d.left} isPressed={isPressed} iconSrc={dirIcons.left} />
+      <Cell label="Down" value={d.down} isPressed={isPressed} iconSrc={dirIcons.down} />
+      <Cell label="Up" value={d.up} isPressed={isPressed} iconSrc={dirIcons.up} />
+      <Cell label="Right" value={d.right} isPressed={isPressed} iconSrc={dirIcons.right} />
     </div>
   );
 }
 
 export default function GroupBindingCard(props: Props) {
-  const { title, value, listening, active, onBindDpad, onBindStick, onClear, onSetMode, hint, isPressed } = props;
+  const { title, value, listening, active, onBindDpad, onBindStick, onClear, onSetMode, isPressed, dirIcons } = props;
 
   const mode: "dpad" | "stick" = value.type === "dpad" ? "dpad" : "stick";
 
@@ -98,7 +131,7 @@ export default function GroupBindingCard(props: Props) {
     <div
       onClick={bind}
       className={`
-        relative w-full p-4 rounded-sm border text-left cursor-pointer my-6
+        relative w-full p-4 rounded-sm border text-left cursor-pointer
         transition-all ${transitionClass}
         ${listening ? "border-accent-secondary bg-accent-muted/30 ring-1 ring-accent-secondary" : "border-border-subtle bg-bg-secondary hover:bg-bg-muted hover:border-border-muted"}
       `}
@@ -144,7 +177,7 @@ export default function GroupBindingCard(props: Props) {
                     e.stopPropagation();
                     onClear();
                   }}
-                  className="text-xs text-fg-muted hover:text-red-400 px-2 py-1 transition-colors duration-200"
+                  className="text-xs text-fg-muted hover:text-red-400 hover:border-red-400/50 px-2.5 py-1 rounded-sm border border-border-subtle bg-bg-primary/50 transition-colors duration-200"
                 >
                   Clear
                 </button>
@@ -183,12 +216,12 @@ export default function GroupBindingCard(props: Props) {
               {listening ? (
                 <div className="text-xs mt-1 font-mono text-accent-secondary animate-pulse">Press input...</div>
               ) : (
-                <DpadGrid d={value} isPressed={isPressed} />
+                <DpadGrid d={value} isPressed={isPressed} dirIcons={dirIcons ?? GENERIC_DIR_ICONS} />
               )}
             </div>
           )}
 
-          {hint ? <div className="text-[10px] mt-2 text-fg-muted uppercase tracking-widest font-bold">{hint}</div> : null}
+          
         </div>
       </div>
     </div>

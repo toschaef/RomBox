@@ -4,7 +4,7 @@ import { setConsoleDigital } from "./consolePath";
 
 export { AXIS_THRESHOLD, type InputEvent } from "../../shared/controls/inputTypes";
 
-/* ── Generic accessor pattern ───────────────────────────── */
+// generic accessor pattern
 
 export interface BindingAccessor<T> {
   setDigital(data: T, path: string, value: DigitalBinding): T;
@@ -13,7 +13,7 @@ export interface BindingAccessor<T> {
   setStick(data: T, group: string, stick: StickBinding): T;
 }
 
-/* ── Profile accessor ───────────────────────────────────── */
+// profile accessor
 
 export const profileAccessor: BindingAccessor<ControlsProfile> = {
   setDigital(profile, path, value) {
@@ -52,7 +52,22 @@ export const profileAccessor: BindingAccessor<ControlsProfile> = {
   },
 };
 
-/* ── Console layout accessor ────────────────────────────── */
+// console layout accessor
+
+function setConsoleNestedBinding(layout: AnyConsoleLayout, group: string, value: DpadBinding | StickBinding): AnyConsoleLayout {
+  const next = structuredClone(layout);
+  let parent = next.bindings as unknown as Record<string, unknown>;
+  const parts = group.split(".");
+  for (let i = 0; i < parts.length - 1; i++) {
+    const part = parts[i];
+    if (!parent[part] || typeof parent[part] !== "object") {
+      parent[part] = {};
+    }
+    parent = parent[part] as Record<string, unknown>;
+  }
+  parent[parts[parts.length - 1]] = value;
+  return next;
+}
 
 export const consoleAccessor: BindingAccessor<AnyConsoleLayout> = {
   setDigital(layout, path, value) {
@@ -72,37 +87,15 @@ export const consoleAccessor: BindingAccessor<AnyConsoleLayout> = {
   },
 
   setDpad(layout, group, nextDpad) {
-    const next = structuredClone(layout);
-    let parent = next.bindings as unknown as Record<string, unknown>;
-    const parts = group.split(".");
-    for (let i = 0; i < parts.length - 1; i++) {
-      const part = parts[i];
-      if (!parent[part] || typeof parent[part] !== "object") {
-        parent[part] = {};
-      }
-      parent = parent[part] as Record<string, unknown>;
-    }
-    parent[parts[parts.length - 1]] = nextDpad;
-    return next;
+    return setConsoleNestedBinding(layout, group, nextDpad);
   },
 
   setStick(layout, group, nextStick) {
-    const next = structuredClone(layout);
-    let parent = next.bindings as unknown as Record<string, unknown>;
-    const parts = group.split(".");
-    for (let i = 0; i < parts.length - 1; i++) {
-      const part = parts[i];
-      if (!parent[part] || typeof parent[part] !== "object") {
-        parent[part] = {};
-      }
-      parent = parent[part] as Record<string, unknown>;
-    }
-    parent[parts[parts.length - 1]] = nextStick;
-    return next;
+    return setConsoleNestedBinding(layout, group, nextStick);
   },
 };
 
-/* ── Bind plans ─────────────────────────────────────────── */
+// binf plans
 
 export type BindPlan =
   | { kind: "digital"; path: string }
@@ -115,7 +108,7 @@ export type BindState =
   | { active: false }
   | { active: true; plan: BindPlan; step: number; startedAt: number };
 
-/* ── Core functions ─────────────────────────────────────── */
+// core functions
 
 function digitalFromEvent(e: InputEvent): DigitalBinding | null {
   if (e.kind === "key") return { type: "key", code: e.code };
@@ -157,31 +150,29 @@ export function applyBindEvent<T>(
 
   const { plan, step } = state;
 
-  if (plan.kind === "digital") {
-    const d = digitalFromEvent(e);
-    if (!d) return null;
-    const nextData = accessor.setDigital(data, plan.path, d);
-    return { data: nextData, state: { active: false } };
-  }
-
-  if (plan.kind === "dpad") {
+  if (plan.kind === "digital" || plan.kind === "dpad") {
     const d = digitalFromEvent(e);
     if (!d) return null;
 
-    const current: DpadBinding = accessor.getDpad(data, plan.group);
-    const next: DpadBinding = structuredClone(current);
+    if (plan.kind === "digital") {
+      const nextData = accessor.setDigital(data, plan.path, d);
+      return { data: nextData, state: { active: false } };
+    } else {
+      const current: DpadBinding = accessor.getDpad(data, plan.group);
+      const next: DpadBinding = structuredClone(current);
 
-    if (step === 0) next.up = d;
-    else if (step === 1) next.down = d;
-    else if (step === 2) next.left = d;
-    else if (step === 3) next.right = d;
-    else return { data, state: { active: false } };
+      if (step === 0) next.up = d;
+      else if (step === 1) next.down = d;
+      else if (step === 2) next.left = d;
+      else if (step === 3) next.right = d;
+      else return { data, state: { active: false } };
 
-    const nextData = accessor.setDpad(data, plan.group, next);
+      const nextData = accessor.setDpad(data, plan.group, next);
 
-    const nextStep = step + 1;
-    if (nextStep <= 3) return { data: nextData, state: { ...state, step: nextStep } };
-    return { data: nextData, state: { active: false } };
+      const nextStep = step + 1;
+      if (nextStep <= 3) return { data: nextData, state: { ...state, step: nextStep } };
+      return { data: nextData, state: { active: false } };
+    }
   }
 
   if (plan.kind === "stick") {

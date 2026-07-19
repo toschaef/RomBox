@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import type { AnyConsoleLayout, DigitalBinding, DpadBinding, StickBinding } from "../../../shared/types/controls";
 import type { BindPlanConsole } from "../../controls/bindMachine";
-import { SECTION_ORDER } from "../../controls/layout";
-import { getConsoleLayoutItems } from "../../controls/consoleLayouts";
+import { SECTION_ORDER, LEFT_STICK_SWITCH_ICONS, RIGHT_STICK_SWITCH_ICONS } from "../../controls/layout";
+import { getConsoleLayoutItems, getConsoleDpadIcons } from "../../controls/consoleLayouts";
 import GroupBindingCard from "./GroupBindingCard";
 import DigitalBindingCard from "./DigitalBindingCard";
 import {
@@ -34,6 +34,7 @@ export default function ConsoleControlsView(props: ConsoleControlsViewProps) {
     props;
 
   const consoleItems = useMemo(() => getConsoleLayoutItems(layout.consoleId), [layout.consoleId]);
+  const dpadIcons = useMemo(() => getConsoleDpadIcons(layout.consoleId), [layout.consoleId]);
 
   const sectionMap = useMemo(() => {
     const map = new Map<string, Array<ReturnType<typeof getConsoleLayoutItems>[number]>>();
@@ -58,7 +59,7 @@ export default function ConsoleControlsView(props: ConsoleControlsViewProps) {
           const active = v.type === "stick" ? isStickPressed(v) : isDpadPressed(v);
 
           return (
-            <div key={sec.key}>
+            <div key={sec.key} className="mb-4">
               <GroupBindingCard
                 title={groupItem.label ?? "Move"}
                 value={v}
@@ -72,7 +73,7 @@ export default function ConsoleControlsView(props: ConsoleControlsViewProps) {
                 onBindDpad={() => startBind({ kind: "dpad", group: "move" })}
                 onBindStick={() => startBind({ kind: "stick", group: "move", stick: "left" })}
                 onClear={() => void saveLayout(clearConsoleGroup(layout, "move"))}
-                hint={v.type === "stick" ? "Binds X then Y" : "Binds Up, Down, Left, Right"}
+                dirIcons={LEFT_STICK_SWITCH_ICONS}
               />
             </div>
           );
@@ -86,7 +87,7 @@ export default function ConsoleControlsView(props: ConsoleControlsViewProps) {
           const active = v.type === "stick" ? isStickPressed(v) : isDpadPressed(v as DpadBinding);
 
           return (
-            <div key={sec.key}>
+            <div key={sec.key} className="mb-4">
               <GroupBindingCard
                 title={groupItem.label ?? "D-Pad"}
                 value={v}
@@ -97,7 +98,7 @@ export default function ConsoleControlsView(props: ConsoleControlsViewProps) {
                 onBindDpad={() => startBind({ kind: "dpad", group: "dpad" })}
                 onBindStick={() => void 0}
                 onClear={() => void saveLayout(clearConsoleGroup(layout, "dpad"))}
-                hint="Binds Up, Down, Left, Right"
+                dirIcons={dpadIcons}
               />
             </div>
           );
@@ -112,7 +113,7 @@ export default function ConsoleControlsView(props: ConsoleControlsViewProps) {
           const active = v.type === "stick" ? isStickPressed(v) : isDpadPressed(v);
 
           return (
-            <div key={sec.key}>
+            <div key={sec.key} className="mb-4">
               <GroupBindingCard
                 title={groupItem.label ?? "C Buttons"}
                 value={v}
@@ -126,14 +127,14 @@ export default function ConsoleControlsView(props: ConsoleControlsViewProps) {
                 onBindDpad={() => startBind({ kind: "dpad", group: groupId })}
                 onBindStick={() => startBind({ kind: "stick", group: groupId, stick: "right" })}
                 onClear={() => void saveLayout(clearConsoleGroup(layout, groupId))}
-                hint={v.type === "stick" ? "Binds X then Y" : "Binds Up, Down, Left, Right"}
+                dirIcons={RIGHT_STICK_SWITCH_ICONS}
               />
             </div>
           );
         }
 
         return (
-          <div key={sec.key} className="mb-10">
+          <div key={sec.key} className="mb-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
               {items
                 .filter((x) => x.kind === "digital")

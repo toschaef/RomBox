@@ -26,6 +26,27 @@ export function makeDefaultConsoleBindings(consoleId: ConsoleID, profile: Contro
     };
   }
 
+  if (consoleId === "gc") {
+    return {
+      ...common,
+      special: {
+        type: "gc",
+        z: { type: "key", code: "Digit0" },
+      },
+    };
+  }
+
+  if (consoleId === "wii") {
+    return {
+      ...common,
+      special: {
+        type: "wii",
+        nunchuckC: { type: "key", code: "Key=" },
+        nunchuckZ: { type: "key", code: "Key-" },
+      },
+    };
+  }
+
   return common;
 }
 
