@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { ControlsProfile, DigitalBinding, DpadBinding, StickBinding } from "../../../shared/types/controls";
 import type { BindPlan } from "../../controls/bindMachine";
-import { SECTION_ORDER, STANDARD_LAYOUT } from "../../controls/layout";
+import { SECTION_ORDER, STANDARD_LAYOUT, DIR_ICONS } from "../../controls/layout";
 import GroupBindingCard from "./GroupBindingCard";
 import DigitalBindingCard from "./DigitalBindingCard";
 import { getDigital, clearDigital, setGroupMode, clearGroup, type DigitalPath } from "./controlsUtils";
@@ -43,7 +43,7 @@ export default function StandardControlsView(props: StandardControlsViewProps) {
           const active = v.type === "stick" ? isStickPressed(v) : isDpadPressed(v);
 
           return (
-            <div key={sec.key}>
+            <div key={sec.key} className="mb-4">
               <GroupBindingCard
                 title="Move"
                 value={v}
@@ -57,7 +57,7 @@ export default function StandardControlsView(props: StandardControlsViewProps) {
                 onBindDpad={() => startBind({ kind: "dpad", group: "move" })}
                 onBindStick={() => startBind({ kind: "stick", group: "move", stick: "left" })}
                 onClear={() => void saveProfile(clearGroup(profile, "move"))}
-                hint={v.type === "stick" ? "Binds X then Y" : "Binds Up, Down, Left, Right"}
+                dirIcons={DIR_ICONS}
               />
             </div>
           );
@@ -68,7 +68,7 @@ export default function StandardControlsView(props: StandardControlsViewProps) {
           const active = isDpadPressed(v);
 
           return (
-            <div key={sec.key}>
+            <div key={sec.key} className="mb-4">
               <GroupBindingCard
                 title="D-Pad"
                 value={v}
@@ -79,7 +79,7 @@ export default function StandardControlsView(props: StandardControlsViewProps) {
                 onBindDpad={() => startBind({ kind: "dpad", group: "dpad" })}
                 onBindStick={() => void 0}
                 onClear={() => void saveProfile(clearGroup(profile, "dpad"))}
-                hint="Binds Up, Down, Left, Right"
+                dirIcons={DIR_ICONS}
               />
             </div>
           );
@@ -90,7 +90,7 @@ export default function StandardControlsView(props: StandardControlsViewProps) {
           const active = v.type === "stick" ? isStickPressed(v) : isDpadPressed(v);
 
           return (
-            <div key={sec.key}>
+            <div key={sec.key} className="mb-4">
               <GroupBindingCard
                 title="Look"
                 value={v}
@@ -104,14 +104,14 @@ export default function StandardControlsView(props: StandardControlsViewProps) {
                 onBindDpad={() => startBind({ kind: "dpad", group: "look" })}
                 onBindStick={() => startBind({ kind: "stick", group: "look", stick: "right" })}
                 onClear={() => void saveProfile(clearGroup(profile, "look"))}
-                hint={v.type === "stick" ? "Binds X then Y" : "Binds Up, Down, Left, Right"}
+                dirIcons={DIR_ICONS}
               />
             </div>
           );
         }
 
         return (
-          <div key={sec.key} className="mb-10">
+          <div key={sec.key} className="mb-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
               {items
                 .filter((x) => x.kind === "digital")

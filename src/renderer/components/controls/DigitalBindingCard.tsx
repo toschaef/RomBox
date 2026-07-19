@@ -33,47 +33,47 @@ export default function DigitalBindingCard(props: {
         ${isActive ? "ring-1 ring-accent-secondary shadow-[0_0_30px_rgba(124,58,237,0.5)] border-accent-secondary/50 bg-accent-muted/20 z-10 scale-[1.02]" : "scale-100"}
       `}
     >
-      <div className="flex items-center gap-4">
-        <div
-          className={`
-            p-2 rounded-sm border transition-colors ${transitionClass}
-            ${isActive ? "bg-accent-secondary border-accent-highlight shadow-inner" : "border-border-subtle bg-bg-primary"}
-          `}
-        >
-          <img src={iconSrc} alt={title} className="w-8 h-8 object-contain" />
-        </div>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          <div
+            className={`
+              p-1.5 rounded-sm border transition-colors ${transitionClass}
+              ${isActive ? "bg-accent-secondary border-accent-highlight shadow-inner" : "border-border-subtle bg-bg-primary"}
+            `}
+          >
+            <img src={iconSrc} alt={title} className="w-12 h-12 object-contain" />
+          </div>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex justify-between items-center">
+          <div className="flex-1 min-w-0">
             <span className={`font-bold text-sm transition-colors ${transitionClass} ${isActive ? "text-white" : "text-fg-primary"}`}>
               {title}
             </span>
 
-            {has && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onClear();
-                }}
-                className="text-xs text-fg-muted hover:text-red-400 px-2 py-1 transition-colors duration-200"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-
-          <div
-            className={`
-              text-xs mt-1 truncate font-mono transition-colors ${transitionClass}
-              ${isListening ? "text-accent-secondary animate-pulse" : ""}
-              ${!isListening && isActive ? "text-accent-highlight" : ""}
-              ${!isListening && !isActive ? "text-fg-muted" : ""}
-            `}
-          >
-            {isListening ? "Press input" : formatDigital(binding)}
+            <div
+              className={`
+                text-xs mt-1 truncate font-mono transition-colors ${transitionClass}
+                ${isListening ? "text-accent-secondary animate-pulse" : ""}
+                ${!isListening && isActive ? "text-accent-highlight" : ""}
+                ${!isListening && !isActive ? "text-fg-muted" : ""}
+              `}
+            >
+              {isListening ? "Press input" : formatDigital(binding)}
+            </div>
           </div>
         </div>
+
+        {has && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClear();
+            }}
+            className="text-xs text-fg-muted hover:text-red-400 hover:border-red-400/50 px-2.5 py-1 rounded-sm border border-border-subtle bg-bg-primary/50 transition-colors duration-200"
+          >
+            Clear
+          </button>
+        )}
       </div>
     </div>
   );
