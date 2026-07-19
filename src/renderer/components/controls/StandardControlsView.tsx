@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { ControlsProfile, DigitalBinding, DpadBinding, StickBinding } from "../../../shared/types/controls";
 import type { BindPlan } from "../../controls/bindMachine";
-import { SECTION_ORDER, STANDARD_LAYOUT, DIR_ICONS } from "../../controls/layout";
+import { SECTION_ORDER, STANDARD_LAYOUT, DIR_ICONS, LEFT_STICK_SWITCH_ICONS, RIGHT_STICK_SWITCH_ICONS } from "../../controls/layout";
 import GroupBindingCard from "./GroupBindingCard";
 import DigitalBindingCard from "./DigitalBindingCard";
 import { getDigital, clearDigital, setGroupMode, clearGroup, type DigitalPath } from "./controlsUtils";
@@ -57,7 +57,7 @@ export default function StandardControlsView(props: StandardControlsViewProps) {
                 onBindDpad={() => startBind({ kind: "dpad", group: "move" })}
                 onBindStick={() => startBind({ kind: "stick", group: "move", stick: "left" })}
                 onClear={() => void saveProfile(clearGroup(profile, "move"))}
-                dirIcons={DIR_ICONS}
+                dirIcons={LEFT_STICK_SWITCH_ICONS}
               />
             </div>
           );
@@ -104,7 +104,7 @@ export default function StandardControlsView(props: StandardControlsViewProps) {
                 onBindDpad={() => startBind({ kind: "dpad", group: "look" })}
                 onBindStick={() => startBind({ kind: "stick", group: "look", stick: "right" })}
                 onClear={() => void saveProfile(clearGroup(profile, "look"))}
-                dirIcons={DIR_ICONS}
+                dirIcons={RIGHT_STICK_SWITCH_ICONS}
               />
             </div>
           );

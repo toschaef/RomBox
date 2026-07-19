@@ -42,7 +42,35 @@ import btnSelect from "../assets/controls/PlayStation Series/Vector/playstation3
 import btnL3 from "../assets/controls/Nintendo Switch/Vector/switch_stick_l_press.svg";
 import btnR3 from "../assets/controls/Nintendo Switch/Vector/switch_stick_r_press.svg";
 
+import stickLUp from "../assets/controls/Nintendo Switch/Vector/switch_stick_l_up.svg";
+import stickLDown from "../assets/controls/Nintendo Switch/Vector/switch_stick_l_down.svg";
+import stickLLeft from "../assets/controls/Nintendo Switch/Vector/switch_stick_l_left.svg";
+import stickLRight from "../assets/controls/Nintendo Switch/Vector/switch_stick_l_right.svg";
+
+import stickRUp from "../assets/controls/Nintendo Switch/Vector/switch_stick_r_up.svg";
+import stickRDown from "../assets/controls/Nintendo Switch/Vector/switch_stick_r_down.svg";
+import stickRLeft from "../assets/controls/Nintendo Switch/Vector/switch_stick_r_left.svg";
+import stickRRight from "../assets/controls/Nintendo Switch/Vector/switch_stick_r_right.svg";
+
+// @ts-expect-error webpack require.context
+const svgContext = require.context("../assets/controls", true, /\.svg$/);
+svgContext.keys().forEach(svgContext);
+
 export const DIR_ICONS = { up: dpadUp, down: dpadDown, left: dpadLeft, right: dpadRight } as const;
+
+export const LEFT_STICK_SWITCH_ICONS = {
+  up: stickLUp,
+  down: stickLDown,
+  left: stickLLeft,
+  right: stickLRight,
+} as const;
+
+export const RIGHT_STICK_SWITCH_ICONS = {
+  up: stickRUp,
+  down: stickRDown,
+  left: stickRLeft,
+  right: stickRRight,
+} as const;
 
 export const STANDARD_LAYOUT: ControlItem[] = [
   { kind: "group", id: "move", label: "Move", section: "leftStick" },

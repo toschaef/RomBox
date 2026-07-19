@@ -38,7 +38,7 @@ export default function DigitalBindingCard(props: {
           <div
             className={`
               p-1.5 rounded-sm border transition-colors ${transitionClass}
-              ${isActive ? "bg-accent-secondary border-accent-highlight shadow-inner" : "border-border-subtle bg-bg-primary"}
+              ${isActive ? "bg-accent-muted border-accent-secondary shadow-inner" : "border-border-subtle bg-bg-primary"}
             `}
           >
             <img src={iconSrc} alt={title} className="w-12 h-12 object-contain" />

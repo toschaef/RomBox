@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { AnyConsoleLayout, DigitalBinding, DpadBinding, StickBinding } from "../../../shared/types/controls";
 import type { BindPlanConsole } from "../../controls/bindMachine";
-import { SECTION_ORDER } from "../../controls/layout";
+import { SECTION_ORDER, LEFT_STICK_SWITCH_ICONS, RIGHT_STICK_SWITCH_ICONS } from "../../controls/layout";
 import { getConsoleLayoutItems, getConsoleDpadIcons } from "../../controls/consoleLayouts";
 import GroupBindingCard from "./GroupBindingCard";
 import DigitalBindingCard from "./DigitalBindingCard";
@@ -73,7 +73,7 @@ export default function ConsoleControlsView(props: ConsoleControlsViewProps) {
                 onBindDpad={() => startBind({ kind: "dpad", group: "move" })}
                 onBindStick={() => startBind({ kind: "stick", group: "move", stick: "left" })}
                 onClear={() => void saveLayout(clearConsoleGroup(layout, "move"))}
-                dirIcons={dpadIcons}
+                dirIcons={LEFT_STICK_SWITCH_ICONS}
               />
             </div>
           );
@@ -127,7 +127,7 @@ export default function ConsoleControlsView(props: ConsoleControlsViewProps) {
                 onBindDpad={() => startBind({ kind: "dpad", group: groupId })}
                 onBindStick={() => startBind({ kind: "stick", group: groupId, stick: "right" })}
                 onClear={() => void saveLayout(clearConsoleGroup(layout, groupId))}
-                dirIcons={dpadIcons}
+                dirIcons={RIGHT_STICK_SWITCH_ICONS}
               />
             </div>
           );

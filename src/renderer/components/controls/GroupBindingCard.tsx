@@ -78,7 +78,7 @@ function Cell({
         {label}
       </div>
       {iconSrc && (
-        <div className={`my-1 p-1 rounded-sm border transition-colors ${transitionClass} ${active ? "bg-accent-secondary border-accent-highlight shadow-inner" : "border-border-subtle bg-bg-primary"}`}>
+        <div className={`my-1 p-1 rounded-sm border transition-colors ${transitionClass} ${active ? "bg-accent-muted border-accent-secondary shadow-inner" : "border-border-subtle bg-bg-primary"}`}>
           <img src={iconSrc} alt={label} className="w-12 h-12 object-contain" />
         </div>
       )}
