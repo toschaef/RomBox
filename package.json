@@ -1,7 +1,7 @@
 {
   "name": "rombox",
   "productName": "rombox",
-  "version": "0.11.0",
+  "version": "0.10.1",
   "description": "RomBox emulator frontend",
   "main": ".webpack/main",
   "config": {
