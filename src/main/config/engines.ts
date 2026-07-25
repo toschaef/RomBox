@@ -109,9 +109,11 @@ export const ENGINES: Record<string, EngineDefinition> = {
     name: "Ares",
     consoles: ["n64"],
     downloads: {
+      win32: `https://github.com/ares-emulator/ares/releases/download/v${ARES_VERSION}/ares-windows-amd64.zip`,
       darwin: `https://github.com/ares-emulator/ares/releases/download/v${ARES_VERSION}/ares-macos-universal.zip`,
     },
     binaries: {
+      win32: `ares-v${ARES_VERSION}/ares.exe`,
       darwin: `ares-v${ARES_VERSION}/ares.app/Contents/MacOS/ares`,
     },
     getLaunchCommand: (game, binPath, options?: LaunchOptions) => {

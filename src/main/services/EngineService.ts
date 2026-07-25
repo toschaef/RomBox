@@ -50,7 +50,7 @@ function resolveNativeHelperPath(helperName: string): string | null {
 }
 
 function installAzaharSdlProbe(): { ok: boolean; dest?: string; reason?: string } {
-  const srcName = process.platform === "darwin" ? "sdlprobe-macos" : "sdlprobe";
+  const srcName = process.platform === "win32" ? "sdlprobe.exe" : (process.platform === "darwin" ? "sdlprobe-macos" : "sdlprobe");
   const src = resolveNativeHelperPath(srcName);
   if (!src) return { ok: false, reason: `native helper missing: ${srcName}` };
 
