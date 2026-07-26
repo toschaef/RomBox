@@ -93,7 +93,7 @@ describe("Extractor", () => {
 
       await expect(
         Extractor.extract7z("/path/archive.7z", "/path/out", "game.nes")
-      ).rejects.toThrow("7-Zip exited with code 1");
+      ).rejects.toThrow("Extraction exited with code 1");
     });
   });
 

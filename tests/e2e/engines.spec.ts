@@ -48,70 +48,56 @@ test.describe('RomBox Engines E2E Suite', () => {
     }
   });
 
-  test('should handle engine installer UI with mock progress stubs', async () => {
+  test('should successfully install all available emulators', async () => {
+    test.setTimeout(600000); // 10 minutes timeout for all downloads
+
     const enginesPage = new EnginesPage(page);
-
-    // Intercept engine IPC calls in the main process to mock installation progress
-    await electronApp.evaluate(async (electronModule: unknown) => {
-      const { ipcMain } = electronModule as typeof import('electron');
-
-      ipcMain.removeHandler('engine:get');
-      ipcMain.handle('engine:get', async () => {
-        return [
-          {
-            engineId: 'mesen',
-            name: 'Mesen',
-            platform: 'darwin',
-            status: 'not_installed',
-            consoles: ['nes', 'snes'],
-            needsBios: false,
-            biosMissingRequired: [] as string[],
-            biosMissingWarning: [] as string[]
-          }
-        ];
-      });
-
-      ipcMain.removeHandler('engine:install-engine');
-      ipcMain.handle('engine:install-engine', async (event: unknown) => {
-        const webContents = (event as { sender: { send: (channel: string, message: string) => void } }).sender;
-        
-        setTimeout(() => {
-          try {
-            webContents.send('install-status-update', 'Downloading emulator files...');
-          } catch (e) { /* ignore */ }
-        }, 50);
-
-        setTimeout(() => {
-          try {
-            webContents.send('install-status-update', 'Extracting files to directory...');
-          } catch (e) { /* ignore */ }
-        }, 200);
-
-        setTimeout(() => {
-          try {
-            webContents.send('install-status-update', 'complete');
-          } catch (e) { /* ignore */ }
-        }, 400);
-
-        return { success: true };
-      });
-    });
 
     // 1. Navigate to Engines Page
     await enginesPage.waitForRoot();
     await enginesPage.navigateToEngines();
     await expect(page.url()).toContain('/engines');
 
-    // 2. Click "Install" on the Mesen engine card
-    const installButton = enginesPage.getInstallButton('Mesen');
-    await expect(installButton).toBeVisible();
-    await enginesPage.installEngine('Mesen');
+    // Wait for the UI to populate the engines list
+    await expect(page.locator('text=Mesen 2')).toBeVisible({ timeout: 15000 });
 
-    // 3. Verify that progress state messages appear sequentially on the UI
-    await expect(enginesPage.downloadingLabel).toBeVisible({ timeout: 5000 });
-    await expect(enginesPage.extractingLabel).toBeVisible({ timeout: 5000 });
+    const enginesToTest = [
+      'Mesen 2',
+      'MelonDS',
+      'Azahar',
+      'Dolphin',
+      'Ares',
+      'RMG',
+      'DuckStation',
+      'PCSX2'
+    ];
 
-    // 4. Verify completion returns status to "Installed"
-    await expect(enginesPage.installedLabel).toBeVisible({ timeout: 5000 });
+    for (const engine of enginesToTest) {
+      const card = enginesPage.getEngineCard(engine);
+      
+      const isCardVisible = await card.isVisible();
+      if (!isCardVisible) {
+        console.log(`Skipping ${engine} as it is not rendered on this platform.`);
+        continue;
+      }
+
+      // Some engines might be rendered but have an unsupported button
+      const isUnsupported = await card.getByText('Unsupported', { exact: true }).isVisible();
+      if (isUnsupported) {
+        console.log(`Skipping ${engine} as it is marked unsupported.`);
+        continue;
+      }
+
+      const isInstalled = await card.getByText('Installed', { exact: true }).isVisible();
+      if (!isInstalled) {
+        const installButton = enginesPage.getInstallButton(engine);
+        await expect(installButton).toBeVisible();
+        await enginesPage.installEngine(engine);
+        
+        // 3. Verify completion returns status to "Installed"
+        const installedLabel = card.getByText('Installed', { exact: true });
+        await expect(installedLabel).toBeVisible({ timeout: 300000 });
+      }
+    }
   });
 });

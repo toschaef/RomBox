@@ -76,10 +76,21 @@ export const Extractor = {
 
   extract7z: (archivePath: string, outputDir: string, fileToExtract?: string): Promise<void> => {
     return new Promise((resolve, reject) => {
-      const args = ['x', archivePath, `-o${outputDir}`, '-y'];
+      let cmd = pathTo7zip;
+      let args = ['x', archivePath, `-o${outputDir}`, '-y'];
       if (fileToExtract) args.push(fileToExtract);
 
-      const child = spawn(pathTo7zip, args);
+      // use system tar for .tar and .xz on non-windows
+      const ext = path.extname(archivePath).toLowerCase();
+      if (process.platform !== 'win32' && (ext === '.tar' || ext === '.xz' || archivePath.endsWith('.tar.xz'))) {
+        cmd = 'tar';
+        args = ['-xf', archivePath, '-C', outputDir];
+        if (fileToExtract) {
+           log.warn('fileToExtract not supported with system tar yet', fileToExtract);
+        }
+      }
+
+      const child = spawn(cmd, args);
 
       let stdout = '';
       let stderr = '';
@@ -96,15 +107,15 @@ export const Extractor = {
         if (code === 0) {
           resolve();
         } else {
-          log.error(`7z extraction failed with code ${code}`);
+          log.error(`Extraction failed with code ${code}`);
           log.error(`stdout: ${stdout}`);
           log.error(`stderr: ${stderr}`);
-          reject(new Error(`7-Zip exited with code ${code}: ${stderr || stdout}`));
+          reject(new Error(`Extraction exited with code ${code}: ${stderr || stdout}`));
         }
       });
 
       child.on('error', (err) => {
-        log.error('7z spawn error', err);
+        log.error('Extraction spawn error', err);
         reject(err);
       });
     });

@@ -13,9 +13,12 @@ export class EnginesPage extends BasePage {
     this.installedLabel = this.page.getByText('Installed').first();
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  getEngineCard(engineName: string): Locator {
+    return this.page.locator('div.rounded-sm.border.border-border-subtle', { hasText: engineName });
+  }
+
   getInstallButton(engineName: string): Locator {
-    return this.page.getByRole('button', { name: 'Install' }).first();
+    return this.getEngineCard(engineName).getByRole('button', { name: /Install/i });
   }
 
   async installEngine(engineName: string) {

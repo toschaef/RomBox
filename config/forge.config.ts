@@ -13,7 +13,9 @@ import { rendererConfig } from './webpack.renderer.config';
 
 const config: ForgeConfig = {
   packagerConfig: {
-    asar: true,
+    asar: {
+      unpack: "**/{mac,linux,win}/**/*"
+    },
   },
   rebuildConfig: {},
   makers: [

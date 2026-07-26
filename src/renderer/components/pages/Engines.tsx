@@ -139,7 +139,7 @@ export default function Engines() {
       })
       .map((e) => {
         const primaryConsole = PRIMARY_CONSOLE_FOR_EMULATOR[e.engineId];
-        const displayName = ENGINE_MAP[primaryConsole] ?? e.name ?? e.engineId;
+        const displayName = e.name ?? e.engineId;
 
         const req = e.biosMissingRequired.map((x) => `${x.consoleId}:${x.filename}`);
         const warn = e.biosMissingWarning.map((x) => `${x.consoleId}:${x.filename}`);
