@@ -24,17 +24,21 @@ function pickSettingsPath(enginePath: string | null) {
   const candidates: { label: string; file: string }[] = [{ label: "appSupport", file: appSupportBml }];
 
   if (enginePath) {
-    const macosDir = path.dirname(enginePath);
-    const contentsDir = path.dirname(macosDir);
-    const appDir = path.dirname(contentsDir);
-    const engineRoot = path.dirname(appDir);
+    const binDir = path.dirname(enginePath);
+    let engineRoot = binDir;
+
+    if (enginePath.includes(".app")) {
+      const macosDir = binDir;
+      const contentsDir = path.dirname(macosDir);
+      const appDir = path.dirname(contentsDir);
+      engineRoot = path.dirname(appDir);
+    } else if (path.basename(binDir).startsWith("ares-v") || path.basename(binDir) !== "ares") {
+      engineRoot = path.dirname(binDir);
+    }
 
     candidates.push(
       { label: "portable_engineRoot", file: path.join(engineRoot, ARES.settingsFile) },
-      { label: "portable_appDir", file: path.join(appDir, ARES.settingsFile) },
-      { label: "portable_contents", file: path.join(contentsDir, ARES.settingsFile) },
-      { label: "portable_macos", file: path.join(macosDir, ARES.settingsFile) },
-      { label: "portable_resources", file: path.join(contentsDir, "Resources", ARES.settingsFile) },
+      { label: "portable_binDir", file: path.join(binDir, ARES.settingsFile) }
     );
   }
 

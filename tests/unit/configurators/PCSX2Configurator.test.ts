@@ -11,6 +11,7 @@ import path from "path";
 import fs from "fs";
 import { initDB } from "../../../src/main/data/db";
 import { PCSX2Configurator } from "../../../src/main/utils/configurators/PCSX2Configurator";
+import { osHandler } from "../../../src/main/platform";
 
 describe("PCSX2Configurator", () => {
   const tempDir = path.resolve(__dirname, "../../temp-userdata");
@@ -33,7 +34,8 @@ describe("PCSX2Configurator", () => {
     const configurator = new PCSX2Configurator();
     await configurator.configure();
 
-    const pcsx2Ini = path.join(tempDir, "Library/Application Support/PCSX2/inis/PCSX2.ini");
+    const configDir = osHandler.getEmulatorConfigPath("pcsx2");
+    const pcsx2Ini = path.join(configDir, "PCSX2.ini");
     expect(fs.existsSync(pcsx2Ini)).toBe(true);
 
     const iniText = fs.readFileSync(pcsx2Ini, "utf-8");

@@ -11,6 +11,7 @@ import path from "path";
 import fs from "fs";
 import { initDB } from "../../../src/main/data/db";
 import { MesenConfigurator } from "../../../src/main/utils/configurators/MesenConfigurator";
+import { osHandler } from "../../../src/main/platform";
 
 describe("MesenConfigurator", () => {
   const tempDir = path.resolve(__dirname, "../../temp-userdata");
@@ -33,7 +34,8 @@ describe("MesenConfigurator", () => {
     const configurator = new MesenConfigurator("nes");
     await configurator.configure();
 
-    const settingsJson = path.join(tempDir, "Library/Application Support/Mesen2/settings.json");
+    const configDir = osHandler.getEmulatorConfigPath("mesen");
+    const settingsJson = path.join(configDir, "settings.json");
     expect(fs.existsSync(settingsJson)).toBe(true);
 
     const text = fs.readFileSync(settingsJson, "utf-8");

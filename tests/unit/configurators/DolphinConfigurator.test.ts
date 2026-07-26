@@ -11,6 +11,7 @@ import path from "path";
 import fs from "fs";
 import { initDB } from "../../../src/main/data/db";
 import { DolphinConfigurator } from "../../../src/main/utils/configurators/DolphinConfigurator";
+import { osHandler } from "../../../src/main/platform";
 import type { Game } from "../../../src/shared/types";
 
 describe("DolphinConfigurator", () => {
@@ -43,18 +44,20 @@ describe("DolphinConfigurator", () => {
     const configurator = new DolphinConfigurator(game);
     await configurator.configure();
 
-    const dolphinIni = path.join(tempDir, "Library/Application Support/Dolphin/Config/Dolphin.ini");
+    const configDir = osHandler.getEmulatorConfigPath("dolphin");
+
+    const dolphinIni = path.join(configDir, "Dolphin.ini");
     expect(fs.existsSync(dolphinIni)).toBe(true);
     const dolphinText = fs.readFileSync(dolphinIni, "utf-8");
     expect(dolphinText).toContain("RenderToMain = False");
     expect(dolphinText).toContain("Fullscreen = False");
 
-    const gfxIni = path.join(tempDir, "Library/Application Support/Dolphin/Config/GFX.ini");
+    const gfxIni = path.join(configDir, "GFX.ini");
     expect(fs.existsSync(gfxIni)).toBe(true);
     const gfxText = fs.readFileSync(gfxIni, "utf-8");
     expect(gfxText).toContain("InternalResolution = 1");
 
-    const gcPadNew = path.join(tempDir, "Library/Application Support/Dolphin/Config/GCPadNew.ini");
+    const gcPadNew = path.join(configDir, "GCPadNew.ini");
     expect(fs.existsSync(gcPadNew)).toBe(true);
     const gcPadText = fs.readFileSync(gcPadNew, "utf-8");
     // GCPad1 face.primary 'KeyU' -> 'U'
@@ -76,12 +79,14 @@ describe("DolphinConfigurator", () => {
     const configurator = new DolphinConfigurator(game);
     await configurator.configure();
 
-    const dolphinIni = path.join(tempDir, "Library/Application Support/Dolphin/Config/Dolphin.ini");
+    const configDir = osHandler.getEmulatorConfigPath("dolphin");
+
+    const dolphinIni = path.join(configDir, "Dolphin.ini");
     expect(fs.existsSync(dolphinIni)).toBe(true);
     const dolphinText = fs.readFileSync(dolphinIni, "utf-8");
     expect(dolphinText).toContain("WiimoteSource0 = 1");
 
-    const wiimoteNew = path.join(tempDir, "Library/Application Support/Dolphin/Config/WiimoteNew.ini");
+    const wiimoteNew = path.join(configDir, "WiimoteNew.ini");
     expect(fs.existsSync(wiimoteNew)).toBe(true);
     const wiiText = fs.readFileSync(wiimoteNew, "utf-8");
     expect(wiiText).toContain("Extension = Classic");

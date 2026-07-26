@@ -14,6 +14,7 @@ const ipcMain = electronIpcMain as unknown as typeof import("../__mocks__/electr
 import { initDB } from "../../src/main/data/db";
 import registerSaveHandlers from "../../src/main/ipc/saveHandler";
 import { LibraryService } from "../../src/main/services/LibraryService";
+import { osHandler } from "../../src/main/platform";
 import type { Game } from "../../src/shared/types";
 
 describe("IPC Save Handler Integration Tests", () => {
@@ -64,7 +65,7 @@ describe("IPC Save Handler Integration Tests", () => {
 
     // Create a mock emulator save file on the emulator's save folder:
     // Mesen save folder: temp-userdata/Library/Application Support/Mesen2/Saves
-    const mesenSaveDir = path.join(tempDir, "Library", "Application Support", "Mesen2", "Saves");
+    const mesenSaveDir = osHandler.getSavePath(mockGame);
     fs.mkdirSync(mesenSaveDir, { recursive: true });
     
     const saveFilePath = path.join(mesenSaveDir, "game.sav");

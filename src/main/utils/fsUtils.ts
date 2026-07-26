@@ -44,7 +44,7 @@ export const scanZipEntries = (filePath: string): Promise<ZipEntry[]> => {
       
       zipfile.on('entry', (entry) => {
         // skip directories
-        if (!/\/$/.test(entry.fileName)) {
+        if (!/[\/\\]$/.test(entry.fileName)) {
           entries.push({
             fileName: entry.fileName,
             uncompressedSize: entry.uncompressedSize
@@ -63,6 +63,71 @@ export const scanZipEntries = (filePath: string): Promise<ZipEntry[]> => {
   });
 };
 
+export const readZipEntryHeader = (
+  zipFilePath: string,
+  entryName: string,
+  maxBytes = 0x8100
+): Promise<Buffer> => {
+  return new Promise((resolve, reject) => {
+    yauzl.open(zipFilePath, { lazyEntries: true }, (err, zipfile) => {
+      if (err) return reject(err);
+
+      let found = false;
+      const targetName = entryName.replace(/\\/g, "/");
+      const targetBase = path.basename(targetName);
+
+      zipfile.readEntry();
+
+      zipfile.on('entry', (entry) => {
+        const normName = entry.fileName.replace(/\\/g, "/");
+        if (normName === targetName || path.basename(normName) === targetBase) {
+          found = true;
+          zipfile.openReadStream(entry, (err, readStream) => {
+            if (err) {
+              zipfile.close();
+              return reject(err);
+            }
+
+            const chunks: Buffer[] = [];
+            let readBytes = 0;
+
+            readStream.on('data', (chunk: Buffer) => {
+              chunks.push(chunk);
+              readBytes += chunk.length;
+              if (readBytes >= maxBytes) {
+                readStream.destroy();
+              }
+            });
+
+            readStream.on('close', () => {
+              zipfile.close();
+              resolve(Buffer.concat(chunks).subarray(0, maxBytes));
+            });
+
+            readStream.on('error', (streamErr) => {
+              zipfile.close();
+              reject(streamErr);
+            });
+          });
+        } else {
+          zipfile.readEntry();
+        }
+      });
+
+      zipfile.on('end', () => {
+        if (!found) {
+          zipfile.close();
+          reject(new Error(`Entry "${entryName}" not found in zip.`));
+        }
+      });
+
+      zipfile.on('error', (err) => {
+        zipfile.close();
+        reject(err);
+      });
+    });
+  });
+};
 
 export const extractZipEntry = (
   zipFilePath: string, 
@@ -74,11 +139,14 @@ export const extractZipEntry = (
       if (err) return reject(err);
 
       let found = false;
+      const targetName = entryName.replace(/\\/g, "/");
+      const targetBase = path.basename(targetName);
       
       zipfile.readEntry();
       
       zipfile.on('entry', (entry) => {
-        if (entry.fileName === entryName) {
+        const normName = entry.fileName.replace(/\\/g, "/");
+        if (normName === targetName || path.basename(normName) === targetBase) {
           found = true;
 
           zipfile.openReadStream(entry, async (err, readStream) => {

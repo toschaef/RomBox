@@ -44,7 +44,7 @@ describe("SaveService", () => {
     const status = SaveService.getSaveStatus(mockGame);
     expect(status.hasCachedSave).toBe(false);
     expect(status.cachedFiles).toHaveLength(0);
-    expect(status.emulatorSaveDir).toContain("emulator_saves/nes");
+    expect(status.emulatorSaveDir.replace(/\\/g, "/")).toContain("emulator_saves/nes");
   });
 
   it("should backup saves from emulator to cache", () => {

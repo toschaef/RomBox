@@ -4,11 +4,11 @@ import fs from 'fs';
 import { app } from 'electron';
 import { Extractor } from '../utils/extractor';
 import { CONSOLES } from '../config/consoles'
-import { getConsoleIdFromExtension, getEngineIdFromConsoleId } from '../../shared/constants';
+import { getConsoleIdFromExtension, getEngineIdFromConsoleId, BIOS_FILENAMES } from '../../shared/constants';
 import type { Game, ConsoleID } from '../../shared/types';
 import type { EngineID } from '../../shared/types/engines';
-import { detectConsoleFromHeader } from '../utils/identifier';
-import { scanZipEntries } from '../utils/fsUtils';
+import { detectConsoleFromHeader, detectConsoleFromBuffer } from '../utils/identifier';
+import { scanZipEntries, readZipEntryHeader } from '../utils/fsUtils';
 import { BiosService } from './BiosService';
 import { Logger } from '../utils/logger';
 import AdmZip from 'adm-zip';
@@ -26,6 +26,9 @@ interface NormalizedEntry {
 
 const BIOS_NAME_TO_CONSOLE: Record<string, ConsoleID> = (() => {
   const out: Record<string, ConsoleID> = {};
+  for (const [fn, consoleId] of Object.entries(BIOS_FILENAMES)) {
+    out[fn.toLowerCase()] = consoleId;
+  }
   for (const consoleId of Object.keys(CONSOLES) as ConsoleID[]) {
     const bios = CONSOLES[consoleId].bios;
     if (!bios) continue;
@@ -79,10 +82,16 @@ function isPS1GameDirectory(dirPath: string): { found: boolean; cueFile?: string
 const identifyConsole = async (
   filename: string,
   fileSize: number,
-  filePathForHeader?: string
+  filePathForHeader?: string,
+  headerBuffer?: Buffer
 ): Promise<string | undefined> => {
   const ext = path.extname(filename).toLowerCase();
   const id = getConsoleIdFromExtension(ext);
+
+  if (headerBuffer) {
+    const detected = detectConsoleFromBuffer(headerBuffer, fileSize);
+    if (detected) return detected;
+  }
 
   if (filePathForHeader && (ext === '.iso' || !id)) {
     const detected = await detectConsoleFromHeader(filePathForHeader);
@@ -95,7 +104,12 @@ const identifyConsole = async (
     return 'gc';
   }
 
-  return id;
+  if (!id && (ext === '.bin' || ext === '.iso' || ext === '.img' || ext === '.chd')) {
+    if (fileSize > 800 * 1024 * 1024) return 'ps2';
+    if (fileSize > 50 * 1024 * 1024) return 'ps1';
+  }
+
+  return id ?? undefined;
 };
 
 const getArchiveEntries = async (filePath: string): Promise<NormalizedEntry[]> => {
@@ -235,8 +249,10 @@ export const ScannerService = {
         }
 
         for (const entry of entries) {
-          const entryName = path.basename(entry.name).toLowerCase();
-          const entryExt = path.extname(entry.name).toLowerCase();
+          const normEntryPath = entry.name.replace(/\\/g, "/");
+          const entryName = path.basename(normEntryPath).toLowerCase();
+          const entryExt = path.extname(normEntryPath).toLowerCase();
+
           const hit = BIOS_NAME_TO_CONSOLE[entryName];
           if (hit) {
             const engineId = getEngineIdFromConsoleId(hit);
@@ -272,7 +288,16 @@ export const ScannerService = {
           }
 
           {
-            const consoleId = await identifyConsole(entry.name, entry.size) as ConsoleID;
+            let headerBuffer: Buffer | undefined;
+            if (['.bin', '.iso', '.img', '.chd'].includes(entryExt) && ext === '.zip') {
+              try {
+                headerBuffer = await readZipEntryHeader(filePath, entry.name);
+              } catch (hErr) {
+                void hErr;
+              }
+            }
+
+            const consoleId = await identifyConsole(entry.name, entry.size, undefined, headerBuffer) as ConsoleID;
 
             if (consoleId) {
               const engineId = getEngineIdFromConsoleId(consoleId);

@@ -242,7 +242,9 @@ ipcMain.handle('process-file-drop', async (event, filePath) => {
       nothingRecognized,
       fileExtension: nothingRecognized ? fileExt : undefined,
       message: nothingRecognized
-        ? `Unknown extension ${fileExt ?? '(none)'}`
+        ? (['.zip', '.7z'].includes(fileExt ?? '')
+            ? `No supported games or BIOS files found in ${path.basename(filePath)}`
+            : `Unknown extension ${fileExt ?? '(none)'}`)
         : `Processed ${processedGames.length} games and ${biosLabels.length} BIOS files.`
     };
   } catch (err) {

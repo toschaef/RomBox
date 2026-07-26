@@ -11,6 +11,7 @@ import path from "path";
 import fs from "fs";
 import { initDB } from "../../../src/main/data/db";
 import { AzaharConfigurator } from "../../../src/main/utils/configurators/AzaharConfigurator";
+import { osHandler } from "../../../src/main/platform";
 
 describe("AzaharConfigurator", () => {
   const tempDir = path.resolve(__dirname, "../../temp-userdata");
@@ -33,7 +34,8 @@ describe("AzaharConfigurator", () => {
     const configurator = new AzaharConfigurator();
     await configurator.configure();
 
-    const qtIni = path.join(tempDir, "Library/Application Support/Azahar/config/qt-config.ini");
+    const configDir = osHandler.getEmulatorConfigPath("azahar");
+    const qtIni = path.join(configDir, "qt-config.ini");
     expect(fs.existsSync(qtIni)).toBe(true);
 
     const iniText = fs.readFileSync(qtIni, "utf-8");

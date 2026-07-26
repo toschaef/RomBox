@@ -146,7 +146,7 @@ describe("Emulator Installation and Binary Path Integration Tests", () => {
 
             // Verify that the resolved path contains the expected binary configuration path structure
             const expectedBinaryConfigPath = cfg.binaries[platform];
-            expect(resolvedPath).toContain(expectedBinaryConfigPath);
+            expect((resolvedPath as string).replace(/\\/g, "/")).toContain(expectedBinaryConfigPath.replace(/\\/g, "/"));
           } finally {
             if (originalPlatform !== platform) {
               Object.defineProperty(process, "platform", {

@@ -18,6 +18,8 @@ import { AresConfigurator } from "../../src/main/utils/configurators/AresConfigu
 import { DuckStationConfigurator } from "../../src/main/utils/configurators/DuckStationConfigurator";
 import { PCSX2Configurator } from "../../src/main/utils/configurators/PCSX2Configurator";
 import { EngineService } from "../../src/main/services/EngineService";
+import { osHandler } from "../../src/main/platform";
+import { DuckStation } from "../../src/main/utils/schema/duckstation";
 import type { Game } from "../../src/shared/types";
 
 describe("Configurator and Translator Pairs Integration Tests", () => {
@@ -51,21 +53,23 @@ describe("Configurator and Translator Pairs Integration Tests", () => {
     const configurator = new DolphinConfigurator(game);
     await configurator.configure();
 
+    const configDir = osHandler.getEmulatorConfigPath("dolphin");
+
     // Verify written Dolphin.ini
-    const dolphinIniPath = path.join(tempDir, "Library/Application Support/Dolphin/Config/Dolphin.ini");
+    const dolphinIniPath = path.join(configDir, "Dolphin.ini");
     expect(fs.existsSync(dolphinIniPath)).toBe(true);
     const dolphinText = fs.readFileSync(dolphinIniPath, "utf-8");
     expect(dolphinText).toContain("RenderToMain = False");
     expect(dolphinText).toContain("Fullscreen = False");
 
     // Verify written GFX.ini
-    const gfxIniPath = path.join(tempDir, "Library/Application Support/Dolphin/Config/GFX.ini");
+    const gfxIniPath = path.join(configDir, "GFX.ini");
     expect(fs.existsSync(gfxIniPath)).toBe(true);
     const gfxText = fs.readFileSync(gfxIniPath, "utf-8");
     expect(gfxText).toContain("InternalResolution = 1");
 
     // Verify written GCPadNew.ini (mapped buttons)
-    const gcPadNewPath = path.join(tempDir, "Library/Application Support/Dolphin/Config/GCPadNew.ini");
+    const gcPadNewPath = path.join(configDir, "GCPadNew.ini");
     expect(fs.existsSync(gcPadNewPath)).toBe(true);
     const gcPadText = fs.readFileSync(gcPadNewPath, "utf-8");
     expect(gcPadText).toContain("Buttons/A = U");
@@ -85,14 +89,16 @@ describe("Configurator and Translator Pairs Integration Tests", () => {
     const configurator = new DolphinConfigurator(game);
     await configurator.configure();
 
+    const configDir = osHandler.getEmulatorConfigPath("dolphin");
+
     // Verify written Dolphin.ini
-    const dolphinIniPath = path.join(tempDir, "Library/Application Support/Dolphin/Config/Dolphin.ini");
+    const dolphinIniPath = path.join(configDir, "Dolphin.ini");
     expect(fs.existsSync(dolphinIniPath)).toBe(true);
     const dolphinText = fs.readFileSync(dolphinIniPath, "utf-8");
     expect(dolphinText).toContain("WiimoteSource0 = 1");
 
     // Verify written WiimoteNew.ini (Wii controls with Classic extension)
-    const wiimoteNewPath = path.join(tempDir, "Library/Application Support/Dolphin/Config/WiimoteNew.ini");
+    const wiimoteNewPath = path.join(configDir, "WiimoteNew.ini");
     expect(fs.existsSync(wiimoteNewPath)).toBe(true);
     const wiiText = fs.readFileSync(wiimoteNewPath, "utf-8");
     expect(wiiText).toContain("Extension = Classic");
@@ -104,7 +110,8 @@ describe("Configurator and Translator Pairs Integration Tests", () => {
     const configurator = new MesenConfigurator("nes");
     await configurator.configure();
 
-    const settingsJsonPath = path.join(tempDir, "Library/Application Support/Mesen2/settings.json");
+    const configDir = osHandler.getEmulatorConfigPath("mesen");
+    const settingsJsonPath = path.join(configDir, "settings.json");
     expect(fs.existsSync(settingsJsonPath)).toBe(true);
 
     const text = fs.readFileSync(settingsJsonPath, "utf-8");
@@ -124,7 +131,8 @@ describe("Configurator and Translator Pairs Integration Tests", () => {
     const configurator = new MesenConfigurator("snes");
     await configurator.configure();
 
-    const settingsJsonPath = path.join(tempDir, "Library/Application Support/Mesen2/settings.json");
+    const configDir = osHandler.getEmulatorConfigPath("mesen");
+    const settingsJsonPath = path.join(configDir, "settings.json");
     expect(fs.existsSync(settingsJsonPath)).toBe(true);
 
     const text = fs.readFileSync(settingsJsonPath, "utf-8");
@@ -144,7 +152,8 @@ describe("Configurator and Translator Pairs Integration Tests", () => {
     const configurator = new MelonDSConfigurator();
     await configurator.configure();
 
-    const melonTomlPath = path.join(tempDir, "Library/Preferences/melonDS/melonDS.toml");
+    const configDir = osHandler.getEmulatorConfigPath("melonds");
+    const melonTomlPath = path.join(configDir, "melonDS.toml");
     expect(fs.existsSync(melonTomlPath)).toBe(true);
 
     const tomlText = fs.readFileSync(melonTomlPath, "utf-8");
@@ -161,7 +170,8 @@ describe("Configurator and Translator Pairs Integration Tests", () => {
     const configurator = new AzaharConfigurator();
     await configurator.configure();
 
-    const qtIniPath = path.join(tempDir, "Library/Application Support/Azahar/config/qt-config.ini");
+    const configDir = osHandler.getEmulatorConfigPath("azahar");
+    const qtIniPath = path.join(configDir, "qt-config.ini");
     expect(fs.existsSync(qtIniPath)).toBe(true);
 
     const iniText = fs.readFileSync(qtIniPath, "utf-8");
@@ -181,7 +191,8 @@ describe("Configurator and Translator Pairs Integration Tests", () => {
     const configurator = new AresConfigurator();
     await configurator.configure();
 
-    const settingsBmlPath = path.join(tempDir, "Library/Application Support/ares/settings.bml");
+    const configDir = osHandler.getEmulatorConfigPath("ares");
+    const settingsBmlPath = path.join(configDir, "settings.bml");
     expect(fs.existsSync(settingsBmlPath)).toBe(true);
 
     const bmlText = fs.readFileSync(settingsBmlPath, "utf-8");
@@ -195,7 +206,8 @@ describe("Configurator and Translator Pairs Integration Tests", () => {
     const configurator = new DuckStationConfigurator();
     await configurator.configure();
 
-    const settingsIniPath = path.join(tempDir, "Library/Application Support/DuckStation/settings.ini");
+    const configDir = osHandler.getEmulatorBasePath("duckstation");
+    const settingsIniPath = DuckStation.iniPath(configDir);
     expect(fs.existsSync(settingsIniPath)).toBe(true);
 
     const iniText = fs.readFileSync(settingsIniPath, "utf-8");
@@ -214,7 +226,8 @@ describe("Configurator and Translator Pairs Integration Tests", () => {
     const configurator = new PCSX2Configurator();
     await configurator.configure();
 
-    const pcsx2IniPath = path.join(tempDir, "Library/Application Support/PCSX2/inis/PCSX2.ini");
+    const configDir = osHandler.getEmulatorConfigPath("pcsx2");
+    const pcsx2IniPath = path.join(configDir, "PCSX2.ini");
     expect(fs.existsSync(pcsx2IniPath)).toBe(true);
 
     const iniText = fs.readFileSync(pcsx2IniPath, "utf-8");

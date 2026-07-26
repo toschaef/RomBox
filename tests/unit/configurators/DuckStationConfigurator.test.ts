@@ -11,6 +11,8 @@ import path from "path";
 import fs from "fs";
 import { initDB } from "../../../src/main/data/db";
 import { DuckStationConfigurator } from "../../../src/main/utils/configurators/DuckStationConfigurator";
+import { osHandler } from "../../../src/main/platform";
+import { DuckStation } from "../../../src/main/utils/schema/duckstation";
 
 describe("DuckStationConfigurator", () => {
   const tempDir = path.resolve(__dirname, "../../temp-userdata");
@@ -33,7 +35,8 @@ describe("DuckStationConfigurator", () => {
     const configurator = new DuckStationConfigurator();
     await configurator.configure();
 
-    const settingsIni = path.join(tempDir, "Library/Application Support/DuckStation/settings.ini");
+    const configDir = osHandler.getEmulatorBasePath("duckstation");
+    const settingsIni = DuckStation.iniPath(configDir);
     expect(fs.existsSync(settingsIni)).toBe(true);
 
     const iniText = fs.readFileSync(settingsIni, "utf-8");

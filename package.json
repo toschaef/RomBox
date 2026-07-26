@@ -14,7 +14,7 @@
   },
   "scripts": {
     "start": "electron-forge start",
-    "start:clean": "rm -rf ./tmp-dev-userdata && electron-forge start -- --user-data-dir=./tmp-dev-userdata",
+    "start:clean": "node -e \"require('fs').rmSync('./tmp-dev-userdata', { recursive: true, force: true })\" && electron-forge start -- --user-data-dir=./tmp-dev-userdata",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",

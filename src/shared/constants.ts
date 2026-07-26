@@ -34,7 +34,7 @@ export const CONSOLEID_ENGINEID_MAP: Record<ConsoleID, EngineID> = {
   'snes': 'mesen',
   'gb': 'mesen',
   'gba': 'mesen',
-  'n64': IS_MAC ? 'ares' : 'rmg',
+  'n64': 'ares',
   'ds': 'melonds',
   '3ds': 'azahar',
   'gc': 'dolphin',
@@ -140,7 +140,7 @@ export const ENGINE_MAP: Record<ConsoleID, string> = {
   'sms': 'Mesen',
   'gg': 'Mesen',
 
-  'n64': IS_MAC ? 'ARES' : 'RMG',
+  'n64': 'Ares',
   'ds': 'MelonDS',
   '3ds': 'Azahar',
 

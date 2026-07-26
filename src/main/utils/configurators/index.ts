@@ -31,11 +31,7 @@ export const getConfigurator = (game: Game): EmulatorConfigurator | null => {
       return new DolphinConfigurator(game);
 
     case 'n64':
-      if (IS_MAC) {
-        return new AresConfigurator();
-      } else {
-        return null;
-      }
+      return new AresConfigurator();
 
     case 'ps1':
       return new DuckStationConfigurator();

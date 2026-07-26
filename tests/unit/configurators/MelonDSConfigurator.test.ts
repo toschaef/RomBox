@@ -11,6 +11,7 @@ import path from "path";
 import fs from "fs";
 import { initDB } from "../../../src/main/data/db";
 import { MelonDSConfigurator } from "../../../src/main/utils/configurators/MelonDSConfigurator";
+import { osHandler } from "../../../src/main/platform";
 
 describe("MelonDSConfigurator", () => {
   const tempDir = path.resolve(__dirname, "../../temp-userdata");
@@ -33,7 +34,8 @@ describe("MelonDSConfigurator", () => {
     const configurator = new MelonDSConfigurator();
     await configurator.configure();
 
-    const melonToml = path.join(tempDir, "Library/Preferences/melonDS/melonDS.toml");
+    const configDir = osHandler.getEmulatorConfigPath("melonds");
+    const melonToml = path.join(configDir, "melonDS.toml");
     expect(fs.existsSync(melonToml)).toBe(true);
 
     const tomlText = fs.readFileSync(melonToml, "utf-8");

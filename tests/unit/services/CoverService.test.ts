@@ -40,12 +40,12 @@ describe("CoverService", () => {
 
   it("should return cover cache path for a game", () => {
     const p = CoverService.getCoverPath(mockGame);
-    expect(p).toContain("covers/nes/Super Mario Bros..png");
+    expect(p.replace(/\\/g, "/")).toContain("covers/nes/Super Mario Bros..png");
   });
 
   it("should report cover availability correctly based on filesystem existence", () => {
     const existsSpy = jest.spyOn(fs, "existsSync").mockImplementation((p: PathLike) => {
-      return p.toString().includes("covers/nes/Super Mario Bros..png");
+      return p.toString().replace(/\\/g, "/").includes("covers/nes/Super Mario Bros..png");
     });
     expect(CoverService.hasCover(mockGame)).toBe(true);
 
@@ -67,7 +67,7 @@ describe("CoverService", () => {
     (Downloader.download as jest.Mock).mockResolvedValue("/mock/dest/file.png");
 
     const result = await CoverService.fetchCover(mockGame);
-    expect(result).toContain("covers/nes/Super Mario Bros..png");
+    expect(result ? result.replace(/\\/g, "/") : "").toContain("covers/nes/Super Mario Bros..png");
     expect(Downloader.download).toHaveBeenCalled();
   });
 });

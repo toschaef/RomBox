@@ -31,10 +31,16 @@ export class WinHandler implements PlatformHandler {
     log.info(`Finalizing: ${binaryPath}`);
   }
 
+  private getBaseDirs() {
+    const home = homedir();
+    const appData = path.join(home, "AppData", "Roaming");
+    const localAppData = path.join(home, "AppData", "Local");
+    const docs = path.join(home, "Documents");
+    return { appData, localAppData, docs };
+  }
+
   async clearPlatformData(): Promise<void> {
-    const appData = process.env.APPDATA || path.join(homedir(), "AppData", "Roaming");
-    const localAppData = process.env.LOCALAPPDATA || path.join(homedir(), "AppData", "Local");
-    const docs = path.join(homedir(), "Documents");
+    const { appData, localAppData, docs } = this.getBaseDirs();
 
     const pathsToDelete = [
       path.join(appData, "Mesen2"), // possibly docs
@@ -65,9 +71,7 @@ export class WinHandler implements PlatformHandler {
   }
 
   getEmulatorConfigPath(engineId: EngineID): string {
-    const appData = process.env.APPDATA || path.join(homedir(), "AppData", "Roaming");
-    const localAppData = process.env.LOCALAPPDATA || path.join(homedir(), "AppData", "Local");
-    const docs = path.join(homedir(), "Documents");
+    const { appData, localAppData, docs } = this.getBaseDirs();
 
     switch (engineId) {
       case "dolphin":
@@ -90,9 +94,7 @@ export class WinHandler implements PlatformHandler {
   }
 
   getEmulatorBasePath(engineId: EngineID): string {
-    const appData = process.env.APPDATA || path.join(homedir(), "AppData", "Roaming");
-    const localAppData = process.env.LOCALAPPDATA || path.join(homedir(), "AppData", "Local");
-    const docs = path.join(homedir(), "Documents");
+    const { appData, localAppData, docs } = this.getBaseDirs();
 
     switch (engineId) {
       case "dolphin":
@@ -115,9 +117,7 @@ export class WinHandler implements PlatformHandler {
   }
 
   getSavePath(game: Game): string {
-    const appData = process.env.APPDATA || path.join(homedir(), "AppData", "Roaming");
-    const localAppData = process.env.LOCALAPPDATA || path.join(homedir(), "AppData", "Local");
-    const docs = path.join(homedir(), "Documents");
+    const { appData, localAppData, docs } = this.getBaseDirs();
 
     switch (game.engineId) {
       case "mesen":

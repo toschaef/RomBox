@@ -12,6 +12,7 @@ import fs from "fs";
 import { initDB } from "../../../src/main/data/db";
 import { AresConfigurator } from "../../../src/main/utils/configurators/AresConfigurator";
 import { EngineService } from "../../../src/main/services/EngineService";
+import { osHandler } from "../../../src/main/platform";
 
 describe("AresConfigurator", () => {
   const tempDir = path.resolve(__dirname, "../../temp-userdata");
@@ -56,7 +57,7 @@ describe("AresConfigurator", () => {
     await configurator.configure();
     
     // In fallback mode, it writes to the standard Application Support location
-    const settingsBml = path.join(tempDir, "Library/Application Support/ares/settings.bml");
+    const settingsBml = path.join(osHandler.getEmulatorConfigPath("ares"), "settings.bml");
     expect(fs.existsSync(settingsBml)).toBe(true);
 
     const bmlText = fs.readFileSync(settingsBml, "utf-8");
