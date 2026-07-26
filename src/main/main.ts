@@ -59,20 +59,32 @@ const createWindow = (): void => {
 
 function registerCoverProtocol() {
   protocol.handle('cover', (request) => {
-    const rawPath = request.url.replace(/^cover:\/\/+/, '');
-    const decodedPath = decodeURIComponent(rawPath);
+    let rawPath = request.url.replace(/^cover:\/\/+/, '');
+    rawPath = decodeURIComponent(rawPath);
     
-    const filePath = path.resolve('/', decodedPath);
+    let filePath: string;
+    if (process.platform === 'win32') {
+      if (/^[a-zA-Z]\//.test(rawPath)) {
+        rawPath = rawPath[0].toUpperCase() + ':' + rawPath.substring(1);
+      } else if (/^\/[a-zA-Z]:/.test(rawPath)) {
+        rawPath = rawPath.substring(1);
+      }
+      filePath = path.normalize(rawPath);
+    } else {
+      if (!rawPath.startsWith('/')) {
+        rawPath = '/' + rawPath;
+      }
+      filePath = path.normalize(rawPath);
+    }
     
-    const coversDir = path.join(app.getPath('userData'), 'covers');
-    const normalizedPath = path.normalize(filePath);
-    const isChild = normalizedPath.toLowerCase().startsWith(coversDir.toLowerCase());
+    const coversDir = path.normalize(path.join(app.getPath('userData'), 'covers'));
+    const isChild = filePath.toLowerCase().startsWith(coversDir.toLowerCase());
 
     if (!isChild) {
       return new Response('Access denied', { status: 403 });
     }
     
-    return net.fetch(pathToFileURL(normalizedPath).toString());
+    return net.fetch(pathToFileURL(filePath).toString());
   });
 }
 
