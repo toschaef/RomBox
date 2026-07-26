@@ -43,7 +43,8 @@ export class WinHandler implements PlatformHandler {
     const { appData, localAppData, docs } = this.getBaseDirs();
 
     const pathsToDelete = [
-      path.join(appData, "Mesen2"), // possibly docs
+      path.join(docs, "Mesen2"),
+      path.join(appData, "Mesen2"),
       path.join(localAppData, "ares"),
       path.join(appData, "Dolphin Emulator"),
       path.join(docs, "Dolphin Emulator"),
@@ -77,7 +78,7 @@ export class WinHandler implements PlatformHandler {
       case "dolphin":
         return path.join(appData, "Dolphin Emulator", "Config");
       case "mesen":
-        return path.join(appData, "Mesen2");
+        return path.join(docs, "Mesen2");
       case "ares":
         return path.join(localAppData, "ares");
       case "melonds":
@@ -100,7 +101,7 @@ export class WinHandler implements PlatformHandler {
       case "dolphin":
         return path.join(appData, "Dolphin Emulator");
       case "mesen":
-        return path.join(appData, "Mesen2");
+        return path.join(docs, "Mesen2");
       case "ares":
         return path.join(localAppData, "ares");
       case "melonds":
@@ -121,7 +122,7 @@ export class WinHandler implements PlatformHandler {
 
     switch (game.engineId) {
       case "mesen":
-        return path.join(appData, "Mesen2", "Saves");
+        return path.join(docs, "Mesen2", "Saves");
       case "melonds":
         return path.dirname(game.filePath);
       case "dolphin":
