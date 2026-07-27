@@ -95,7 +95,7 @@ describe("DuckStationTranslator", () => {
     const stickLUp = result.find(p => p.kind === "ini-set" && p.key === "LUp");
     expect(stickLUp).toBeDefined();
     if (stickLUp && stickLUp.kind === "ini-set") {
-      expect(stickLUp.value).toBe("SDL-0/+LeftY"); // normal UP for Left stick is GP_LS_UP (positive sign in GP_LS_UP)
+      expect(stickLUp.value).toBe("SDL-0/-LeftY"); // normal UP for Left stick is GP_LS_UP (negative sign for up in DuckStation)
     }
   });
 

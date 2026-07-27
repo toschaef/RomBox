@@ -12,6 +12,12 @@ import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
 import { spawnSync } from 'child_process';
 import * as path from 'path';
+import * as fs from 'fs';
+
+const binDir = path.join(__dirname, '..', 'bin');
+if (!fs.existsSync(binDir)) {
+  fs.mkdirSync(binDir, { recursive: true });
+}
 
 const config: ForgeConfig = {
   hooks: {

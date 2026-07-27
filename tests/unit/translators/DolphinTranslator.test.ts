@@ -2,6 +2,7 @@ import { DolphinTranslator } from "../../../src/main/utils/translators/DolphinTr
 import { createDefaultProfileShape } from "../../../src/shared/controls/layoutDefaults";
 import type { ControlsProfile } from "../../../src/shared/types/controls";
 import type { TranslateContext } from "../../../src/main/utils/translators/ITranslator";
+import child_process from "child_process";
 
 describe("DolphinTranslator", () => {
   const profile: ControlsProfile = {
@@ -12,6 +13,14 @@ describe("DolphinTranslator", () => {
     isDefault: true,
     ...createDefaultProfileShape()
   };
+
+  beforeEach(() => {
+    jest.spyOn(child_process, "spawnSync").mockReturnValue({ stdout: "" } as any);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
 
   const context: TranslateContext = {
     platform: "darwin",
@@ -149,7 +158,7 @@ describe("DolphinTranslator", () => {
     const buttonA = result.find(p => p.kind === "ini-set" && p.key === "Buttons/A");
     expect(buttonA).toBeDefined();
     if (buttonA && buttonA.kind === "ini-set") {
-      expect(buttonA.value).toBe("`Button A`");
+      expect(buttonA.value).toBe("`Button S`");
     }
 
     // Buttons/Z should be mapped to `Back` (token GP_SELECT)

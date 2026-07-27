@@ -14,14 +14,17 @@ import type { ControlsProfile, DigitalBinding, PlayerBindings } from "../../../s
 import type { TranslateContext } from "../../../src/main/utils/translators/ITranslator";
 import { JsonEditor } from "../../../src/main/utils/editors/json";
 
+import child_process from "child_process";
 describe("Milestone 2 Empirical Stress Tests", () => {
   let tmpDir: string;
 
   beforeEach(() => {
+    jest.spyOn(child_process, "spawnSync").mockReturnValue({ stdout: "" } as any);
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "m2-stress-"));
   });
 
   afterEach(() => {
+    jest.restoreAllMocks();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 

@@ -3,7 +3,8 @@ import type { IEmulatorTranslator, TranslateContext, EmulatorPatch } from "./ITr
 import type { ControlsProfile, DigitalBinding } from "../../../shared/types/controls";
 import { axisToDigitalToken } from "../../../shared/controls/gamepadTokens";
 import { getDirFromDpad, getDirFromLook, getDirFromMove } from "../profileRead";
-import { DOLPHIN, quartzKeyFromDomCode, dolphinExprForGamepadToken, getPlatformGamepadDevice, detectDolphinPadDevice } from "../schema/dolphin";
+import { DOLPHIN, dolphinExprForGamepadToken, getPlatformGamepadDevice, detectDolphinPadDevice } from "../schema/dolphin";
+import { KeycodeMapper } from "../keycodes/KeycodeMapper";
 
 
 type DolphinConsole = "gc" | "wii";
@@ -84,7 +85,8 @@ function wrapTok(tok: string) {
 }
 
 function getSDLDeviceIndex(ctx?: TranslateContext, profile?: ControlsProfile): number {
-  if (ctx?.platform === "darwin") return 0;
+  if (ctx?.deviceIndex !== undefined) return ctx.deviceIndex;
+  if (ctx?.padPort !== undefined) return Math.max(0, ctx.padPort - 1);
   return 0; // fallback default
 }
 
@@ -110,10 +112,8 @@ function dolphinExprForDigital(
   }
   
   if (b.type !== "key") return null;
-  let key = b.code;
-  if (platform === "darwin") {
-    key = quartzKeyFromDomCode(b.code) || b.code;
-  }
+  const mapped = KeycodeMapper.toKeycode("dolphin", b.code, platform);
+  const key = typeof mapped === "string" ? mapped : b.code;
   return wrapTok(key);
 }
 
@@ -152,11 +152,12 @@ export class DolphinTranslator implements IEmulatorTranslator {
     if (ctx) ctx.learnedBinds = info.learnedBinds;
     
     let device = info.deviceString;
-    if (ctx.configDir) {
+    if (kind === "gamepad" && ctx.learnedDevice) {
+      device = ctx.learnedDevice;
+    } else if (ctx.configDir) {
       const detected = detectDolphinPadDevice(ctx.configDir);
       if (detected) {
         if (
-          (ctx.platform === "darwin" && kind === "gamepad") ||
           (kind === "gamepad" && detected.includes("Keyboard")) ||
           (kind === "keyboard" && !detected.includes("Keyboard"))
         ) {

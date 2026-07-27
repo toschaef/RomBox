@@ -38,8 +38,10 @@ function resolveNativeHelperPath(helperName: string): string | null {
     path.resolve(process.cwd(), "bin", platformDir, helperName),
     path.resolve(process.cwd(), "..", "bin", platformDir, helperName),
     path.resolve(process.cwd(), "..", "..", "bin", platformDir, helperName),
-    path.resolve(process.resourcesPath, "bin", platformDir, helperName),
   ];
+  if (process.resourcesPath) {
+    candidates.push(path.resolve(process.resourcesPath, "bin", platformDir, helperName));
+  }
 
   for (const p of candidates) if (fs.existsSync(p)) return p;
   log.warn('Native helper not found', { helperName, candidates });

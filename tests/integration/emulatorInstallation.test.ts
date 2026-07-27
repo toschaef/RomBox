@@ -134,6 +134,7 @@ describe("Emulator Installation and Binary Path Integration Tests", () => {
 
             // Install the engine
             const result = await EngineService.installEngine(engineId, progressCallback);
+            console.log(`[TEST] Install result for ${engineId}:`, result);
             expect(result).toBeDefined();
             expect(result?.success).toBe(true);
 

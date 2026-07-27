@@ -22,7 +22,7 @@ export function quartzKeyFromDomCode(code: string): string | null {
   if (code.startsWith("Key") && code.length === 4) return code.slice(3);
   if (code.startsWith("Digit") && code.length === 6) return code.slice(5);
 
-  const map: Record<string, string> = {
+  const map: Record<string, string> = Object.assign(Object.create(null), {
     ArrowUp: "Up Arrow",
     ArrowDown: "Down Arrow",
     ArrowLeft: "Left Arrow",
@@ -39,12 +39,23 @@ export function quartzKeyFromDomCode(code: string): string | null {
     ControlRight: "Ctrl",
     AltLeft: "Alt",
     AltRight: "Alt",
-  };
+    Comma: ",",
+    Period: ".",
+    Semicolon: ";",
+    Quote: "'",
+    Slash: "/",
+    Backslash: "\\",
+    Minus: "-",
+    Equal: "=",
+    BracketLeft: "[",
+    BracketRight: "]",
+    Backquote: "`",
+  });
 
   return map[code] ?? null;
 }
 
-const TOK_TO_SDL3_BUTTON: Record<string, number> = {
+const TOK_TO_SDL3_BUTTON: Record<string, number> = Object.assign(Object.create(null), {
   GP_A: 0,
   GP_B: 1,
   GP_X: 2,
@@ -60,7 +71,7 @@ const TOK_TO_SDL3_BUTTON: Record<string, number> = {
   GP_DPAD_DOWN: 12,
   GP_DPAD_LEFT: 13,
   GP_DPAD_RIGHT: 14,
-};
+});
 
 export function dolphinExprForGamepadToken(tok: GamepadToken, platform: string = "win32", learnedBinds?: any): string | null {
   const isSdl = platform !== "win32";
