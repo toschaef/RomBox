@@ -69,7 +69,7 @@ export class MelonDSConfigurator extends BaseConfigurator {
       return;
     }
 
-    const updatesBySection = patchesToIniUpdates(patches);
+    const updatesBySection = this.patchesToIniUpdates(patches);
 
     if (targetKind === "toml") {
       for (const [section, kv] of Object.entries(updatesBySection)) {
@@ -82,15 +82,4 @@ export class MelonDSConfigurator extends BaseConfigurator {
       IniEditor.updateIni(targetPath, updatesBySection);
     }
   }
-}
-
-function patchesToIniUpdates(patches: EmulatorPatch[]): Record<string, Record<string, string>> {
-  const out: Record<string, Record<string, string>> = {};
-  for (const p of patches) {
-    if (p.kind !== "ini-set") continue;
-    const section = (p.section ?? "").trim();
-    out[section] ??= {};
-    out[section][p.key] = p.value;
-  }
-  return out;
 }

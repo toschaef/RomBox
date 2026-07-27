@@ -2,10 +2,10 @@ import type { IEmulatorTranslator, TranslateContext, EmulatorPatch } from "./ITr
 import type { ControlsProfile, DigitalBinding } from "../../../shared/types/controls";
 import { axisToDigitalToken } from "../../../shared/controls/gamepadTokens";
 import { getDirFromDpad, getDirFromMove, getDirFromLook } from "../profileRead";
-import { PCSX2, pcsx2KeyFromDomCode, pcsx2ExprForGamepadToken } from "../schema/pcsx2";
+import { PCSX2, pcsx2KeyFromDomCode, pcsx2ExprForGamepadToken, getSDLDeviceIndex } from "../schema/pcsx2";
 
 
-function pcsx2ExprForDigital(b: DigitalBinding): string | null {
+function pcsx2ExprForDigital(b: DigitalBinding, deviceIndex = 0): string | null {
   if (b.type === "key") {
     const key = pcsx2KeyFromDomCode(b.code);
     if (!key) return null;
@@ -13,7 +13,7 @@ function pcsx2ExprForDigital(b: DigitalBinding): string | null {
   }
 
   if (b.type === "gp_button") {
-    return pcsx2ExprForGamepadToken(b.token);
+    return pcsx2ExprForGamepadToken(b.token, deviceIndex);
   }
 
   if (b.type === "gp_axis_digital") {
@@ -22,7 +22,7 @@ function pcsx2ExprForDigital(b: DigitalBinding): string | null {
       axis: b.axis,
       sign: b.dir === "neg" ? -1 : 1,
     });
-    return pcsx2ExprForGamepadToken(tok);
+    return pcsx2ExprForGamepadToken(tok, deviceIndex);
   }
 
   return null;
@@ -47,10 +47,11 @@ export class PCSX2Translator implements IEmulatorTranslator {
     const patches: EmulatorPatch[] = [];
     const iniPath = PCSX2.iniPath(ctx.configDir);
     const section = "Pad1";
+    const deviceIndex = getSDLDeviceIndex(ctx, profile);
 
     const writeBinding = (label: string, b?: DigitalBinding) => {
       if (!b) return;
-      const expr = pcsx2ExprForDigital(b);
+      const expr = pcsx2ExprForDigital(b, deviceIndex);
       if (!expr) return;
       addIniPatch(patches, iniPath, section, label, expr);
     };

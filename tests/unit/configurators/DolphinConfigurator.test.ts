@@ -19,9 +19,12 @@ describe("DolphinConfigurator", () => {
 
   beforeEach(() => {
     if (fs.existsSync(tempDir)) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      fs.rmSync(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
     fs.mkdirSync(tempDir, { recursive: true });
+    jest.spyOn(osHandler, "getEmulatorConfigPath").mockReturnValue(
+      path.join(tempDir, "Library", "Application Support", "Dolphin", "Config")
+    );
     initDB();
   });
 

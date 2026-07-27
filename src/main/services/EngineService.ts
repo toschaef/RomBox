@@ -32,16 +32,13 @@ function tryChmod755(p: string) {
 }
 
 function resolveNativeHelperPath(helperName: string): string | null {
-  if (app.isPackaged) {
-    const p = path.join(process.resourcesPath, "native", helperName);
-    return fs.existsSync(p) ? p : null;
-  }
-
+  const platformDir = process.platform === 'win32' ? 'win' : (process.platform === 'darwin' ? 'mac' : 'linux');
   const candidates = [
-    path.resolve(app.getAppPath(), "src", "native", helperName),
-    path.resolve(process.cwd(), "src", "native", helperName),
-    path.resolve(process.cwd(), "..", "src", "native", helperName),
-    path.resolve(process.cwd(), "..", "..", "src", "native", helperName),
+    path.resolve(app.getAppPath(), "bin", platformDir, helperName),
+    path.resolve(process.cwd(), "bin", platformDir, helperName),
+    path.resolve(process.cwd(), "..", "bin", platformDir, helperName),
+    path.resolve(process.cwd(), "..", "..", "bin", platformDir, helperName),
+    path.resolve(process.resourcesPath, "bin", platformDir, helperName),
   ];
 
   for (const p of candidates) if (fs.existsSync(p)) return p;
@@ -50,7 +47,7 @@ function resolveNativeHelperPath(helperName: string): string | null {
 }
 
 function installAzaharSdlProbe(): { ok: boolean; dest?: string; reason?: string } {
-  const srcName = process.platform === "win32" ? "sdlprobe.exe" : (process.platform === "darwin" ? "sdlprobe-macos" : "sdlprobe");
+  const srcName = process.platform === "win32" ? "sdl2probe.exe" : (process.platform === "darwin" ? "sdl2probe-macos" : "sdl2probe");
   const src = resolveNativeHelperPath(srcName);
   if (!src) return { ok: false, reason: `native helper missing: ${srcName}` };
 

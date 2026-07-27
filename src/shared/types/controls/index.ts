@@ -21,8 +21,21 @@ export type WiiSpecialBinding = {
 
   nunchuckC?: DigitalBinding;
   nunchuckZ?: DigitalBinding;
-
+  
   home?: DigitalBinding;
+
+  wiimoteA?: DigitalBinding;
+  wiimoteB?: DigitalBinding;
+  wiimote1?: DigitalBinding;
+  wiimote2?: DigitalBinding;
+  wiimotePlus?: DigitalBinding;
+  wiimoteMinus?: DigitalBinding;
+  wiimoteHome?: DigitalBinding;
+  wiimoteDpad?: DpadBinding;
+
+  shake?: DigitalBinding;
+  tilt?: StickBinding | DpadBinding;
+  ir?: StickBinding | DpadBinding;
 }
 
 export type SpecialBinding =

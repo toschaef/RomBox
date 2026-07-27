@@ -18,54 +18,10 @@ function ensureDirs(configDir: string) {
   fs.mkdirSync(path.join(configDir, "savestates"), { recursive: true });
 }
 
-function applyPatches(patches: EmulatorPatch[]) {
-  for (const p of patches) {
-    if (p.kind === "ini-set") {
-      if (!p.absPath) continue;
-      IniEditor.updateIni(p.absPath, { [p.section]: { [p.key]: p.value } });
-      continue;
-    }
-
-    if (p.kind === "file-write") {
-      if (!p.absPath) continue;
-      fs.mkdirSync(path.dirname(p.absPath), { recursive: true });
-      fs.writeFileSync(p.absPath, p.contents, "utf-8");
-      continue;
-    }
-
-    if (p.kind === "ini-delete") {
-      if (!p.absPath) continue;
-      IniEditor.deleteKeys(p.absPath, { [p.section]: [p.key] });
-      continue;
-    }
-  }
-}
-
-function findBiosFile(biosDir: string): string | null {
-  const validBiosNames = [
-    "scph1001.bin", "scph5500.bin", "scph5501.bin",
-    "scph5502.bin", "scph7502.bin", "ps1_bios.bin",
-  ];
-
-  if (!fs.existsSync(biosDir)) return null;
-
-  for (const name of validBiosNames) {
-    if (fs.existsSync(path.join(biosDir, name))) {
-      return name;
-    }
-  }
-
-  try {
-    const files = fs.readdirSync(biosDir);
-    const biosFile = files.find(f =>
-      f.toLowerCase().endsWith(".bin") &&
-      (f.toLowerCase().startsWith("scph") || f.toLowerCase().includes("bios"))
-    );
-    return biosFile || null;
-  } catch {
-    return null;
-  }
-}
+const DUCKSTATION_VALID_BIOS = [
+  "scph1001.bin", "scph5500.bin", "scph5501.bin",
+  "scph5502.bin", "scph7502.bin", "ps1_bios.bin",
+];
 
 export class DuckStationConfigurator extends BaseConfigurator {
   async configure(): Promise<void> {
@@ -83,7 +39,7 @@ export class DuckStationConfigurator extends BaseConfigurator {
     const resolution = settingsSvc.get("launch.resolution");
     const resScale = String(getResolutionMultiplier(resolution, "duckstation"));
 
-    const biosFile = findBiosFile(biosDir);
+    const biosFile = this.findBiosFile(biosDir, DUCKSTATION_VALID_BIOS);
 
     const pathNtscU = biosFile ? path.join(biosDir, biosFile) : "";
 
@@ -333,6 +289,6 @@ export class DuckStationConfigurator extends BaseConfigurator {
     const translator = new DuckStationTranslator();
     const patches = translator.translate(effectiveProfile, ctx);
 
-    applyPatches(patches);
+    this.applyPatches(patches);
   }
 }

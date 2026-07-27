@@ -26,17 +26,26 @@ export class WinHandler implements PlatformHandler {
     await fs.promises.copyFile(filePath, destPath);
   }
 
-  async finalizeInstall(binaryPath: string, needsWrapper: boolean): Promise<void> {
+  async finalizeInstall(binaryPath: string, _needsWrapper: boolean): Promise<void> {
     if (!fs.existsSync(binaryPath)) return;
     log.info(`Finalizing: ${binaryPath}`);
   }
 
   private getBaseDirs() {
-    const home = homedir();
-    const appData = path.join(home, "AppData", "Roaming");
-    const localAppData = path.join(home, "AppData", "Local");
+    const env = process.env;
+    const home = env.USERPROFILE || env.HOME || homedir();
+    const appData = env.APPDATA || path.join(home, "AppData", "Roaming");
+    const localAppData = env.LOCALAPPDATA || path.join(home, "AppData", "Local");
     const docs = path.join(home, "Documents");
-    return { appData, localAppData, docs };
+    return { appData, localAppData, docs, home };
+  }
+
+  resolveWinPath(p: string): string {
+    const { appData, localAppData, home } = this.getBaseDirs();
+    return p
+      .replace(/%APPDATA%/gi, appData)
+      .replace(/%LOCALAPPDATA%/gi, localAppData)
+      .replace(/%USERPROFILE%/gi, home);
   }
 
   async clearPlatformData(): Promise<void> {
@@ -63,11 +72,16 @@ export class WinHandler implements PlatformHandler {
 
   launchProcess(binaryPath: string, args: string[], opts?: { cwd?: string }): ChildProcess {
     log.info(`Launch: ${binaryPath}`);
+    const cwd = opts?.cwd || (binaryPath.includes("\\") ? path.win32.dirname(binaryPath) : path.dirname(binaryPath));
     return spawn(binaryPath, args, {
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
-      cwd: opts?.cwd || path.dirname(binaryPath)
+      cwd
     });
+  }
+
+  getConfigDir(engineId: EngineID): string {
+    return this.getEmulatorConfigPath(engineId);
   }
 
   getEmulatorConfigPath(engineId: EngineID): string {
@@ -116,6 +130,10 @@ export class WinHandler implements PlatformHandler {
     }
   }
 
+  getSaveDir(game: Game): string {
+    return this.getSavePath(game);
+  }
+
   getSavePath(game: Game): string {
     const { appData, localAppData, docs } = this.getBaseDirs();
 
@@ -141,6 +159,29 @@ export class WinHandler implements PlatformHandler {
         return path.join(docs, "PCSX2", "memcards");
       default:
         throw new Error(`[SaveService] Unknown engine: ${game.engineId}`);
+    }
+  }
+
+  getBiosDir(engineId: EngineID): string {
+    const { appData, localAppData, docs } = this.getBaseDirs();
+
+    switch (engineId) {
+      case "dolphin":
+        return path.join(appData, "Dolphin Emulator", "Sys");
+      case "mesen":
+        return path.join(appData, "Mesen2", "Firmware");
+      case "ares":
+        return path.join(localAppData, "ares", "Firmware");
+      case "melonds":
+        return path.join(localAppData, "melonDS");
+      case "azahar":
+        return path.join(appData, "Azahar", "sysdata");
+      case "pcsx2":
+        return path.join(docs, "PCSX2", "bios");
+      case "duckstation":
+        return path.join(docs, "DuckStation", "bios");
+      default:
+        throw new Error(`[Win] BIOS dir not found for: ${engineId}`);
     }
   }
 

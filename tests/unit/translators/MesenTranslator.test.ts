@@ -66,4 +66,39 @@ describe("MesenTranslator", () => {
     // move.up maps to GP_LS_UP (index 19) -> 4096 + 19 = 4115
     expect(resultMove["Up"]).toBe(4115);
   });
+
+  it("should translate keyboard bindings for win32 platform via MesenTranslator correctly", () => {
+    const translator = new MesenTranslator();
+
+    const resultMoveWin = translator.translateForDeviceFromPlayer(profile.player1, 1, "keyboard", "move", "win32");
+    expect(Object.keys(resultMoveWin).length).toBeGreaterThan(0);
+
+    // face.primary is 'KeyU' -> VK_U (85)
+    expect(resultMoveWin["A"]).toBe(85);
+
+    // system.start is 'KeyT' -> VK_T (84)
+    expect(resultMoveWin["Start"]).toBe(84);
+
+    // move.up is 'KeyW' -> VK_W (87)
+    expect(resultMoveWin["Up"]).toBe(87);
+  });
+
+  it("should output declarative JSON merge patches purely without disk side effects", () => {
+    const translator = new MesenTranslator();
+    const patches = translator.translate(profile, { consoleId: "snes", platform: "darwin", configDir: "/non/existent/dir" });
+
+    expect(patches).toHaveLength(1);
+    const patch = patches[0];
+    expect(patch.kind).toBe("json-merge");
+    if (patch.kind === "json-merge") {
+      expect(patch.path).toEqual(["Snes"]);
+      expect(patch.value).toHaveProperty("Port1");
+      const port1 = (patch.value as Record<string, unknown>).Port1 as Record<string, unknown>;
+      expect(port1.Type).toBe("SnesController");
+      expect(port1).toHaveProperty("Mapping1");
+    }
+  });
 });
+
+
+

@@ -10,12 +10,27 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses';
 
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
+import { spawnSync } from 'child_process';
+import * as path from 'path';
 
 const config: ForgeConfig = {
+  hooks: {
+    generateAssets: async () => {
+      if (process.platform === 'darwin') {
+        console.log('Building macOS native binaries...');
+        const buildScript = path.join(__dirname, '..', 'src', 'native', 'build.sh');
+        const result = spawnSync('bash', [buildScript], { stdio: 'inherit' });
+        if (result.status !== 0) {
+          throw new Error(`Failed to build macOS native binaries. Exit code: ${result.status}`);
+        }
+      }
+    }
+  },
   packagerConfig: {
     asar: {
       unpack: "**/{mac,linux,win}/**/*"
     },
+    extraResource: ['./bin']
   },
   rebuildConfig: {},
   makers: [

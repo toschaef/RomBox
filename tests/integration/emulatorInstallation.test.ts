@@ -84,7 +84,7 @@ describe("Emulator Installation and Binary Path Integration Tests", () => {
 
   beforeEach(() => {
     if (fs.existsSync(tempDir)) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      fs.rmSync(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
     fs.mkdirSync(tempDir, { recursive: true });
     initDB();
@@ -93,7 +93,7 @@ describe("Emulator Installation and Binary Path Integration Tests", () => {
   afterEach(() => {
     jest.restoreAllMocks();
     if (fs.existsSync(tempDir)) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      fs.rmSync(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
   });
 

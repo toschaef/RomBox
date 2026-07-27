@@ -8,7 +8,7 @@ import type { Game } from "../../../shared/types";
 import { DolphinTranslator } from "../translators/DolphinTranslator";
 import type { EmulatorPatch, TranslateContext } from "../translators/ITranslator";
 import type { PlayerBindings } from "../../../shared/types/controls";
-import { DOLPHIN } from "../schema/dolphin";
+import { DOLPHIN, detectDolphinPadDevice } from "../schema/dolphin";
 import { SettingsService } from "../../services/SettingsService";
 import { getResolutionMultiplier } from "../../../shared/resolution";
 
@@ -36,57 +36,11 @@ function iniGetAll(text: string, section: string, key: string): string[] {
   return out;
 }
 
-function detectDolphinPadDevice(configDir: string): string | null {
-  const candidates: Array<{ file: string; section: string }> = [
-    { file: DOLPHIN.gcPadNewPath(configDir), section: "GCPad1" },
-    { file: DOLPHIN.wiimoteNewPath(configDir), section: "Wiimote1" },
-  ];
-
-  for (const c of candidates) {
-    try {
-      if (!fs.existsSync(c.file)) continue;
-      const txt = fs.readFileSync(c.file, "utf-8");
-      const dev = iniGetAll(txt, c.section, "Device").at(-1)?.trim();
-      if (!dev) continue;
-
-      if (dev.includes("Keyboard") || dev.includes("Quartz") || dev.includes("Keyboard & Mouse")) continue;
-
-      return dev;
-    } catch (err) {
-      void err;
-    }
-  }
-  return null;
-}
-
 function ensureDirs(configDir: string) {
   fs.mkdirSync(configDir, { recursive: true });
   fs.mkdirSync(path.join(configDir, "Profiles", "GCPad"), { recursive: true });
   fs.mkdirSync(path.join(configDir, "Profiles", "Wiimote"), { recursive: true });
   fs.mkdirSync(path.join(configDir, "GameSettings"), { recursive: true });
-}
-
-function applyPatches(patches: EmulatorPatch[]) {
-  for (const p of patches) {
-    if (p.kind === "ini-set") {
-      if (!p.absPath) continue;
-      IniEditor.updateIni(p.absPath, { [p.section]: { [p.key]: p.value } });
-      continue;
-    }
-
-    if (p.kind === "file-write") {
-      if (!p.absPath) continue;
-      fs.mkdirSync(path.dirname(p.absPath), { recursive: true });
-      fs.writeFileSync(p.absPath, p.contents, "utf-8");
-      continue;
-    }
-
-    if (p.kind === "ini-delete") {
-      if (!p.absPath) continue;
-      IniEditor.deleteKeys(p.absPath, { [p.section]: [p.key] });
-      continue;
-    }
-  }
 }
 
 function dolphinGameIdFromGame(game: Game): string | undefined {
@@ -109,7 +63,7 @@ export class DolphinConfigurator extends BaseConfigurator {
     const resolution = settingsSvc.get("launch.resolution");
     const resScale = String(getResolutionMultiplier(resolution, "dolphin"));
 
-    IniEditor.updateIni(dolphinIni, {
+    const iniUpdate: any = {
       Display: { RenderToMain: "False", Fullscreen: fs_flag },
       Interface: {
         ShowMainWindow: "False",
@@ -120,7 +74,16 @@ export class DolphinConfigurator extends BaseConfigurator {
         ShowStatusbar: "False",
       },
       General: { RecursiveISOPaths: "False" },
-    });
+      Analytics: { PermissionAsked: "True" },
+      Core: { BackgroundInput: "True" },
+      Controls: { SIDevice0: "6" },
+    };
+
+    if (this.game.consoleId === "wii") {
+      iniUpdate.Controls.WiimoteSource0 = "1";
+    }
+
+    IniEditor.updateIni(dolphinIni, iniUpdate);
 
     const gfxIni = path.join(configDir, "GFX.ini");
     IniEditor.updateIni(gfxIni, {
@@ -128,14 +91,7 @@ export class DolphinConfigurator extends BaseConfigurator {
     });
 
     if (this.game.consoleId === "wii") {
-      IniEditor.updateIni(dolphinIni, {
-        Controls: {
-          WiimoteSource0: "1",
-        },
-      });
-
       const wiiNewPath = DOLPHIN.wiimoteNewPath(configDir);
-
       IniEditor.updateIni(wiiNewPath, {
         Wiimote1: {
           Extension: "Classic",
@@ -151,7 +107,7 @@ export class DolphinConfigurator extends BaseConfigurator {
     const detected = detectDolphinPadDevice(configDir);
     const effectiveProfile = {
       ...profile,
-      preferredControllerId: profile.preferredControllerId ?? detected ?? profile.preferredControllerId,
+      preferredControllerId: profile.preferredControllerId,
       player1: bindings,
     };
 
@@ -167,7 +123,7 @@ export class DolphinConfigurator extends BaseConfigurator {
     const translator = new DolphinTranslator();
     const patches = translator.translate(effectiveProfile, ctx);
 
-    applyPatches(patches);
+    this.applyPatches(patches);
 
     if (this.game.consoleId === "wii") {
       try {

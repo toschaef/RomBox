@@ -74,9 +74,9 @@ export const ARES_QUARTZ_KEYS = [
 ] as const;
 
 export const ARES_QUARTZ_KEY_INDEX: Record<string, number> =
-  Object.fromEntries(ARES_QUARTZ_KEYS.map((k, i) => [k, i]));
+  Object.assign(Object.create(null), Object.fromEntries(ARES_QUARTZ_KEYS.map((k, i) => [k, i])));
 
-const DOM_TO_ARES_KEY: Record<string, string> = {
+const DOM_TO_ARES_KEY: Record<string, string> = Object.assign(Object.create(null), {
   Escape: "Escape",
 
   Backquote: "Tilde",
@@ -136,7 +136,7 @@ const DOM_TO_ARES_KEY: Record<string, string> = {
   NumpadEnter: "Enter",
 
   NumpadEqual: "Equals",
-};
+});
 
 function domCodeToAresKeyName(code: string): string | null {
   if (code.startsWith("Key") && code.length === 4) return code[3];
@@ -156,4 +156,13 @@ export function resolveQuartzKeyboardKeyIndex(code: string): number | null {
   if (!aresName) return null;
   const idx = ARES_QUARTZ_KEY_INDEX[aresName];
   return Number.isInteger(idx) ? idx : null;
+}
+
+export function resolveAresKeyboardKeyIndex(
+  code: string,
+  platform: import("../../../shared/types").Platform = "darwin"
+): number | null {
+  const { KeycodeMapper } = require("../keycodes/KeycodeMapper");
+  const val = KeycodeMapper.toKeycode("ares", code, platform);
+  return typeof val === "number" ? val : null;
 }

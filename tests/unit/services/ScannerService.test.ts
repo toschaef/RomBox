@@ -34,14 +34,22 @@ describe("ScannerService", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     if (fs.existsSync(tempDir)) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      try {
+        fs.rmSync(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+      } catch {
+        // ignore locked dir
+      }
     }
     fs.mkdirSync(tempDir, { recursive: true });
   });
 
   afterEach(() => {
     if (fs.existsSync(tempDir)) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      try {
+        fs.rmSync(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+      } catch {
+        // ignore locked dir
+      }
     }
   });
 

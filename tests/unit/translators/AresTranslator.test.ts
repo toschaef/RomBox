@@ -61,7 +61,7 @@ describe("AresTranslator", () => {
     expect(result["R-Up"]).toBe("0x1/0/48;;");
   });
 
-  it("should handle stick-based special C bindings gracefully", () => {
+  it("should handle stick-based special C bindings and translate to gamepad axis", () => {
     const specialProfile: ControlsProfile = {
       ...profile,
       player1: {
@@ -78,7 +78,67 @@ describe("AresTranslator", () => {
     };
     const translator = new AresTranslator();
     const result = translator.translateFromPlayer(specialProfile.player1);
-    // Gamepad stick axes are not key-based, so they should return undefined in Ares (no crash)
-    expect(result["R-Up"]).toBeUndefined();
+    // Gamepad stick axis GP_RS_UP (index 23) -> "0x2/0/23;;"
+    expect(result["R-Up"]).toBe("0x2/0/23;;");
+  });
+
+  it("should translate gamepad button and axis bindings for Ares correctly on darwin and win32", () => {
+    const gamepadProfile: ControlsProfile = {
+      ...profile,
+      player1: {
+        ...profile.player1,
+        face: {
+          type: "face",
+          primary: { type: "gp_button", token: "GP_A" },
+          secondary: { type: "gp_button", token: "GP_B" },
+        },
+        move: {
+          type: "stick",
+          stick: "left",
+          deadzone: 0.15,
+        },
+        special: {
+          type: "n64",
+          z: { type: "gp_button", token: "GP_L2" },
+        }
+      }
+    };
+    const translator = new AresTranslator();
+
+    // Test macOS (darwin)
+    const resultMac = translator.translateFromPlayer(gamepadProfile.player1, "darwin");
+    expect(resultMac["A..South"]).toBe("0x2/0/0;;"); // GP_A -> 0
+    expect(resultMac["B..East"]).toBe("0x2/0/1;;");  // GP_B -> 1
+    expect(resultMac["L-Up"]).toBe("0x2/0/19;;");   // GP_LS_UP -> 19
+    expect(resultMac["L-Trigger"]).toBe("0x2/0/12;;"); // GP_L2 -> 12
+
+    // Test Windows (win32)
+    const resultWin = translator.translateFromPlayer(gamepadProfile.player1, "win32");
+    expect(resultWin["A..South"]).toBe("0x2/0/0;;");
+    expect(resultWin["B..East"]).toBe("0x2/0/1;;");
+    expect(resultWin["L-Up"]).toBe("0x2/0/19;;");
+    expect(resultWin["L-Trigger"]).toBe("0x2/0/12;;");
+
+    // Test with custom device index (deviceIndex = 2)
+    const resultIdx2 = translator.translateFromPlayer(gamepadProfile.player1, "darwin", 2);
+    expect(resultIdx2["A..South"]).toBe("0x2/2/0;;");
+    expect(resultIdx2["B..East"]).toBe("0x2/2/1;;");
+    expect(resultIdx2["L-Trigger"]).toBe("0x2/2/12;;");
+  });
+
+  it("should translate bindings for win32 platform via AresTranslator correctly", () => {
+    const translator = new AresTranslator();
+    const resultWin = translator.translateFromPlayer(profile.player1, "win32");
+    expect(resultWin).toBeDefined();
+
+    // 'KeyT' for Start -> VK_T (84) -> "0x1/0/84;;"
+    expect(resultWin["Start"]).toBe("0x1/0/84;;");
+
+    // 'KeyU' for A -> VK_U (85) -> "0x1/0/85;;"
+    expect(resultWin["A..South"]).toBe("0x1/0/85;;");
+
+    // 'KeyW' for Analog Up -> VK_W (87) -> "0x1/0/87;;"
+    expect(resultWin["L-Up"]).toBe("0x1/0/87;;");
   });
 });
+

@@ -1,4 +1,5 @@
 import fs from "fs";
+import path from "path";
 
 type Line = { raw: string; indent: number; text: string };
 
@@ -155,6 +156,7 @@ export const BmlEditor = {
       lines.splice(insertAt, 0, ...insertLines);
     }
 
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
     fs.writeFileSync(filePath, lines.map((l) => l.raw).join("\n"), "utf-8");
   },
 };

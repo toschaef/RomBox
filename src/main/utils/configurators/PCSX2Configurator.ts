@@ -17,57 +17,13 @@ function ensureDirs(configDir: string) {
   fs.mkdirSync(path.join(configDir, "bios"), { recursive: true });
 }
 
-function applyPatches(patches: EmulatorPatch[]) {
-  for (const p of patches) {
-    if (p.kind === "ini-set") {
-      if (!p.absPath) continue;
-      IniEditor.updateIni(p.absPath, { [p.section]: { [p.key]: p.value } });
-      continue;
-    }
-
-    if (p.kind === "file-write") {
-      if (!p.absPath) continue;
-      fs.mkdirSync(path.dirname(p.absPath), { recursive: true });
-      fs.writeFileSync(p.absPath, p.contents, "utf-8");
-      continue;
-    }
-
-    if (p.kind === "ini-delete") {
-      if (!p.absPath) continue;
-      IniEditor.deleteKeys(p.absPath, { [p.section]: [p.key] });
-      continue;
-    }
-  }
-}
-
-function findBiosFile(biosDir: string): string | null {
-  const validBiosNames = [
-    "scph10000.bin", "scph30001.bin", "scph30004.bin",
-    "scph39001.bin", "scph39004.bin", "scph50000.bin",
-    "scph70000.bin", "scph70004.bin", "scph70012.bin",
-    "scph77001.bin", "scph77004.bin", "scph90006.bin",
-    "bios.bin", "ps2_bios.bin",
-  ];
-
-  if (!fs.existsSync(biosDir)) return null;
-
-  for (const name of validBiosNames) {
-    if (fs.existsSync(path.join(biosDir, name))) {
-      return name;
-    }
-  }
-
-  try {
-    const files = fs.readdirSync(biosDir);
-    const biosFile = files.find(f =>
-      f.toLowerCase().endsWith(".bin") &&
-      (f.toLowerCase().startsWith("scph") || f.toLowerCase().includes("bios"))
-    );
-    return biosFile || null;
-  } catch {
-    return null;
-  }
-}
+const PCSX2_VALID_BIOS = [
+  "scph10000.bin", "scph30001.bin", "scph30004.bin",
+  "scph39001.bin", "scph39004.bin", "scph50000.bin",
+  "scph70000.bin", "scph70004.bin", "scph70012.bin",
+  "scph77001.bin", "scph77004.bin", "scph90006.bin",
+  "bios.bin", "ps2_bios.bin",
+];
 
 export class PCSX2Configurator extends BaseConfigurator {
   async configure(): Promise<void> {
@@ -80,7 +36,7 @@ export class PCSX2Configurator extends BaseConfigurator {
     const pcsx2Ini = PCSX2.iniPath(configDir);
     const biosDir = path.join(configDir, "bios");
 
-    const biosFile = findBiosFile(biosDir);
+    const biosFile = this.findBiosFile(biosDir, PCSX2_VALID_BIOS);
 
     const settingsSvc = new SettingsService();
     const fullscreen = settingsSvc.get("launch.fullscreen");
@@ -149,6 +105,6 @@ export class PCSX2Configurator extends BaseConfigurator {
     const translator = new PCSX2Translator();
     const patches = translator.translate(effectiveProfile, ctx);
 
-    applyPatches(patches);
+    this.applyPatches(patches);
   }
 }

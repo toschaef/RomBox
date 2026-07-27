@@ -3,7 +3,7 @@ import type { IEmulatorTranslator, TranslateContext, EmulatorPatch } from "./ITr
 import type { ControlsProfile, DigitalBinding } from "../../../shared/types/controls";
 import { axisToDigitalToken } from "../../../shared/controls/gamepadTokens";
 import { getDirFromDpad, getDirFromLook, getDirFromMove } from "../profileRead";
-import { DOLPHIN, quartzKeyFromDomCode, dolphinExprForGamepadToken } from "../schema/dolphin";
+import { DOLPHIN, quartzKeyFromDomCode, dolphinExprForGamepadToken, getPlatformGamepadDevice, detectDolphinPadDevice } from "../schema/dolphin";
 
 
 type DolphinConsole = "gc" | "wii";
@@ -83,24 +83,37 @@ function wrapTok(tok: string) {
   return needsBackticks(tok) ? `\`${tok}\`` : tok;
 }
 
-function dolphinExprForDigital(b: DigitalBinding, kind: DeviceKind): string | null {
+function getSDLDeviceIndex(ctx?: TranslateContext, profile?: ControlsProfile): number {
+  if (ctx?.platform === "darwin") return 0;
+  return 0; // fallback default
+}
+
+
+
+function dolphinExprForDigital(
+  b: DigitalBinding,
+  kind: DeviceKind,
+  platform: TranslateContext["platform"] = "win32",
+  learnedBinds?: any
+): string | null {
   if (kind === "gamepad") {
-    if (b.type === "gp_button") return dolphinExprForGamepadToken(b.token);
+    if (b.type === "gp_button") return dolphinExprForGamepadToken(b.token, platform, learnedBinds);
     if (b.type === "gp_axis_digital") {
       const tok = axisToDigitalToken({
         stick: b.stick,
         axis: b.axis,
         sign: b.dir === "neg" ? -1 : 1,
       });
-      return dolphinExprForGamepadToken(tok);
+      return tok ? dolphinExprForGamepadToken(tok, platform, learnedBinds) : null;
     }
     return null;
   }
-
+  
   if (b.type !== "key") return null;
-  const key = quartzKeyFromDomCode(b.code);
-  if (!key) return null;
-
+  let key = b.code;
+  if (platform === "darwin") {
+    key = quartzKeyFromDomCode(b.code) || b.code;
+  }
   return wrapTok(key);
 }
 
@@ -133,7 +146,27 @@ export class DolphinTranslator implements IEmulatorTranslator {
 
     const which = pickConsole(ctx);
     const kind = detectDeviceKindFromProfile(profile);
-    const device = pickDeviceString(profile, kind, ctx.platform);
+
+    const deviceIndex = getSDLDeviceIndex(ctx, profile);
+    const info = getPlatformGamepadDevice(ctx.platform, deviceIndex, profile.preferredControllerId);
+    if (ctx) ctx.learnedBinds = info.learnedBinds;
+    
+    let device = info.deviceString;
+    if (ctx.configDir) {
+      const detected = detectDolphinPadDevice(ctx.configDir);
+      if (detected) {
+        if (
+          (ctx.platform === "darwin" && kind === "gamepad") ||
+          (kind === "gamepad" && detected.includes("Keyboard")) ||
+          (kind === "keyboard" && !detected.includes("Keyboard"))
+        ) {
+          console.log(`[DolphinTranslator] Ignoring cached fallback device: ${detected}`);
+        } else {
+          console.log(`[DolphinTranslator] Using detected device from config: ${detected}`);
+          device = detected;
+        }
+      }
+    }
     const patches: EmulatorPatch[] = [];
 
     const gcNew = DOLPHIN.gcPadNewPath(ctx.configDir);
@@ -143,7 +176,7 @@ export class DolphinTranslator implements IEmulatorTranslator {
       if (!b) return;
       if (kind === "gamepad" && !device) return;
 
-      const expr = dolphinExprForDigital(b, kind === "gamepad" && device ? "gamepad" : "keyboard");
+      const expr = dolphinExprForDigital(b, kind === "gamepad" && device ? "gamepad" : "keyboard", ctx.platform, ctx.learnedBinds);
       if (!expr) return;
 
       addIniPatch(patches, absPath, section, label, expr);
@@ -208,6 +241,7 @@ export class DolphinTranslator implements IEmulatorTranslator {
       addIniPatch(patches, wiiNew, "Wiimote1", "Device", effectiveDevice);
       addIniPatch(patches, wiiNew, "Wiimote1", "Extension", "Classic");
 
+      // --- Classic Controller ---
       writeClassic("Classic/Buttons/A", profile.player1.face.primary);
       writeClassic("Classic/Buttons/B", profile.player1.face.secondary);
       writeClassic("Classic/Buttons/X", profile.player1.face.tertiary);
@@ -215,6 +249,12 @@ export class DolphinTranslator implements IEmulatorTranslator {
 
       writeClassic("Classic/Buttons/+", profile.player1.system.start);
       writeClassic("Classic/Buttons/-", profile.player1.system.select);
+      
+      const wiiSpecial = special?.type === "wii" ? special : undefined;
+      
+      if (wiiSpecial?.home) {
+        writeClassic("Classic/Buttons/Home", wiiSpecial.home);
+      }
 
       writeClassic("Classic/D-Pad/Up", getDirFromDpad(profile, "up"));
       writeClassic("Classic/D-Pad/Down", getDirFromDpad(profile, "down"));
@@ -235,6 +275,55 @@ export class DolphinTranslator implements IEmulatorTranslator {
       writeClassic("Classic/Triggers/R", profile.player1.shoulders.bumperR);
       writeClassic("Classic/Buttons/ZL", profile.player1.shoulders.triggerL);
       writeClassic("Classic/Buttons/ZR", profile.player1.shoulders.triggerR);
+
+      // wiimote fallback
+      if (wiiSpecial) {
+        writeBinding(wiiNew, "Wiimote1", "Buttons/A", wiiSpecial.wiimoteA);
+        writeBinding(wiiNew, "Wiimote1", "Buttons/B", wiiSpecial.wiimoteB);
+        writeBinding(wiiNew, "Wiimote1", "Buttons/1", wiiSpecial.wiimote1);
+        writeBinding(wiiNew, "Wiimote1", "Buttons/2", wiiSpecial.wiimote2);
+        writeBinding(wiiNew, "Wiimote1", "Buttons/+", wiiSpecial.wiimotePlus);
+        writeBinding(wiiNew, "Wiimote1", "Buttons/-", wiiSpecial.wiimoteMinus);
+        writeBinding(wiiNew, "Wiimote1", "Buttons/Home", wiiSpecial.wiimoteHome);
+
+        writeBinding(wiiNew, "Wiimote1", "D-Pad/Up", wiiSpecial.wiimoteDpad?.up);
+        writeBinding(wiiNew, "Wiimote1", "D-Pad/Down", wiiSpecial.wiimoteDpad?.down);
+        writeBinding(wiiNew, "Wiimote1", "D-Pad/Left", wiiSpecial.wiimoteDpad?.left);
+        writeBinding(wiiNew, "Wiimote1", "D-Pad/Right", wiiSpecial.wiimoteDpad?.right);
+
+        // nunchuck
+        writeBinding(wiiNew, "Wiimote1", "Nunchuk/Buttons/C", wiiSpecial.nunchuckC);
+        writeBinding(wiiNew, "Wiimote1", "Nunchuk/Buttons/Z", wiiSpecial.nunchuckZ);
+
+        // motion / ir
+        writeBinding(wiiNew, "Wiimote1", "Shake/X", wiiSpecial.shake);
+        writeBinding(wiiNew, "Wiimote1", "Shake/Y", wiiSpecial.shake);
+        writeBinding(wiiNew, "Wiimote1", "Shake/Z", wiiSpecial.shake);
+
+        if (wiiSpecial.tilt?.type === "stick") {
+          writeBinding(wiiNew, "Wiimote1", "Tilt/Forward", { type: "gp_axis_digital", stick: wiiSpecial.tilt.stick, axis: "y", dir: "neg", threshold: 0.5 });
+          writeBinding(wiiNew, "Wiimote1", "Tilt/Backward", { type: "gp_axis_digital", stick: wiiSpecial.tilt.stick, axis: "y", dir: "pos", threshold: 0.5 });
+          writeBinding(wiiNew, "Wiimote1", "Tilt/Left", { type: "gp_axis_digital", stick: wiiSpecial.tilt.stick, axis: "x", dir: "neg", threshold: 0.5 });
+          writeBinding(wiiNew, "Wiimote1", "Tilt/Right", { type: "gp_axis_digital", stick: wiiSpecial.tilt.stick, axis: "x", dir: "pos", threshold: 0.5 });
+        } else if (wiiSpecial.tilt?.type === "dpad") {
+          writeBinding(wiiNew, "Wiimote1", "Tilt/Forward", wiiSpecial.tilt.up);
+          writeBinding(wiiNew, "Wiimote1", "Tilt/Backward", wiiSpecial.tilt.down);
+          writeBinding(wiiNew, "Wiimote1", "Tilt/Left", wiiSpecial.tilt.left);
+          writeBinding(wiiNew, "Wiimote1", "Tilt/Right", wiiSpecial.tilt.right);
+        }
+
+        if (wiiSpecial.ir?.type === "stick") {
+          writeBinding(wiiNew, "Wiimote1", "IR/Up", { type: "gp_axis_digital", stick: wiiSpecial.ir.stick, axis: "y", dir: "neg", threshold: 0.5 });
+          writeBinding(wiiNew, "Wiimote1", "IR/Down", { type: "gp_axis_digital", stick: wiiSpecial.ir.stick, axis: "y", dir: "pos", threshold: 0.5 });
+          writeBinding(wiiNew, "Wiimote1", "IR/Left", { type: "gp_axis_digital", stick: wiiSpecial.ir.stick, axis: "x", dir: "neg", threshold: 0.5 });
+          writeBinding(wiiNew, "Wiimote1", "IR/Right", { type: "gp_axis_digital", stick: wiiSpecial.ir.stick, axis: "x", dir: "pos", threshold: 0.5 });
+        } else if (wiiSpecial.ir?.type === "dpad") {
+          writeBinding(wiiNew, "Wiimote1", "IR/Up", wiiSpecial.ir.up);
+          writeBinding(wiiNew, "Wiimote1", "IR/Down", wiiSpecial.ir.down);
+          writeBinding(wiiNew, "Wiimote1", "IR/Left", wiiSpecial.ir.left);
+          writeBinding(wiiNew, "Wiimote1", "IR/Right", wiiSpecial.ir.right);
+        }
+      }
     }
 
     if (ctx.gameId) {

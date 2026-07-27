@@ -1,11 +1,11 @@
 import { spawnSync } from "child_process";
-import { runAzaharSdlProbe } from "../../../src/main/utils/azahar/sdlprobe";
+import { runSdlProbe } from "../../../src/main/utils/azahar/sdlprobe";
 
 jest.mock("child_process", () => ({
   spawnSync: jest.fn()
 }));
 
-describe("runAzaharSdlProbe", () => {
+describe("runSdlProbe", () => {
   const mockSpawnSync = spawnSync as jest.Mock;
 
   beforeEach(() => {
@@ -28,7 +28,7 @@ describe("runAzaharSdlProbe", () => {
       status: 0
     });
 
-    const result = runAzaharSdlProbe({
+    const result = runSdlProbe({
       helperPath: "/path/to/helper",
       preferredGuid: "preferred-guid"
     });
@@ -52,7 +52,7 @@ describe("runAzaharSdlProbe", () => {
       status: 0
     });
 
-    const result = runAzaharSdlProbe({ helperPath: "/path/to/helper" });
+    const result = runSdlProbe({ helperPath: "/path/to/helper" });
 
     expect(result.learned).toBeNull();
     expect(result.rawStdout).toBe("invalid-json-output");
@@ -67,7 +67,7 @@ describe("runAzaharSdlProbe", () => {
       status: 1
     });
 
-    const result = runAzaharSdlProbe({ helperPath: "/path/to/helper" });
+    const result = runSdlProbe({ helperPath: "/path/to/helper" });
 
     expect(result.learned).toBeNull();
     expect(result.exitCode).toBe(1);
@@ -80,7 +80,7 @@ describe("runAzaharSdlProbe", () => {
       status: 255
     });
 
-    const result = runAzaharSdlProbe({ helperPath: "/path/to/helper" });
+    const result = runSdlProbe({ helperPath: "/path/to/helper" });
 
     expect(result.learned).toBeNull();
     expect(result.rawStderr).toBe("Fatal process error");

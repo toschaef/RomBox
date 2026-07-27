@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import type { EmulatorConfigurator } from "./types";
+import { BaseConfigurator } from "./BaseConfigurator";
 import { osHandler } from "../../platform";
 import { IniEditor } from "../editors/ini";
 import { ControlsService } from "../../services/ControlsService";
@@ -19,7 +19,7 @@ import {
 import type { EmulatorPatch, TranslateContext } from "../translators/ITranslator";
 import { AzaharTranslator } from "../translators/AzaharTranslator";
 import type { AzaharLearnedSDL } from "../azahar/sdlprobe";
-import { runAzaharSdlProbe } from "../azahar/sdlprobe";
+import { runSdlProbe } from "../azahar/sdlprobe";
 import { SettingsService } from "../../services/SettingsService";
 import { getResolutionMultiplier } from "../../../shared/resolution";
 
@@ -61,16 +61,6 @@ function parseIniSectionKV(sectionText: string): Record<string, string> {
     out[kv[1].trim()] = kv[2].trim();
   }
   return out;
-}
-
-function patchesToIniUpdates(patches: EmulatorPatch[]): Record<string, Record<string, string>> {
-  const updates: Record<string, Record<string, string>> = {};
-  for (const p of patches) {
-    if (p.kind !== "ini-set") continue;
-    updates[p.section] ??= {};
-    updates[p.section][p.key] = p.value;
-  }
-  return updates;
 }
 
 function readCachedLearned(cachePath: string): AzaharLearnedSDL | null {
@@ -170,7 +160,7 @@ function buildControlsSection(args: {
   return out;
 }
 
-export class AzaharConfigurator implements EmulatorConfigurator {
+export class AzaharConfigurator extends BaseConfigurator {
   async configure(): Promise<void> {
     const svc = new ControlsService();
     const profile = svc.getDefaultProfile();
@@ -188,7 +178,7 @@ export class AzaharConfigurator implements EmulatorConfigurator {
 
     let learned = readCachedLearned(cachePath);
     if (fs.existsSync(helperPath)) {
-      const res = runAzaharSdlProbe({
+      const res = runSdlProbe({
         helperPath,
         timeoutMs: 1500,
         preferredGuid: profile.preferredControllerId,
@@ -233,7 +223,7 @@ export class AzaharConfigurator implements EmulatorConfigurator {
     patches.push({ kind: "ini-set", section: "Renderer", key: "resolution_factor\\default", value: "false" });
 
 
-    const updates = patchesToIniUpdates(patches);
+    const updates = this.patchesToIniUpdates(patches);
     const rawControls = updates[AZAHAR.sections.controls] ?? {};
     const uiUpdates = updates[AZAHAR.sections.ui] ?? {};
     const miscUpdates = updates["Miscellaneous"] ?? {};

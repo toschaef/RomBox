@@ -98,4 +98,55 @@ describe("DuckStationTranslator", () => {
       expect(stickLUp.value).toBe("SDL-0/+LeftY"); // normal UP for Left stick is GP_LS_UP (positive sign in GP_LS_UP)
     }
   });
+
+  it("should translate keyboard bindings for win32 platform via DuckStationTranslator correctly", () => {
+    const winContext: TranslateContext = {
+      platform: "win32",
+      configDir: "/mock/config/dir",
+      consoleId: "ps1",
+    };
+    const translator = new DuckStationTranslator();
+    const result = translator.translate(profile, winContext);
+    expect(result.length).toBeGreaterThan(0);
+
+    const buttonCross = result.find(p => p.kind === "ini-set" && p.key === "Cross");
+    expect(buttonCross).toBeDefined();
+    if (buttonCross && buttonCross.kind === "ini-set") {
+      expect(buttonCross.value).toBe("Keyboard/U");
+    }
+  });
+
+  it("should derive dynamic SDL device index from learnedDevice, preferredControllerId, and padPort", () => {
+    const gamepadProfile: ControlsProfile = {
+      ...profile,
+      preferredControllerId: "SDL-2",
+      player1: {
+        ...profile.player1,
+        face: {
+          type: "face",
+          primary: { type: "gp_button", token: "GP_A" },
+        }
+      }
+    };
+    const translator = new DuckStationTranslator();
+
+    // 1. ctx.learnedDevice takes priority
+    const ctxLearned: TranslateContext = { ...context, learnedDevice: "SDL-3" };
+    const resLearned = translator.translate(gamepadProfile, ctxLearned);
+    const crossLearned = resLearned.find(p => p.kind === "ini-set" && p.key === "Cross");
+    expect(crossLearned && crossLearned.kind === "ini-set" ? crossLearned.value : null).toBe("SDL-3/A");
+
+    // 2. Fall back to profile.preferredControllerId ("SDL-2")
+    const resPreferred = translator.translate(gamepadProfile, context);
+    const crossPreferred = resPreferred.find(p => p.kind === "ini-set" && p.key === "Cross");
+    expect(crossPreferred && crossPreferred.kind === "ini-set" ? crossPreferred.value : null).toBe("SDL-2/A");
+
+    // 3. Fall back to ctx.padPort (padPort: 2 -> index 1)
+    const noPreferredProfile: ControlsProfile = { ...gamepadProfile, preferredControllerId: undefined };
+    const ctxPort: TranslateContext = { ...context, padPort: 2 };
+    const resPort = translator.translate(noPreferredProfile, ctxPort);
+    const crossPort = resPort.find(p => p.kind === "ini-set" && p.key === "Cross");
+    expect(crossPort && crossPort.kind === "ini-set" ? crossPort.value : null).toBe("SDL-1/A");
+  });
 });
+

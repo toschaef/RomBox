@@ -14,7 +14,7 @@ export type DigitalPath =
   | "system.start"
   | "system.select";
 
-export type ConsoleGroupId = "move" | "dpad" | "look" | "special.c" | "special";
+export type ConsoleGroupId = "move" | "dpad" | "look" | "special.c" | "special" | "special.wiimoteDpad" | "special.tilt" | "special.ir";
 
 export function defaultStick(stick: "left" | "right"): StickBinding {
   return { type: "stick", stick, deadzone: 0.15 };
@@ -93,7 +93,7 @@ export function getConsoleGroupValue(layout: AnyConsoleLayout, group: ConsoleGro
 export function setConsoleGroupMode(layout: AnyConsoleLayout, group: ConsoleGroupId, mode: "dpad" | "stick"): AnyConsoleLayout {
   const next = structuredClone(layout);
 
-  const stick: "left" | "right" = (group === "special.c" || group === "look") ? "right" : "left";
+  const stick: "left" | "right" = (group === "special.c" || group === "look" || group === "special.tilt" || group === "special.ir") ? "right" : "left";
   const val = mode === "dpad" ? defaultDpad() : defaultStick(stick);
 
   let parent: Record<string, unknown> = next.bindings as unknown as Record<string, unknown>;

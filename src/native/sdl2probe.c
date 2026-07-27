@@ -149,11 +149,14 @@ static int build_stick_blob_azahar(
 
 int main(int argc, char** argv) {
   int desired_index = -1;
+  int listen_mode = 0;
 
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "--index") == 0 && i + 1 < argc) {
       desired_index = atoi(argv[i + 1]);
       i++;
+    } else if (strcmp(argv[i], "--listen") == 0) {
+      listen_mode = 1;
     }
   }
 
@@ -189,11 +192,28 @@ int main(int argc, char** argv) {
   SDL_Joystick* js = SDL_GameControllerGetJoystick(gc);
   SDL_JoystickGUID g = SDL_JoystickGetGUID(js);
 
+  if (listen_mode) {
+    printf("{\"ok\":true,\"listen\":true,\"message\":\"Listening for button press...\"}\n");
+    fflush(stdout);
+    SDL_Event e;
+    while (SDL_WaitEvent(&e)) {
+      if (e.type == SDL_CONTROLLERBUTTONDOWN) {
+        printf("{\"ok\":true,\"button_pressed\":%d}\n", e.cbutton.button);
+        break;
+      }
+    }
+    SDL_GameControllerClose(gc);
+    SDL_Quit();
+    return 0;
+  }
+
   char guid_str[64];
   SDL_JoystickGetGUIDString(g, guid_str, (int)sizeof(guid_str));
 
   printf("{\"ok\":true,\"guid\":");
   print_json_string(guid_str);
+  printf(",\"name\":");
+  print_json_string(SDL_GameControllerName(gc));
   printf(",\"port\":0,\"binds\":{");
 
   int first = 1;

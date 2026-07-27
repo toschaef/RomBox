@@ -5,7 +5,19 @@ import { schema } from "./schema";
 
 let db: Database.Database | null = null;
 
+export function closeDB() {
+  if (db) {
+    try {
+      db.close();
+    } catch {
+      // Ignore
+    }
+    db = null;
+  }
+}
+
 export function initDB() {
+  closeDB();
   const dbPath = path.join(app.getPath("userData"), "rombox.db");
 
   db = new Database(dbPath);

@@ -1,19 +1,22 @@
 import type { IEmulatorTranslator, TranslateContext, EmulatorPatch } from "./ITranslator";
 import type { ControlsProfile, DigitalBinding } from "../../../shared/types/controls";
+import type { Platform } from "../../../shared/types";
 import { axisToDigitalToken } from "../../../shared/controls/gamepadTokens";
 import { getDirFromDpad, getDirFromMove, getDirFromLook } from "../profileRead";
-import { DuckStation, duckstationKeyFromDomCode, duckstationExprForGamepadToken } from "../schema/duckstation";
+import { DuckStation, duckstationExprForGamepadToken, getSDLDeviceIndex } from "../schema/duckstation";
+import { KeycodeMapper } from "../keycodes/KeycodeMapper";
+import { osHandler } from "../../platform";
 
 
-function duckstationExprForDigital(b: DigitalBinding): string | null {
+function duckstationExprForDigital(b: DigitalBinding, platform: Platform = osHandler.getPlatform(), deviceIndex: number = 0): string | null {
   if (b.type === "key") {
-    const key = duckstationKeyFromDomCode(b.code);
+    const key = KeycodeMapper.toKeycode("duckstation", b.code, platform);
     if (!key) return null;
     return `Keyboard/${key}`;
   }
 
   if (b.type === "gp_button") {
-    return duckstationExprForGamepadToken(b.token);
+    return duckstationExprForGamepadToken(b.token, deviceIndex);
   }
 
   if (b.type === "gp_axis_digital") {
@@ -22,7 +25,7 @@ function duckstationExprForDigital(b: DigitalBinding): string | null {
       axis: b.axis,
       sign: b.dir === "neg" ? -1 : 1,
     });
-    return duckstationExprForGamepadToken(tok);
+    return duckstationExprForGamepadToken(tok, deviceIndex);
   }
 
   return null;
@@ -47,10 +50,12 @@ export class DuckStationTranslator implements IEmulatorTranslator {
     const patches: EmulatorPatch[] = [];
     const iniPath = DuckStation.iniPath(ctx.configDir);
     const section = "Pad1";
+    const platform = ctx.platform ?? osHandler.getPlatform();
+    const deviceIndex = getSDLDeviceIndex(ctx, profile);
 
     const writeBinding = (label: string, b?: DigitalBinding) => {
       if (!b) return;
-      const expr = duckstationExprForDigital(b);
+      const expr = duckstationExprForDigital(b, platform, deviceIndex);
       if (!expr) return;
       addIniPatch(patches, iniPath, section, label, expr);
     };

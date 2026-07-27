@@ -76,7 +76,7 @@ import switchDpadRight from "../assets/controls/Nintendo Switch/Vector/switch_dp
 export type ConsoleControlItem =
   | {
     kind: "group";
-    id: "move" | "look" | "dpad" | "special.c" | "special";
+    id: "move" | "look" | "dpad" | "special.c" | "special" | "special.wiimoteDpad" | "special.tilt" | "special.ir";
     label: string;
     section: "leftStick" | "dpad" | "rightStick" | "special";
   }
@@ -100,7 +100,16 @@ export type ConsoleControlItem =
     | "special.c"
     | "special.z"
     | "special.nunchuckZ"
-    | "special.nunchuckC";
+    | "special.nunchuckC"
+    | "special.home"
+    | "special.wiimoteA"
+    | "special.wiimoteB"
+    | "special.wiimote1"
+    | "special.wiimote2"
+    | "special.wiimotePlus"
+    | "special.wiimoteMinus"
+    | "special.wiimoteHome"
+    | "special.shake";
     label: string;
     icon: string;
     section: SectionKey;
@@ -263,20 +272,39 @@ export const CONSOLE_LAYOUTS: Partial<Record<ConsoleID, ConsoleControlItem[]>> =
   ],
 
   wii: [
-    { kind: "group", id: "move", label: "Move", section: "leftStick" },
-    { kind: "group", id: "dpad", label: "D-Pad", section: "dpad" },
+    { kind: "group", id: "move", label: "Classic Left Stick", section: "leftStick" },
+    { kind: "group", id: "look", label: "Classic Right Stick", section: "rightStick" },
+    { kind: "group", id: "dpad", label: "Classic D-Pad", section: "dpad" },
 
-    { kind: "digital", id: "face.primary", label: "A", icon: wiiA, section: "face" },
-    { kind: "digital", id: "face.secondary", label: "B", icon: wiiB, section: "face" },
-    { kind: "digital", id: "1", label: "1", icon: wii1, section: "face" },
-    { kind: "digital", id: "2", label: "2", icon: wii2, section: "face" },
+    { kind: "digital", id: "face.primary", label: "Classic A", icon: switchA, section: "face" },
+    { kind: "digital", id: "face.secondary", label: "Classic B", icon: switchB, section: "face" },
+    { kind: "digital", id: "face.tertiary", label: "Classic X", icon: switchX, section: "face" },
+    { kind: "digital", id: "face.quaternary", label: "Classic Y", icon: switchY, section: "face" },
 
-    { kind: "digital", id: "system.start", label: "Plus", icon: wiiPlus, section: "system" },
-    { kind: "digital", id: "system.select", label: "Minus", icon: wiiMinus, section: "system" },
+    { kind: "digital", id: "shoulders.bumperL", label: "Classic L", icon: switchL, section: "shoulders" },
+    { kind: "digital", id: "shoulders.bumperR", label: "Classic R", icon: switchR, section: "shoulders" },
+    { kind: "digital", id: "shoulders.triggerL", label: "Classic ZL", icon: switchZL, section: "shoulders" },
+    { kind: "digital", id: "shoulders.triggerR", label: "Classic ZR", icon: switchZR, section: "shoulders" },
 
-    { kind: "group", id: "special", label: "Nunchuck", section: "special" },
+    { kind: "digital", id: "system.start", label: "Classic Plus", icon: switchPlus, section: "system" },
+    { kind: "digital", id: "system.select", label: "Classic Minus", icon: switchMinus, section: "system" },
+    { kind: "digital", id: "special.home", label: "Classic Home", icon: switchPlus, section: "system" },
+
+    { kind: "digital", id: "special.wiimoteA", label: "Wiimote A", icon: wiiA, section: "special" },
+    { kind: "digital", id: "special.wiimoteB", label: "Wiimote B", icon: wiiB, section: "special" },
+    { kind: "digital", id: "special.wiimote1", label: "Wiimote 1", icon: wii1, section: "special" },
+    { kind: "digital", id: "special.wiimote2", label: "Wiimote 2", icon: wii2, section: "special" },
+    { kind: "digital", id: "special.wiimotePlus", label: "Wiimote Plus", icon: wiiPlus, section: "special" },
+    { kind: "digital", id: "special.wiimoteMinus", label: "Wiimote Minus", icon: wiiMinus, section: "special" },
+    { kind: "digital", id: "special.wiimoteHome", label: "Wiimote Home", icon: wiiPlus, section: "special" },
+    { kind: "group", id: "special.wiimoteDpad", label: "Wiimote D-Pad", section: "special" },
+
     { kind: "digital", id: "special.nunchuckC", label: "Nunchuck C", icon: wiiC, section: "special" },
     { kind: "digital", id: "special.nunchuckZ", label: "Nunchuck Z", icon: wiiZ, section: "special" },
+
+    { kind: "digital", id: "special.shake", label: "Shake (Motion)", icon: wiiA, section: "special" },
+    { kind: "group", id: "special.tilt", label: "Tilt (Motion)", section: "special" },
+    { kind: "group", id: "special.ir", label: "IR Pointer", section: "special" },
   ],
 
   ps1: [

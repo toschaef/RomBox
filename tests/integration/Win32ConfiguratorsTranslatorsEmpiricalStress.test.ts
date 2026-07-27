@@ -1,0 +1,307 @@
+jest.mock("os", () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const path = require("path");
+  return {
+    ...jest.requireActual("os"),
+    homedir: () => path.resolve(__dirname, "../temp-userdata-win32-stress"),
+  };
+});
+
+import path from "path";
+import fs from "fs";
+import { initDB } from "../../src/main/data/db";
+import { DolphinConfigurator } from "../../src/main/utils/configurators/DolphinConfigurator";
+import { MesenConfigurator } from "../../src/main/utils/configurators/MesenConfigurator";
+import { MelonDSConfigurator } from "../../src/main/utils/configurators/MelonDSConfigurator";
+import { AzaharConfigurator } from "../../src/main/utils/configurators/AzaharConfigurator";
+import { AresConfigurator } from "../../src/main/utils/configurators/AresConfigurator";
+import { DuckStationConfigurator } from "../../src/main/utils/configurators/DuckStationConfigurator";
+import { PCSX2Configurator } from "../../src/main/utils/configurators/PCSX2Configurator";
+
+import { DolphinTranslator } from "../../src/main/utils/translators/DolphinTranslator";
+import { AresTranslator } from "../../src/main/utils/translators/AresTranslator";
+import { DuckStationTranslator } from "../../src/main/utils/translators/DuckStationTranslator";
+import { PCSX2Translator } from "../../src/main/utils/translators/PCSX2Translator";
+
+import { EngineService } from "../../src/main/services/EngineService";
+import { osHandler } from "../../src/main/platform";
+import { WinHandler } from "../../src/main/platform/WinHandler";
+import { DuckStation } from "../../src/main/utils/schema/duckstation";
+import type { Game } from "../../src/shared/types";
+import { ControlsService } from "../../src/main/services/ControlsService";
+
+describe("M3 Integration Stress Test - Win32 Configurators & Translators for All 7 Emulators", () => {
+  const tempDir = path.resolve(__dirname, "../temp-userdata-win32-stress");
+  let winHandler: WinHandler;
+
+  beforeEach(() => {
+    if (fs.existsSync(tempDir)) {
+      fs.rmSync(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    }
+    fs.mkdirSync(tempDir, { recursive: true });
+    initDB();
+
+    winHandler = new WinHandler();
+    jest.spyOn(osHandler, "getPlatform").mockReturnValue("win32");
+    jest.spyOn(osHandler, "getPlatformId").mockReturnValue("windows");
+
+    jest.spyOn(osHandler, "getEmulatorConfigPath").mockImplementation((engineId) => {
+      const appData = path.join(tempDir, "AppData", "Roaming");
+      const localAppData = path.join(tempDir, "AppData", "Local");
+      const docs = path.join(tempDir, "Documents");
+
+      switch (engineId) {
+        case "dolphin": return path.join(appData, "Dolphin Emulator", "Config");
+        case "mesen": return path.join(appData, "Mesen2");
+        case "ares": return path.join(localAppData, "ares");
+        case "melonds": return path.join(localAppData, "melonDS");
+        case "azahar": return path.join(appData, "Azahar", "config");
+        case "pcsx2": return path.join(docs, "PCSX2", "inis");
+        case "duckstation": return path.join(docs, "DuckStation");
+        default: return winHandler.getEmulatorConfigPath(engineId);
+      }
+    });
+
+    jest.spyOn(osHandler, "getEmulatorBasePath").mockImplementation((engineId) => {
+      const appData = path.join(tempDir, "AppData", "Roaming");
+      const localAppData = path.join(tempDir, "AppData", "Local");
+      const docs = path.join(tempDir, "Documents");
+
+      switch (engineId) {
+        case "dolphin": return path.join(appData, "Dolphin Emulator");
+        case "mesen": return path.join(appData, "Mesen2");
+        case "ares": return path.join(localAppData, "ares");
+        case "melonds": return path.join(localAppData, "melonDS");
+        case "azahar": return path.join(appData, "Azahar");
+        case "pcsx2": return path.join(docs, "PCSX2");
+        case "duckstation": return path.join(docs, "DuckStation");
+        default: return winHandler.getEmulatorBasePath(engineId);
+      }
+    });
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+    if (fs.existsSync(tempDir)) {
+      fs.rmSync(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    }
+  });
+
+  describe("1. Dolphin (GC & Wii) Win32 Integration & Stress", () => {
+    it("should configure Dolphin GC on win32 and map DInput keyboard device", async () => {
+      const game: Game = {
+        id: "wind-waker-stress",
+        title: "Zelda: Wind Waker (Special Chars & Paths C:\\Roms\\)",
+        filePath: "C:\\Roms\\Zelda\\ww.iso",
+        consoleId: "gc",
+        engineId: "dolphin",
+        playtimeSeconds: 100,
+        lastPlayedAt: Date.now(),
+      };
+
+      const configurator = new DolphinConfigurator(game);
+      await configurator.configure();
+
+      const configDir = osHandler.getEmulatorConfigPath("dolphin");
+      const gcPadNewPath = path.join(configDir, "GCPadNew.ini");
+      expect(fs.existsSync(gcPadNewPath)).toBe(true);
+
+      const content = fs.readFileSync(gcPadNewPath, "utf-8");
+      expect(content).toContain("Device = DInput/0/Keyboard Mouse");
+      expect(content).toContain("Buttons/A = U");
+    });
+
+    it("should translate Dolphin gamepad profile with varying XInput device indices (0, 1, 3)", async () => {
+      const translator = new DolphinTranslator();
+      const svc = new ControlsService();
+      const baseProfile = svc.getDefaultProfile();
+      const bindings = await svc.getEffectiveConsoleBindings("gc", baseProfile.id);
+
+      const fullProfile = {
+        ...baseProfile,
+        player1: {
+          ...bindings,
+          face: { ...bindings.face, primary: { type: "gp_button" as const, token: "GP_A" as const } }
+        }
+      };
+
+      // Test deviceIndex = 0
+      const patches0 = translator.translate(fullProfile, { platform: "win32", consoleId: "gc", configDir: "dummy", deviceIndex: 0 });
+      const dev0 = patches0.find(p => p.kind === "ini-set" && p.key === "Device");
+      expect(dev0 && dev0.kind === "ini-set" ? dev0.value : "").toBe("XInput/0/Gamepad");
+
+      // Test deviceIndex = 3
+      const patches3 = translator.translate(fullProfile, { platform: "win32", consoleId: "gc", configDir: "dummy", deviceIndex: 3 });
+      const dev3 = patches3.find(p => p.kind === "ini-set" && p.key === "Device");
+      expect(dev3 && dev3.kind === "ini-set" ? dev3.value : "").toBe("XInput/3/Gamepad");
+    });
+  });
+
+  describe("2. Mesen (NES & SNES) Win32 Integration & Stress", () => {
+    it("should configure Mesen NES on win32 with Virtual Keycodes (KeyU=85, KeyT=84)", async () => {
+      const configurator = new MesenConfigurator("nes");
+      await configurator.configure();
+
+      const configDir = osHandler.getEmulatorConfigPath("mesen");
+      const settingsPath = path.join(configDir, "settings.json");
+      expect(fs.existsSync(settingsPath)).toBe(true);
+
+      const settings = JSON.parse(fs.readFileSync(settingsPath, "utf-8"));
+      expect(settings.Nes.Port1.Type).toBe("NesController");
+      expect(settings.Nes.Port1.Mapping1.A).toBe(85);
+      expect(settings.Nes.Port1.Mapping1.Start).toBe(84);
+    });
+
+    it("should configure Mesen SNES on win32 and produce valid settings JSON", async () => {
+      const configurator = new MesenConfigurator("snes");
+      await configurator.configure();
+
+      const configDir = osHandler.getEmulatorConfigPath("mesen");
+      const settingsPath = path.join(configDir, "settings.json");
+      const settings = JSON.parse(fs.readFileSync(settingsPath, "utf-8"));
+      expect(settings.Snes.Port1.Type).toBe("SnesController");
+      expect(settings.Snes.Port1.Mapping1.A).toBe(85);
+    });
+  });
+
+  describe("3. MelonDS Win32 Integration & Stress", () => {
+    it("should configure MelonDS on win32 with AppData/Local path and TOML structure", async () => {
+      const configurator = new MelonDSConfigurator();
+      await configurator.configure();
+
+      const configDir = osHandler.getEmulatorConfigPath("melonds");
+      const tomlPath = path.join(configDir, "melonDS.toml");
+      expect(fs.existsSync(tomlPath)).toBe(true);
+
+      const tomlContent = fs.readFileSync(tomlPath, "utf-8");
+      expect(tomlContent).toContain("[Instance0]");
+      expect(tomlContent).toContain("Key_A = 85");
+      expect(tomlContent).toContain("JoystickID = 0");
+    });
+  });
+
+  describe("4. Azahar Win32 Integration & Stress", () => {
+    it("should configure Azahar 3DS on win32 with qt-config.ini format", async () => {
+      const configurator = new AzaharConfigurator();
+      await configurator.configure();
+
+      const configDir = osHandler.getEmulatorConfigPath("azahar");
+      const iniPath = path.join(configDir, "qt-config.ini");
+      expect(fs.existsSync(iniPath)).toBe(true);
+
+      const content = fs.readFileSync(iniPath, "utf-8");
+      expect(content).toContain("profiles\\1\\button_a=\"code:85,engine:keyboard\"");
+      expect(content).toContain("[Renderer]");
+    });
+  });
+
+  describe("5. Ares Win32 Integration & Stress", () => {
+    it("should configure Ares N64 on win32 with settings.bml and VK mappings", async () => {
+      jest.spyOn(EngineService, "getEnginePath").mockResolvedValue(null);
+
+      const configurator = new AresConfigurator();
+      await configurator.configure();
+
+      const configDir = osHandler.getEmulatorConfigPath("ares");
+      const bmlPath = path.join(configDir, "settings.bml");
+      expect(fs.existsSync(bmlPath)).toBe(true);
+
+      const content = fs.readFileSync(bmlPath, "utf-8");
+      expect(content).toContain("VirtualPad1");
+      expect(content).toContain("A..South: 0x1/0/85;;");
+      expect(content).toContain("Start: 0x1/0/84;;");
+    });
+
+    it("should translate gamepad bindings for Ares on win32 with dynamic device indexing (0x2/deviceIndex/id)", async () => {
+      const translator = new AresTranslator();
+      const svc = new ControlsService();
+      const profile = svc.getDefaultProfile();
+      const bindings = await svc.getEffectiveConsoleBindings("n64", profile.id);
+
+      const updates = translator.translateFromPlayer(
+        {
+          ...bindings,
+          face: { ...bindings.face, primary: { type: "gp_button" as const, token: "GP_A" as const } }
+        },
+        "win32",
+        1
+      );
+
+      expect(updates["A..South"]).toBe("0x2/1/0;;");
+    });
+  });
+
+  describe("6. DuckStation Win32 Integration & Stress", () => {
+    it("should configure DuckStation PS1 on win32 with Documents path and ini structure", async () => {
+      const configurator = new DuckStationConfigurator();
+      await configurator.configure();
+
+      const baseDir = osHandler.getEmulatorBasePath("duckstation");
+      const iniPath = DuckStation.iniPath(baseDir);
+      expect(fs.existsSync(iniPath)).toBe(true);
+
+      const content = fs.readFileSync(iniPath, "utf-8");
+      expect(content).toContain("[Pad1]");
+      expect(content).toContain("Cross = Keyboard/U");
+      expect(content).toContain("Start = Keyboard/T");
+    });
+
+    it("should translate DuckStation gamepad profile for win32 with dynamic SDL device indexing", async () => {
+      const translator = new DuckStationTranslator();
+      const svc = new ControlsService();
+      const profile = svc.getDefaultProfile();
+      const bindings = await svc.getEffectiveConsoleBindings("ps1", profile.id);
+
+      const patches = translator.translate(
+        {
+          ...profile,
+          player1: {
+            ...bindings,
+            face: { ...bindings.face, primary: { type: "gp_button" as const, token: "GP_A" as const } }
+          }
+        },
+        { platform: "win32", configDir: "dummy", deviceIndex: 4 }
+      );
+
+      const crossPatch = patches.find(p => p.kind === "ini-set" && p.key === "Cross");
+      expect(crossPatch && crossPatch.kind === "ini-set" ? crossPatch.value : "").toBe("SDL-4/A");
+    });
+  });
+
+  describe("7. PCSX2 Win32 Integration & Stress", () => {
+    it("should configure PCSX2 PS2 on win32 with Documents path and PCSX2.ini format", async () => {
+      const configurator = new PCSX2Configurator();
+      await configurator.configure();
+
+      const configDir = osHandler.getEmulatorConfigPath("pcsx2");
+      const iniPath = path.join(configDir, "PCSX2.ini");
+      expect(fs.existsSync(iniPath)).toBe(true);
+
+      const content = fs.readFileSync(iniPath, "utf-8");
+      expect(content).toContain("[Pad1]");
+      expect(content).toContain("Cross = Keyboard/U");
+      expect(content).toContain("Start = Keyboard/T");
+    });
+
+    it("should translate PCSX2 gamepad profile for win32 with dynamic SDL device indexing", async () => {
+      const translator = new PCSX2Translator();
+      const svc = new ControlsService();
+      const profile = svc.getDefaultProfile();
+      const bindings = await svc.getEffectiveConsoleBindings("ps2", profile.id);
+
+      const patches = translator.translate(
+        {
+          ...profile,
+          player1: {
+            ...bindings,
+            face: { ...bindings.face, primary: { type: "gp_button" as const, token: "GP_A" as const } }
+          }
+        },
+        { platform: "win32", configDir: "dummy", deviceIndex: 2 }
+      );
+
+      const crossPatch = patches.find(p => p.kind === "ini-set" && p.key === "Cross");
+      expect(crossPatch && crossPatch.kind === "ini-set" ? crossPatch.value : "").toBe("SDL-2/FaceSouth");
+    });
+  });
+});

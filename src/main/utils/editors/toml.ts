@@ -1,4 +1,5 @@
 import fs from "fs";
+import path from "path";
 
 export const TomlEditor = {
   updateTomlKV(filePath: string, updates: Record<string, string>) {
@@ -34,6 +35,7 @@ export const TomlEditor = {
       for (const [k, v] of missing) out.push(`${k} = ${v}`);
     }
 
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
     fs.writeFileSync(filePath, out.join("\n"));
   },
 
@@ -98,6 +100,7 @@ export const TomlEditor = {
       for (const [k, v] of Object.entries(updates)) out.push(`${k} = ${v}`);
     }
 
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
     fs.writeFileSync(filePath, out.join("\n"));
   },
 };

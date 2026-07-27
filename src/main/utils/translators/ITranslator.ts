@@ -6,8 +6,8 @@ export type EmulatorPatch =
   | { kind: "file-write"; absPath?: string; contents: string }
   | { kind: "ini-set"; absPath?: string; section: string; key: string; value: string }
   | { kind: "ini-delete"; absPath?: string; section: string; key: string }
-  | { kind: "json-merge"; path: string[]; value: unknown }
-  | { kind: "json-set"; path: string[]; value: unknown };
+  | { kind: "json-merge"; absPath?: string; path: string[]; value: unknown }
+  | { kind: "json-set"; absPath?: string; path: string[]; value: unknown };
 
 export interface TranslateContext {
   platform: Platform;
@@ -16,6 +16,9 @@ export interface TranslateContext {
   player?: number;
   padPort?: number;
   configDir?: string;
+  learnedDevice?: string;
+  learnedBinds?: any;
+  deviceIndex?: number;
 }
 
 export interface IEmulatorTranslator {

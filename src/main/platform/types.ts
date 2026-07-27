@@ -28,4 +28,8 @@ export interface PlatformHandler {
 
   getPlatformId(): "macos" | "windows" | "linux";
   getPlatform(): Platform;
+
+  getConfigDir?(engineId: EngineID): string;
+  getSaveDir?(game: Game): string;
+  getBiosDir?(engineId: EngineID): string;
 }

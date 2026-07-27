@@ -1,29 +1,47 @@
 import type { PlayerBindings, DigitalBinding, ControlsProfile } from "../../../shared/types/controls";
 import type { IEmulatorTranslator, EmulatorPatch, TranslateContext } from "./ITranslator";
-import { ARES, resolveQuartzKeyboardKeyIndex } from "../schema/ares";
-import { pickDir, getDirFromBinding } from "../profileRead";
+import { ARES } from "../schema/ares";
+import { pickDir, getDirFromBinding, digitalToGamepadToken } from "../profileRead";
+import type { Platform } from "../../../shared/types";
+import { KeycodeMapper } from "../keycodes/KeycodeMapper";
+import { GP_FIXED_TO_INDEX } from "../../../shared/controls/gamepadTokens";
+import { getSDLDeviceIndex } from "../schema/duckstation";
 import path from "path";
 
 const KEYBOARD_DEVICE_ID = 0x1;
+const GAMEPAD_DEVICE_ID = 0x2;
 
-function encodeKeyboard(domCode: string): string | null {
-  const idx = resolveQuartzKeyboardKeyIndex(domCode);
-  const tok = idx == null ? null : `0x${KEYBOARD_DEVICE_ID.toString(16)}/0/${idx};;`;
-
-  return tok;
+function encodeKeyboard(domCode: string, platform: Platform = "darwin"): string | null {
+  const mapped = KeycodeMapper.toKeycode("ares", domCode, platform);
+  return mapped == null ? null : `0x${KEYBOARD_DEVICE_ID.toString(16)}/0/${mapped};;`;
 }
 
-function encodeDigital(d?: DigitalBinding): string | null {
+function encodeGamepad(d: DigitalBinding, deviceIndex = 0): string | null {
+  const tok = digitalToGamepadToken(d);
+  if (!tok) return null;
+  const idx = GP_FIXED_TO_INDEX[tok];
+  if (idx === undefined) return null;
+  return `0x${GAMEPAD_DEVICE_ID.toString(16)}/${deviceIndex}/${idx};;`;
+}
+
+function encodeDigital(d?: DigitalBinding, platform: Platform = "darwin", deviceIndex = 0): string | null {
   if (!d) return null;
-  if (d.type !== "key") return null;
-  return encodeKeyboard(d.code);
+  if (d.type === "key") {
+    return encodeKeyboard(d.code, platform);
+  }
+  if (d.type === "gp_button" || d.type === "gp_axis_digital") {
+    return encodeGamepad(d, deviceIndex);
+  }
+  return null;
 }
 
 export class AresTranslator implements IEmulatorTranslator {
   id = "ares";
 
   translate(profile: ControlsProfile, ctx: TranslateContext): EmulatorPatch[] {
-    const updates = this.translateFromPlayer(profile.player1);
+    const platform = ctx.platform ?? "darwin";
+    const deviceIndex = getSDLDeviceIndex(ctx, profile);
+    const updates = this.translateFromPlayer(profile.player1, platform, deviceIndex);
     const patches: EmulatorPatch[] = [];
     const settingsPath = path.join(ctx.configDir || "", ARES.settingsFile);
     for (const [key, value] of Object.entries(updates)) {
@@ -38,12 +56,12 @@ export class AresTranslator implements IEmulatorTranslator {
     return patches;
   }
 
-  translateFromPlayer(p1: PlayerBindings): Record<string, string> {
+  translateFromPlayer(p1: PlayerBindings, platform: Platform = "darwin", deviceIndex = 0): Record<string, string> {
     const k = ARES.keys;
     const updates: Record<string, string> = {};
 
     const set = (key: string, d: DigitalBinding | undefined) => {
-      const v = encodeDigital(d);
+      const v = encodeDigital(d, platform, deviceIndex);
       if (v) updates[key] = v;
     };
 
@@ -70,7 +88,7 @@ export class AresTranslator implements IEmulatorTranslator {
     set(k.rTrigger, p1.shoulders?.triggerR);
 
     const specialN64 = p1.special?.type === "n64" ? p1.special : undefined;
-    set(k.z, specialN64?.z);
+    set(k.z, specialN64?.z ?? p1.shoulders?.triggerL);
 
     const cDpad = specialN64?.c;
     set(k.rUp, getDirFromBinding(cDpad, "up") ?? getDirFromBinding(p1.look, "up"));

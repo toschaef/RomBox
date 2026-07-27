@@ -79,6 +79,37 @@ describe("DolphinTranslator", () => {
     }
   });
 
+  it("should translate bindings via DolphinTranslator using win32 DirectInput key strings when platform is win32", () => {
+    const winContext: TranslateContext = {
+      platform: "win32",
+      configDir: "/mock/config/dir",
+      consoleId: "gc",
+    };
+    const translator = new DolphinTranslator();
+    const result = translator.translate(profile, winContext);
+
+    // dpad.up is 'Digit3' -> '3' on win32
+    const dpadUp = result.find(p => p.kind === "ini-set" && p.key === "D-Pad/Up");
+    expect(dpadUp).toBeDefined();
+    if (dpadUp && dpadUp.kind === "ini-set") {
+      expect(dpadUp.value).toBe("3");
+    }
+
+    // move.up is 'KeyW' -> 'W'
+    const stickUp = result.find(p => p.kind === "ini-set" && p.key === "Main Stick/Up");
+    expect(stickUp).toBeDefined();
+    if (stickUp && stickUp.kind === "ini-set") {
+      expect(stickUp.value).toBe("W");
+    }
+
+    // Device string for keyboard on win32
+    const device = result.find(p => p.kind === "ini-set" && p.key === "Device");
+    expect(device).toBeDefined();
+    if (device && device.kind === "ini-set") {
+      expect(device.value).toBe("DInput/0/Keyboard Mouse");
+    }
+  });
+
   it("should translate gamepad bindings and GC Z-button correctly", () => {
     const gamepadProfile: ControlsProfile = {
       ...profile,
@@ -157,4 +188,40 @@ describe("DolphinTranslator", () => {
       expect(devicePatch.value).toBe("SDL/0/Controller");
     }
   });
+
+  it("should fall back to standard platform gamepad device strings when detectDolphinPadDevice returns null", () => {
+    const gamepadProfileNoPref: ControlsProfile = {
+      ...profile,
+      preferredControllerId: undefined,
+      player1: {
+        ...profile.player1,
+        face: {
+          type: "face",
+          primary: { type: "gp_button", token: "GP_A" },
+        }
+      }
+    };
+    const translator = new DolphinTranslator();
+
+    // macOS platform fallback: SDL/0/Gamepad
+    const resDarwin = translator.translate(gamepadProfileNoPref, { platform: "darwin", configDir: "/non/existent/dir", consoleId: "gc" });
+    const deviceDarwin = resDarwin.find(p => p.kind === "ini-set" && p.key === "Device");
+    expect(deviceDarwin && deviceDarwin.kind === "ini-set" ? deviceDarwin.value : null).toBe("SDL/0/Gamepad");
+
+    // win32 platform fallback: XInput/0/Gamepad
+    const resWin = translator.translate(gamepadProfileNoPref, { platform: "win32", configDir: "/non/existent/dir", consoleId: "gc" });
+    const deviceWin = resWin.find(p => p.kind === "ini-set" && p.key === "Device");
+    expect(deviceWin && deviceWin.kind === "ini-set" ? deviceWin.value : null).toBe("XInput/0/Gamepad");
+
+    // learnedDevice fallback: SDL/2/Gamepad
+    const resLearned = translator.translate(gamepadProfileNoPref, { platform: "darwin", configDir: "/non/existent/dir", consoleId: "gc", learnedDevice: "SDL/2/Gamepad" });
+    const deviceLearned = resLearned.find(p => p.kind === "ini-set" && p.key === "Device");
+    expect(deviceLearned && deviceLearned.kind === "ini-set" ? deviceLearned.value : null).toBe("SDL/2/Gamepad");
+
+    // deviceIndex / padPort fallback (padPort: 3 -> index 2): SDL/2/Gamepad
+    const resPort = translator.translate(gamepadProfileNoPref, { platform: "darwin", configDir: "/non/existent/dir", consoleId: "gc", padPort: 3 });
+    const devicePort = resPort.find(p => p.kind === "ini-set" && p.key === "Device");
+    expect(devicePort && devicePort.kind === "ini-set" ? devicePort.value : null).toBe("SDL/2/Gamepad");
+  });
 });
+

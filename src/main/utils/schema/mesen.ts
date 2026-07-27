@@ -19,7 +19,7 @@ export const MESEN_KEYCODE_MAP_128: number[] = [
   91, 20, 90, 23, 25, 26, 24, 0,
 ];
 
-export const APPLE_KEYCODE_BY_CODE: Record<string, number> = {
+export const APPLE_KEYCODE_BY_CODE: Record<string, number> = Object.assign(Object.create(null), {
   KeyA: 0, KeyS: 1, KeyD: 2, KeyF: 3, KeyH: 4, KeyG: 5,
   KeyZ: 6, KeyX: 7, KeyC: 8, KeyV: 9, KeyB: 11, KeyQ: 12,
   KeyW: 13, KeyE: 14, KeyR: 15, KeyY: 16, KeyT: 17,
@@ -46,7 +46,30 @@ export const APPLE_KEYCODE_BY_CODE: Record<string, number> = {
   ControlRight: 62,
   AltLeft: 58,
   AltRight: 61,
-};
+
+  // Punctuation
+  Semicolon: 41,
+  Equal: 24,
+  Comma: 43,
+  Minus: 27,
+  Period: 47,
+  Slash: 44,
+  Backquote: 50,
+  BracketLeft: 33,
+  Backslash: 42,
+  BracketRight: 30,
+  Quote: 39,
+
+  // Function Keys F1-F12
+  F1: 122, F2: 120, F3: 99, F4: 118, F5: 96, F6: 97,
+  F7: 98, F8: 100, F9: 101, F10: 109, F11: 103, F12: 111,
+
+  // Numpad
+  Numpad0: 82, Numpad1: 83, Numpad2: 84, Numpad3: 85, Numpad4: 86,
+  Numpad5: 87, Numpad6: 88, Numpad7: 89, Numpad8: 91, Numpad9: 92,
+  NumLock: 71, NumpadDivide: 75, NumpadMultiply: 67, NumpadSubtract: 78,
+  NumpadAdd: 69, NumpadDecimal: 65, NumpadEnter: 76, NumpadEqual: 81,
+});
 
 export const MESEN_BUCKET_BY_CONSOLE: Partial<Record<ConsoleID, string>> = {
   nes: "Nes",
@@ -74,4 +97,10 @@ export function getMesenBucket(consoleId: ConsoleID): string | null {
 
 export function getMesenControllerType(consoleId: ConsoleID): string | null {
   return MESEN_PORT_TYPE_BY_CONSOLE[consoleId] ?? null;
+}
+
+export function getMesenKeyboardCode(domCode: string, platform: import("../../../shared/types").Platform = "darwin"): number | null {
+  const { KeycodeMapper } = require("../keycodes/KeycodeMapper");
+  const val = KeycodeMapper.toKeycode("mesen", domCode, platform);
+  return typeof val === "number" ? val : null;
 }

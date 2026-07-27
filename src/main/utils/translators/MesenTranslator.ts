@@ -1,21 +1,18 @@
+import path from "path";
 import type { PlayerBindings, DigitalBinding, ControlsProfile } from "../../../shared/types/controls";
 import type { IEmulatorTranslator, EmulatorPatch, TranslateContext } from "./ITranslator";
 import { GP_FIXED_TO_INDEX, type GamepadToken } from "../../../shared/controls/gamepadTokens";
-import { BASE_GAMEPAD, MESEN_KEYCODE_MAP_128, APPLE_KEYCODE_BY_CODE, getMesenBucket, getMesenControllerType } from "../schema/mesen";
+import { BASE_GAMEPAD, getMesenBucket, getMesenControllerType } from "../schema/mesen";
 import { digitalToGamepadToken, pickDir, getDirFromBinding, type Dir } from "../profileRead";
-import type { ConsoleID } from "../../../shared/types";
-import path from "path";
-import fs from "fs";
+import type { ConsoleID, Platform } from "../../../shared/types";
+import { KeycodeMapper } from "../keycodes/KeycodeMapper";
 
 type Device = "keyboard" | "gamepad";
 type DirSource = "dpad" | "move";
 
-function mesenKeyboardCode(domCode: string): number | null {
-  const apple = APPLE_KEYCODE_BY_CODE[domCode];
-  if (apple === undefined || apple < 0 || apple >= MESEN_KEYCODE_MAP_128.length) return null;
-
-  const mapped = MESEN_KEYCODE_MAP_128[apple] ?? 0;
-  return mapped === 0 ? null : mapped;
+function mesenKeyboardCode(domCode: string, platform: Platform = "darwin"): number | null {
+  const code = KeycodeMapper.toKeycode("mesen", domCode, platform);
+  return typeof code === "number" ? code : null;
 }
 
 function mesenGamepadCode(token: GamepadToken, port1Based: number): number {
@@ -32,12 +29,12 @@ function fixToken(tok: GamepadToken): GamepadToken {
   return tok;
 }
 
-function translateDigital(d: DigitalBinding | undefined, player: number, device: Device | null): number | null {
+function translateDigital(d: DigitalBinding | undefined, player: number, device: Device | null, platform: Platform = "darwin"): number | null {
   if (!d) return null;
 
   if (d.type === "key") {
     if (device && device !== "keyboard") return null;
-    return mesenKeyboardCode(d.code);
+    return mesenKeyboardCode(d.code, platform);
   }
 
   const gpTok = digitalToGamepadToken(d);
@@ -54,36 +51,9 @@ type JsonObject = Record<string, unknown>;
 type MappingSlot = "Mapping1" | "Mapping2" | "Mapping3" | "Mapping4";
 const ALL_SLOTS: readonly MappingSlot[] = ["Mapping1", "Mapping2", "Mapping3", "Mapping4"] as const;
 
-function isObject(v: unknown): v is JsonObject {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
-}
-
-function ensureObject(obj: JsonObject, key: string): JsonObject {
-  const existing = obj[key];
-  if (isObject(existing)) return existing;
-  const created: JsonObject = {};
-  obj[key] = created;
-  return created;
-}
-
 function preferredRootKey(consoleId: ConsoleID): "Port1" | "Controller" {
   if (consoleId === "gb" || consoleId === "gba") return "Controller";
   return "Port1";
-}
-
-function isRootKeyCandidate(k: string) {
-  return k === "Port1" || k.startsWith("Port1") || k === "Controller" || k.startsWith("Controller");
-}
-
-function collectRootKeysToWrite(bucketNode: JsonObject, consoleId: ConsoleID): { keys: string[]; preferred: string } {
-  const preferred = preferredRootKey(consoleId);
-
-  const existing = Object.keys(bucketNode)
-    .filter((k) => isRootKeyCandidate(k))
-    .filter((k) => isObject(bucketNode[k]));
-
-  const all = new Set<string>([...existing, preferred]);
-  return { keys: [...all], preferred };
 }
 
 export class MesenTranslator implements IEmulatorTranslator {
@@ -105,51 +75,34 @@ export class MesenTranslator implements IEmulatorTranslator {
       Mapping4: { device: "gamepad", dirSource: "dpad" },
     };
 
+    const platform = ctx.platform ?? "darwin";
     const slotMaps = {
-      Mapping1: this.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping1.device, slotPlan.Mapping1.dirSource),
-      Mapping2: this.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping2.device, slotPlan.Mapping2.dirSource),
-      Mapping3: this.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping3.device, slotPlan.Mapping3.dirSource),
-      Mapping4: this.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping4.device, slotPlan.Mapping4.dirSource),
+      Mapping1: this.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping1.device, slotPlan.Mapping1.dirSource, platform),
+      Mapping2: this.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping2.device, slotPlan.Mapping2.dirSource, platform),
+      Mapping3: this.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping3.device, slotPlan.Mapping3.dirSource, platform),
+      Mapping4: this.translateForDeviceFromPlayer(p1, 1, slotPlan.Mapping4.device, slotPlan.Mapping4.dirSource, platform),
     };
 
-    const configPath = ctx.configDir || "";
-    const settingsFile = path.join(configPath, "settings.json");
+    const rootKey = preferredRootKey(consoleId);
+    const rootNode: JsonObject = { Type: type };
 
-    let settings: JsonObject = {};
-    try {
-      if (fs.existsSync(settingsFile)) {
-        settings = JSON.parse(fs.readFileSync(settingsFile, "utf-8"));
-      }
-    } catch {
-      // Ignored
-    }
-
-    const bucketNode = ensureObject(settings, bucket);
-    const { keys: rootKeysToWrite } = collectRootKeysToWrite(bucketNode, consoleId);
-
-    const bucketUpdates = structuredClone(bucketNode);
-
-    for (const rootKey of rootKeysToWrite) {
-      const rootNode = ensureObject(bucketUpdates, rootKey);
-
-      if (rootNode["Type"] !== type) {
-        rootNode["Type"] = type;
-      }
-
-      for (const slot of ALL_SLOTS) {
-        const mapForSlot = slotMaps[slot];
-
-        if (Object.keys(mapForSlot).length === 0) {
-            continue;
-        }
-        const node = ensureObject(rootNode, slot);
-        Object.assign(node, mapForSlot);
+    for (const slot of ALL_SLOTS) {
+      const mapForSlot = slotMaps[slot];
+      if (Object.keys(mapForSlot).length > 0) {
+        rootNode[slot] = mapForSlot;
       }
     }
+
+    const bucketUpdates: JsonObject = {
+      [rootKey]: rootNode,
+    };
+
+    const absPath = ctx.configDir ? path.join(ctx.configDir, "settings.json") : undefined;
 
     return [
       {
         kind: "json-merge",
+        absPath,
         path: [bucket],
         value: bucketUpdates,
       }
@@ -159,14 +112,15 @@ export class MesenTranslator implements IEmulatorTranslator {
   translateForDeviceFromPlayer(
     p1: PlayerBindings,
     player = 1,
-    device: Device | null,
-    dirSource: DirSource,
+    device: Device | null = null,
+    dirSource: DirSource = "move",
+    platform: Platform = "darwin",
   ): Record<string, number> {
     const mapping: Record<string, number> = {};
 
     const setDir = (mesenKey: "Up" | "Down" | "Left" | "Right", dir: Dir) => {
       const binding = dirSource === "dpad" ? pickDir(p1.dpad, dir) : getDirFromBinding(p1.move, dir);
-      const v = translateDigital(binding, player, device);
+      const v = translateDigital(binding, player, device, platform);
       if (v !== null) mapping[mesenKey] = v;
     };
 
@@ -176,7 +130,7 @@ export class MesenTranslator implements IEmulatorTranslator {
     setDir("Right", "right");
 
     const set = (mesenKey: string, d?: DigitalBinding) => {
-      const v = translateDigital(d, player, device);
+      const v = translateDigital(d, player, device, platform);
       if (v !== null) mapping[mesenKey] = v;
     };
     
