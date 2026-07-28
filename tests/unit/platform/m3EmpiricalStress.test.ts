@@ -64,6 +64,7 @@ describe("Milestone 3 Empirical Stress Test Harness - Platform Logic & WinHandle
           configurable: true,
         });
         jest.resetModules();
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const { osHandler } = require("../../../src/main/platform");
         expect(osHandler.getPlatform()).toBe(targetPlat);
         expect(osHandler.getPlatformId()).toBe(targetPlat === "win32" ? "windows" : "macos");

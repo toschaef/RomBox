@@ -100,6 +100,7 @@ export function getMesenControllerType(consoleId: ConsoleID): string | null {
 }
 
 export function getMesenKeyboardCode(domCode: string, platform: import("../../../shared/types").Platform = "darwin"): number | null {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { KeycodeMapper } = require("../keycodes/KeycodeMapper");
   const val = KeycodeMapper.toKeycode("mesen", domCode, platform);
   return typeof val === "number" ? val : null;

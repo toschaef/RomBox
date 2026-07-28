@@ -44,7 +44,7 @@ export const scanZipEntries = (filePath: string): Promise<ZipEntry[]> => {
       
       zipfile.on('entry', (entry) => {
         // skip directories
-        if (!/[\/\\]$/.test(entry.fileName)) {
+        if (!/[/\\]$/.test(entry.fileName)) {
           entries.push({
             fileName: entry.fileName,
             uncompressedSize: entry.uncompressedSize

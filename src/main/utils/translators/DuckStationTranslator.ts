@@ -8,7 +8,7 @@ import { KeycodeMapper } from "../keycodes/KeycodeMapper";
 import { osHandler } from "../../platform";
 
 
-function duckstationExprForDigital(b: DigitalBinding, platform: Platform = osHandler.getPlatform(), deviceIndex: number = 0): string | null {
+function duckstationExprForDigital(b: DigitalBinding, platform: Platform = osHandler.getPlatform(), deviceIndex = 0): string | null {
   if (b.type === "key") {
     const key = KeycodeMapper.toKeycode("duckstation", b.code, platform);
     if (!key) return null;

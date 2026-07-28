@@ -162,6 +162,7 @@ export function resolveAresKeyboardKeyIndex(
   code: string,
   platform: import("../../../shared/types").Platform = "darwin"
 ): number | null {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { KeycodeMapper } = require("../keycodes/KeycodeMapper");
   const val = KeycodeMapper.toKeycode("ares", code, platform);
   return typeof val === "number" ? val : null;

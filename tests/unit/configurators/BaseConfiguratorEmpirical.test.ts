@@ -5,7 +5,9 @@ import { IniEditor } from '../../../src/main/utils/editors/ini';
 import type { EmulatorPatch } from '../../../src/main/utils/translators/ITranslator';
 
 class TestConfigurator extends BaseConfigurator {
-  public async configure(): Promise<void> {}
+  public async configure(): Promise<void> {
+    // No-op for testing
+  }
 
   public testSetIniValue(filePath: string, section: string, key: string, value: string) {
     this.setIniValue(filePath, section, key, value);

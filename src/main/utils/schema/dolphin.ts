@@ -1,4 +1,5 @@
 import path from "path";
+import * as fs from "fs";
 import { app } from "electron";
 import { spawnSync } from "child_process";
 import type { GamepadToken } from "../../../shared/controls/gamepadTokens";
@@ -73,7 +74,7 @@ const TOK_TO_SDL3_BUTTON: Record<string, number> = Object.assign(Object.create(n
   GP_DPAD_RIGHT: 14,
 });
 
-export function dolphinExprForGamepadToken(tok: GamepadToken, platform: string = "win32", learnedBinds?: any): string | null {
+export function dolphinExprForGamepadToken(tok: GamepadToken, platform = "win32", learnedBinds?: any): string | null {
   const isSdl = platform !== "win32";
   let expr = "";
   switch (tok) {
@@ -118,19 +119,18 @@ export function dolphinExprForGamepadToken(tok: GamepadToken, platform: string =
 }
 export function detectDolphinPadDevice(configDir: string): string | null {
   try {
-    const fs = require("fs");
     const p = path.join(configDir, "GCPadNew.ini");
     if (fs.existsSync(p)) {
       const content = fs.readFileSync(p, "utf-8");
       const match = content.match(/^Device\s*=\s*(.+)$/m);
       if (match) return match[1].trim();
     }
-  } catch (err) {}
+  } catch (err) { /* ignore */ }
   return null;
 }
 
 export function getPlatformGamepadDevice(
-  platform: string = "win32",
+  platform = "win32",
   deviceIndex = 0,
   preferredControllerId?: string
 ): { deviceString: string; learnedBinds?: any } {
@@ -155,7 +155,6 @@ export function getPlatformGamepadDevice(
       if (app.isPackaged) {
         helperPath = path.join(process.resourcesPath, "bin/mac/sdl3probe-macos");
       } else {
-        const fs = require('fs');
         const altPath = path.join(process.cwd(), "bin/mac/sdl3probe-macos");
         if (fs.existsSync(altPath)) helperPath = altPath;
       }
