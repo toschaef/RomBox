@@ -352,10 +352,10 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
       `}
     >
       <div className="relative w-full h-full overflow-hidden rounded-xs">
-        {hasCover ? (
+        {hasCover && coverPath ? (
           <div className="relative h-full w-auto">
             <img
-              src={`cover://${coverPath}`}
+              src={`cover:///${coverPath.replace(/\\/g, '/').replace(/^\/+/, '')}`}
               alt={game.title}
               className="w-full h-auto object-contain transition-transform duration-300 group-hover:scale-101"
               draggable={false}
