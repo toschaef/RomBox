@@ -271,11 +271,16 @@ export class DuckStationConfigurator extends BaseConfigurator {
     const svc = new ControlsService();
     const profile = svc.getDefaultProfile();
 
-    const bindings: PlayerBindings = await svc.getEffectiveConsoleBindings("ps1", profile.id);
+    const layout = await svc.getEffectiveConsoleLayout("ps1", profile.id);
+    const bindings: PlayerBindings = layout.player1;
 
     const effectiveProfile = {
       ...profile,
-      player1: bindings,
+      preferredControllerId: profile.preferredControllerId,
+      player1: layout.player1,
+      player2: layout.player2,
+      player3: layout.player3,
+      player4: layout.player4,
     };
 
     const ctx: TranslateContext = {
@@ -284,6 +289,7 @@ export class DuckStationConfigurator extends BaseConfigurator {
       player: 1,
       padPort: 1,
       configDir,
+      controllerId: layout.controllerId,
     };
 
     const translator = new DuckStationTranslator();

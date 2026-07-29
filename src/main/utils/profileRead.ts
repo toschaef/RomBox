@@ -28,12 +28,13 @@ export function pickDir(d: DpadBinding, dir: Dir): DigitalBinding | undefined {
   return d.right;
 }
 
-export function getDirFromDpad(profile: ControlsProfile, dir: Dir): DigitalBinding | undefined {
-  return pickDir(profile.player1.dpad, dir);
+export function getDirFromDpad(profile: ControlsProfile, playerKey: "player1" | "player2" | "player3" | "player4", dir: Dir): DigitalBinding | undefined {
+  return pickDir(profile[playerKey]?.dpad ?? { type: "dpad" }, dir);
 }
 
-export function getDirFromMove(profile: ControlsProfile, dir: Dir): DigitalBinding | undefined {
-  const m = profile.player1.move;
+export function getDirFromMove(profile: ControlsProfile, playerKey: "player1" | "player2" | "player3" | "player4", dir: Dir): DigitalBinding | undefined {
+  const m = profile[playerKey]?.move;
+  if (!m) return undefined;
 
   if (m.type === "dpad") {
     return pickDir(m, dir);
@@ -52,9 +53,9 @@ export function getDirFromMove(profile: ControlsProfile, dir: Dir): DigitalBindi
   return { type: "gp_axis_digital", stick, axis: "y", dir: invY ? "neg" : "pos", threshold };
 }
 
-export function getStickDirFromMove(profile: ControlsProfile, dir: "up" | "down" | "left" | "right"): DigitalBinding | undefined {
-  const m = profile.player1.move;
-  if (m.type !== "stick") return undefined;
+export function getStickDirFromMove(profile: ControlsProfile, playerKey: "player1" | "player2" | "player3" | "player4", dir: "up" | "down" | "left" | "right"): DigitalBinding | undefined {
+  const m = profile[playerKey]?.move;
+  if (!m || m.type !== "stick") return undefined;
 
   const stick = m.stick;
   const threshold = 0.65;
@@ -69,8 +70,8 @@ export function getStickDirFromMove(profile: ControlsProfile, dir: "up" | "down"
   return { type: "gp_axis_digital", stick, axis: "y", dir: invY ? "neg" : "pos", threshold };
 }
 
-export function getDirUnion(profile: ControlsProfile, dir: Dir): DigitalBinding | undefined {
-  return getDirFromDpad(profile, dir) ?? getDirFromMove(profile, dir);
+export function getDirUnion(profile: ControlsProfile, playerKey: "player1" | "player2" | "player3" | "player4", dir: Dir): DigitalBinding | undefined {
+  return getDirFromDpad(profile, playerKey, dir) ?? getDirFromMove(profile, playerKey, dir);
 }
 
 export function getDirFromBinding(
@@ -96,6 +97,6 @@ export function getDirFromBinding(
   return { type: "gp_axis_digital", stick, axis: "y", dir: invY ? "neg" : "pos", threshold };
 }
 
-export function getDirFromLook(profile: ControlsProfile, dir: Dir): DigitalBinding | undefined {
-  return getDirFromBinding(profile.player1.look, dir);
+export function getDirFromLook(profile: ControlsProfile, playerKey: "player1" | "player2" | "player3" | "player4", dir: Dir): DigitalBinding | undefined {
+  return getDirFromBinding(profile[playerKey]?.look, dir);
 }

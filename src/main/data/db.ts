@@ -32,6 +32,12 @@ export function initDB() {
     db.exec("ALTER TABLE games ADD COLUMN last_played_at INTEGER");
   }
 
+  const clColumns = db.prepare("PRAGMA table_info(console_layouts)").all() as { name: string }[];
+  const hasControllerId = clColumns.some(c => c.name === 'controller_id');
+  if (!hasControllerId) {
+    db.exec("ALTER TABLE console_layouts ADD COLUMN controller_id TEXT");
+  }
+
   console.log("Database initialized");
 }
 

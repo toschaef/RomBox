@@ -84,6 +84,8 @@ export type FaceBinding = {
   secondary?: DigitalBinding;
   tertiary?: DigitalBinding;
   quaternary?: DigitalBinding;
+  quinary?: DigitalBinding;
+  senary?: DigitalBinding;
 };
 
 export type ShoulderBinding = {
@@ -126,6 +128,9 @@ export type ControlsProfile = {
   isDefault: boolean;
   preferredDevice: InputDevice;
   player1: PlayerBindings;
+  player2?: PlayerBindings;
+  player3?: PlayerBindings;
+  player4?: PlayerBindings;
 
   melonJoystickId?: number;
   preferredControllerId?: string;
@@ -138,11 +143,15 @@ export type ConsoleLayoutBase = {
   createdAt: number;
   updatedAt: number;
   isUserModified: boolean;
+  controllerId?: string;
 };
 
 export type ConsoleLayout<C extends ConsoleID = ConsoleID> = ConsoleLayoutBase & {
   consoleId: C;
-  bindings: PlayerBindings;
+  player1: PlayerBindings;
+  player2?: PlayerBindings;
+  player3?: PlayerBindings;
+  player4?: PlayerBindings;
 };
 
 export type AnyConsoleLayout = ConsoleLayout;

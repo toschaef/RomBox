@@ -25,16 +25,28 @@ type RawLayoutRow = {
   created_at: number;
   updated_at: number;
   is_user_modified: number;
+  controller_id: string | null;
   bindings_json: string;
 };
 
-function safeParseBindingsJson(text: string): PlayerBindings {
-  const parsed = JsonEditor.safeParse(text);
-  return parsed as PlayerBindings;
+type LayoutPlayers = {
+  player1: PlayerBindings;
+  player2?: PlayerBindings;
+  player3?: PlayerBindings;
+  player4?: PlayerBindings;
+};
+
+function safeParseBindingsJson(text: string): LayoutPlayers {
+  const parsed = JsonEditor.safeParse(text) as any;
+  if (parsed && typeof parsed === "object") {
+    if (parsed.player1) return parsed as LayoutPlayers;
+    return { player1: parsed as PlayerBindings };
+  }
+  return { player1: createDefaultProfileShape().player1 };
 }
 
-function bindingsJson(bindings: PlayerBindings): string {
-  return JsonEditor.stringify(bindings, 0, false);
+function bindingsJson(players: LayoutPlayers): string {
+  return JsonEditor.stringify(players, 0, false);
 }
 
 const ALL_CONSOLE_IDS: ConsoleID[] = [
@@ -75,6 +87,9 @@ function rowToProfile(row: RawProfileRow): ControlsProfile {
 
     preferredDevice: p.preferredDevice ?? base.preferredDevice,
     player1: p.player1 ?? base.player1,
+    player2: p.player2,
+    player3: p.player3,
+    player4: p.player4,
   };
 }
 
@@ -83,6 +98,9 @@ function profileJson(profile: ControlsProfile): string {
     {
       preferredDevice: profile.preferredDevice,
       player1: profile.player1,
+      player2: profile.player2,
+      player3: profile.player3,
+      player4: profile.player4,
     },
     0,
     false
@@ -96,6 +114,7 @@ export type ConsoleLayoutMeta = {
   created_at: number;
   updated_at: number;
   is_user_modified: number;
+  controller_id?: string;
 };
 
 export class ControlsService {
@@ -173,7 +192,13 @@ export class ControlsService {
     const basePayload = payload.copyFromId
       ? (() => {
         const src = this.getProfile(payload.copyFromId);
-        return { preferredDevice: src.preferredDevice, player1: src.player1 };
+        return { 
+          preferredDevice: src.preferredDevice, 
+          player1: src.player1,
+          player2: src.player2,
+          player3: src.player3,
+          player4: src.player4,
+        };
       })()
       : createDefaultProfileShape();
 
@@ -253,7 +278,7 @@ export class ControlsService {
 
     const row = db
       .prepare(
-        `SELECT id, console_id, profile_id, created_at, updated_at, is_user_modified, bindings_json
+        `SELECT id, console_id, profile_id, created_at, updated_at, is_user_modified, controller_id, bindings_json
         FROM console_layouts
         WHERE console_id = ? AND profile_id = ?
         LIMIT 1`
@@ -266,7 +291,7 @@ export class ControlsService {
 
     assertConsoleID(row.console_id);
 
-    const bindings: PlayerBindings = safeParseBindingsJson(row.bindings_json);
+    const parsed = safeParseBindingsJson(row.bindings_json);
 
     return {
       id: row.id,
@@ -275,11 +300,15 @@ export class ControlsService {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       isUserModified: row.is_user_modified === 1,
-      bindings,
+      controllerId: row.controller_id || undefined,
+      player1: parsed.player1,
+      player2: parsed.player2,
+      player3: parsed.player3,
+      player4: parsed.player4,
     };
   }
 
-  saveConsoleLayout(args: { consoleId: ConsoleID; profileId: string; bindings: PlayerBindings }): ConsoleLayout {
+  saveConsoleLayout(args: { consoleId: ConsoleID; profileId: string; player1: PlayerBindings; player2?: PlayerBindings; player3?: PlayerBindings; player4?: PlayerBindings; controllerId?: string }): ConsoleLayout {
     const db = getDB();
     this.getProfile(args.profileId);
 
@@ -288,23 +317,30 @@ export class ControlsService {
       .get(args.consoleId, args.profileId) as { id: string } | undefined;
 
     const ts = now();
+    
+    const players: LayoutPlayers = {
+      player1: args.player1,
+      player2: args.player2,
+      player3: args.player3,
+      player4: args.player4,
+    };
 
     if (!existing?.id) {
       const id = randomUUID();
       db.prepare(
         `INSERT INTO console_layouts
-        (id, console_id, profile_id, created_at, updated_at, is_user_modified, bindings_json)
-        VALUES (?, ?, ?, ?, ?, 1, ?)`
-      ).run(id, args.consoleId, args.profileId, ts, ts, bindingsJson(args.bindings));
+        (id, console_id, profile_id, created_at, updated_at, is_user_modified, controller_id, bindings_json)
+        VALUES (?, ?, ?, ?, ?, 1, ?, ?)`
+      ).run(id, args.consoleId, args.profileId, ts, ts, args.controllerId || null, bindingsJson(players));
 
       return this.getConsoleLayout(args.consoleId, args.profileId);
     }
 
     db.prepare(
       `UPDATE console_layouts
-      SET bindings_json = ?, updated_at = ?, is_user_modified = 1
+      SET bindings_json = ?, updated_at = ?, is_user_modified = 1, controller_id = ?
       WHERE id = ?`
-    ).run(bindingsJson(args.bindings), ts, existing.id);
+    ).run(bindingsJson(players), ts, args.controllerId || null, existing.id);
 
     return this.getConsoleLayout(args.consoleId, args.profileId);
   }
@@ -313,7 +349,9 @@ export class ControlsService {
     const db = getDB();
     const profile = this.getProfile(profileId);
 
-    const defaults: PlayerBindings = makeDefaultConsoleBindings(consoleId, profile);
+    const defaultP1: PlayerBindings = makeDefaultConsoleBindings(consoleId, profile);
+    const defaults: LayoutPlayers = { player1: defaultP1 };
+    
     const ts = now();
 
     const existing = db
@@ -339,7 +377,7 @@ export class ControlsService {
 
     const rows = db
       .prepare(
-        `SELECT id, console_id, profile_id, created_at, updated_at, is_user_modified
+        `SELECT id, console_id, profile_id, created_at, updated_at, is_user_modified, controller_id
         FROM console_layouts
         WHERE profile_id = ?
         ORDER BY updated_at DESC`
@@ -351,6 +389,7 @@ export class ControlsService {
         created_at: number;
         updated_at: number;
         is_user_modified: number;
+        controller_id: string | null;
       }>;
 
     return rows.map((r) => {
@@ -362,6 +401,7 @@ export class ControlsService {
         created_at: r.created_at,
         updated_at: r.updated_at,
         is_user_modified: r.is_user_modified,
+        controller_id: r.controller_id || undefined,
       };
     });
   }
@@ -371,21 +411,38 @@ export class ControlsService {
 
     const id = randomUUID();
     const ts = now();
-    const bindings: PlayerBindings = makeDefaultConsoleBindings(consoleId, profile);
+    const defaultP1: PlayerBindings = makeDefaultConsoleBindings(consoleId, profile);
+    const defaults: LayoutPlayers = { player1: defaultP1 };
 
     db.prepare(
       `INSERT INTO console_layouts
-      (id, console_id, profile_id, created_at, updated_at, is_user_modified, bindings_json)
-      VALUES (?, ?, ?, ?, ?, 0, ?)`
-    ).run(id, consoleId, profile.id, ts, ts, bindingsJson(bindings));
+      (id, console_id, profile_id, created_at, updated_at, is_user_modified, controller_id, bindings_json)
+      VALUES (?, ?, ?, ?, ?, 0, NULL, ?)`
+    ).run(id, consoleId, profile.id, ts, ts, bindingsJson(defaults));
 
     return this.getConsoleLayout(consoleId, profile.id);
   }
 
-  async getEffectiveConsoleBindings(consoleId: ConsoleID, profileId: string): Promise<PlayerBindings> {
+  async getEffectiveConsoleLayout(consoleId: ConsoleID, profileId: string): Promise<ConsoleLayout> {
     const profile = this.getProfile(profileId);
     const layout = this.getConsoleLayout(consoleId, profileId);
+    
+    if (!layout.isUserModified) {
+      return {
+        ...layout,
+        player1: makeDefaultConsoleBindings(consoleId, profile),
+        player2: profile.player2,
+        player3: profile.player3,
+        player4: profile.player4,
+      };
+    }
 
-    return layout.bindings ?? makeDefaultConsoleBindings(consoleId, profile);
+    return {
+      ...layout,
+      player1: layout.player1 ?? profile.player1,
+      player2: layout.player2 ?? profile.player2,
+      player3: layout.player3 ?? profile.player3,
+      player4: layout.player4 ?? profile.player4,
+    };
   }
 }

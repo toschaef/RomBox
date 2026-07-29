@@ -153,10 +153,10 @@ describe("Cross-Platform (win32 & darwin) Integration Tests for POC Emulators", 
         expect(bmlText).toContain("VirtualPad1");
 
         if (plat === "win32") {
-          // Windows VK code for 'KeyT' (84) -> 0x1/0/84;;
-          // Windows VK code for 'KeyU' (85) -> 0x1/0/85;;
-          expect(bmlText).toContain("Start: 0x1/0/84;;");
-          expect(bmlText).toContain("A..South: 0x1/0/85;;");
+          // Ares indexes into its rawinput key list on win32, not raw VK codes:
+          // 'KeyT' -> index 54, 'KeyU' -> index 55
+          expect(bmlText).toContain("Start: 0x1/0/54;;");
+          expect(bmlText).toContain("A..South: 0x1/0/55;;");
         } else {
           // macOS Quartz index for 'KeyT' (59) -> 0x1/0/59;;
           // macOS Quartz index for 'KeyU' (60) -> 0x1/0/60;;

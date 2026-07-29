@@ -2,7 +2,7 @@ import type { IEmulatorTranslator, TranslateContext, EmulatorPatch } from "./ITr
 import type { ControlsProfile, DigitalBinding } from "../../../shared/types/controls";
 import { axisToDigitalToken } from "../../../shared/controls/gamepadTokens";
 import { getDirFromDpad, getDirFromMove, getDirFromLook } from "../profileRead";
-import { PCSX2, pcsx2KeyFromDomCode, pcsx2ExprForGamepadToken, getSDLDeviceIndex } from "../schema/pcsx2";
+import { PCSX2, pcsx2KeyFromDomCode, pcsx2ExprForGamepadToken } from "../schema/pcsx2";
 
 
 function pcsx2ExprForDigital(b: DigitalBinding, deviceIndex = 0): string | null {
@@ -46,46 +46,57 @@ export class PCSX2Translator implements IEmulatorTranslator {
 
     const patches: EmulatorPatch[] = [];
     const iniPath = PCSX2.iniPath(ctx.configDir);
-    const section = "Pad1";
-    const deviceIndex = getSDLDeviceIndex(ctx, profile);
+    const players = [
+      { key: "player1" as const, prefix: "Pad1" },
+      { key: "player2" as const, prefix: "Pad2" },
+      { key: "player3" as const, prefix: "Pad3" },
+      { key: "player4" as const, prefix: "Pad4" },
+    ];
 
-    const writeBinding = (label: string, b?: DigitalBinding) => {
-      if (!b) return;
-      const expr = pcsx2ExprForDigital(b, deviceIndex);
-      if (!expr) return;
-      addIniPatch(patches, iniPath, section, label, expr);
-    };
+    for (let i = 0; i < players.length; i++) {
+      const p = players[i];
+      if (!profile[p.key]) continue;
+      const section = p.prefix;
+      const deviceIndex = i; // Map Pad1 -> SDL-0, Pad2 -> SDL-1, etc.
+      
+      const writeBinding = (label: string, b?: DigitalBinding) => {
+        if (!b) return;
+        const expr = pcsx2ExprForDigital(b, deviceIndex);
+        if (!expr) return;
+        addIniPatch(patches, iniPath, section, label, expr);
+      };
 
-    writeBinding("Cross", profile.player1.face?.primary);
-    writeBinding("Circle", profile.player1.face?.secondary);
-    writeBinding("Square", profile.player1.face?.tertiary);
-    writeBinding("Triangle", profile.player1.face?.quaternary);
+      writeBinding("Cross", profile[p.key]?.face?.primary);
+      writeBinding("Circle", profile[p.key]?.face?.secondary);
+      writeBinding("Square", profile[p.key]?.face?.tertiary);
+      writeBinding("Triangle", profile[p.key]?.face?.quaternary);
 
-    writeBinding("Start", profile.player1.system?.start);
-    writeBinding("Select", profile.player1.system?.select);
+      writeBinding("Start", profile[p.key]?.system?.start);
+      writeBinding("Select", profile[p.key]?.system?.select);
 
-    writeBinding("L1", profile.player1.shoulders?.bumperL);
-    writeBinding("R1", profile.player1.shoulders?.bumperR);
-    writeBinding("L2", profile.player1.shoulders?.triggerL);
-    writeBinding("R2", profile.player1.shoulders?.triggerR);
+      writeBinding("L1", profile[p.key]?.shoulders?.bumperL);
+      writeBinding("R1", profile[p.key]?.shoulders?.bumperR);
+      writeBinding("L2", profile[p.key]?.shoulders?.triggerL);
+      writeBinding("R2", profile[p.key]?.shoulders?.triggerR);
 
-    writeBinding("Up", getDirFromDpad(profile, "up"));
-    writeBinding("Down", getDirFromDpad(profile, "down"));
-    writeBinding("Left", getDirFromDpad(profile, "left"));
-    writeBinding("Right", getDirFromDpad(profile, "right"));
+      writeBinding("Up", getDirFromDpad(profile, p.key, "up"));
+      writeBinding("Down", getDirFromDpad(profile, p.key, "down"));
+      writeBinding("Left", getDirFromDpad(profile, p.key, "left"));
+      writeBinding("Right", getDirFromDpad(profile, p.key, "right"));
 
-    writeBinding("LUp", getDirFromMove(profile, "up"));
-    writeBinding("LDown", getDirFromMove(profile, "down"));
-    writeBinding("LLeft", getDirFromMove(profile, "left"));
-    writeBinding("LRight", getDirFromMove(profile, "right"));
+      writeBinding("LUp", getDirFromMove(profile, p.key, "up"));
+      writeBinding("LDown", getDirFromMove(profile, p.key, "down"));
+      writeBinding("LLeft", getDirFromMove(profile, p.key, "left"));
+      writeBinding("LRight", getDirFromMove(profile, p.key, "right"));
 
-    writeBinding("RUp", getDirFromLook(profile, "up"));
-    writeBinding("RDown", getDirFromLook(profile, "down"));
-    writeBinding("RLeft", getDirFromLook(profile, "left"));
-    writeBinding("RRight", getDirFromLook(profile, "right"));
+      writeBinding("RUp", getDirFromLook(profile, p.key, "up"));
+      writeBinding("RDown", getDirFromLook(profile, p.key, "down"));
+      writeBinding("RLeft", getDirFromLook(profile, p.key, "left"));
+      writeBinding("RRight", getDirFromLook(profile, p.key, "right"));
 
-    writeBinding("L3", profile.player1.sticks?.l3);
-    writeBinding("R3", profile.player1.sticks?.r3);
+      writeBinding("L3", profile[p.key]?.sticks?.l3);
+      writeBinding("R3", profile[p.key]?.sticks?.r3);
+    }
 
     return patches;
   }

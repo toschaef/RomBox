@@ -16,24 +16,30 @@ import {
   type ConsoleGroupId,
 } from "./controlsUtils";
 
-interface ConsoleControlsViewProps {
+export default function ConsoleControlsView(props: {
   layout: AnyConsoleLayout;
+  playerKey: "player1" | "player2" | "player3" | "player4";
   saveLayout: (l: AnyConsoleLayout) => void;
-
   bindStateActive: boolean;
-  startBind: (plan: BindPlanConsole) => void;
-  planEquals: (p: BindPlanConsole) => boolean;
+  startBind: (plan: BindPlanConsole, playerKey: "player1" | "player2" | "player3" | "player4") => void;
+  planEquals: (plan: BindPlanConsole) => boolean;
+  isDigitalPressed: (token: DigitalBinding) => boolean;
+  isDpadPressed: (dpad: DpadBinding, dir: "up" | "down" | "left" | "right") => boolean;
+  isStickPressed: (stick: StickBinding, axis: "x" | "y", val: -1 | 1) => boolean;
+}) {
+  const {
+    layout,
+    playerKey,
+    saveLayout,
+    bindStateActive,
+    startBind,
+    planEquals,
+    isDigitalPressed,
+    isDpadPressed,
+    isStickPressed,
+  } = props;
 
-  isDigitalPressed: (d?: DigitalBinding) => boolean;
-  isDpadPressed: (d: DpadBinding) => boolean;
-  isStickPressed: (s: StickBinding) => boolean;
-}
-
-export default function ConsoleControlsView(props: ConsoleControlsViewProps) {
-  const { layout, saveLayout, bindStateActive, startBind, planEquals, isDigitalPressed, isDpadPressed, isStickPressed } =
-    props;
-
-  const consoleItems = useMemo(() => getConsoleLayoutItems(layout.consoleId), [layout.consoleId]);
+  const consoleItems = useMemo(() => getConsoleLayoutItems(layout.consoleId, layout.controllerId), [layout.consoleId, layout.controllerId]);
   const dpadIcons = useMemo(() => getConsoleDpadIcons(layout.consoleId), [layout.consoleId]);
 
   const sectionMap = useMemo(() => {
@@ -55,8 +61,8 @@ export default function ConsoleControlsView(props: ConsoleControlsViewProps) {
           const groupItem = items.find((x) => x.kind === "group" && x.id === "move");
           if (!groupItem) return null;
 
-          const v = getConsoleGroupValue(layout, "move");
-          const active = v.type === "stick" ? isStickPressed(v) : isDpadPressed(v);
+          const v = getConsoleGroupValue(layout, playerKey, "move");
+          const active = v.type === "stick" ? isStickPressed(v, "x", 1) : isDpadPressed(v, "up");
 
           return (
             <div key={sec.key} className="mb-4">
@@ -69,10 +75,10 @@ export default function ConsoleControlsView(props: ConsoleControlsViewProps) {
                 }
                 active={active}
                 isPressed={isDigitalPressed}
-                onSetMode={(mode) => void saveLayout(setConsoleGroupMode(layout, "move", mode))}
-                onBindDpad={() => startBind({ kind: "dpad", group: "move" })}
-                onBindStick={() => startBind({ kind: "stick", group: "move", stick: "left" })}
-                onClear={() => void saveLayout(clearConsoleGroup(layout, "move"))}
+                onSetMode={(mode) => void saveLayout(setConsoleGroupMode(layout, playerKey, "move", mode))}
+                onBindDpad={() => startBind({ kind: "dpad", group: "move" }, playerKey)}
+                onBindStick={() => startBind({ kind: "stick", group: "move", stick: "left" }, playerKey)}
+                onClear={() => void saveLayout(clearConsoleGroup(layout, playerKey, "move"))}
                 dirIcons={LEFT_STICK_SWITCH_ICONS}
               />
             </div>
@@ -83,8 +89,8 @@ export default function ConsoleControlsView(props: ConsoleControlsViewProps) {
           const groupItem = items.find((x) => x.kind === "group" && x.id === "dpad");
           if (!groupItem) return null;
 
-          const v = getConsoleGroupValue(layout, "dpad");
-          const active = v.type === "stick" ? isStickPressed(v) : isDpadPressed(v as DpadBinding);
+          const v = getConsoleGroupValue(layout, playerKey, "dpad");
+          const active = v.type === "stick" ? isStickPressed(v, "x", 1) : isDpadPressed(v as DpadBinding, "up");
 
           return (
             <div key={sec.key} className="mb-4">
@@ -95,9 +101,9 @@ export default function ConsoleControlsView(props: ConsoleControlsViewProps) {
                 active={active}
                 isPressed={isDigitalPressed}
                 onSetMode={() => void 0}
-                onBindDpad={() => startBind({ kind: "dpad", group: "dpad" })}
+                onBindDpad={() => startBind({ kind: "dpad", group: "dpad" }, playerKey)}
                 onBindStick={() => void 0}
-                onClear={() => void saveLayout(clearConsoleGroup(layout, "dpad"))}
+                onClear={() => void saveLayout(clearConsoleGroup(layout, playerKey, "dpad"))}
                 dirIcons={dpadIcons}
               />
             </div>
@@ -109,8 +115,8 @@ export default function ConsoleControlsView(props: ConsoleControlsViewProps) {
           if (!groupItem) return null;
 
           const groupId = groupItem.id as ConsoleGroupId;
-          const v = getConsoleGroupValue(layout, groupId);
-          const active = v.type === "stick" ? isStickPressed(v) : isDpadPressed(v);
+          const v = getConsoleGroupValue(layout, playerKey, groupId);
+          const active = v.type === "stick" ? isStickPressed(v, "x", 1) : isDpadPressed(v, "up");
 
           return (
             <div key={sec.key} className="mb-4">
@@ -123,10 +129,10 @@ export default function ConsoleControlsView(props: ConsoleControlsViewProps) {
                 }
                 active={active}
                 isPressed={isDigitalPressed}
-                onSetMode={(mode) => void saveLayout(setConsoleGroupMode(layout, groupId, mode))}
-                onBindDpad={() => startBind({ kind: "dpad", group: groupId })}
-                onBindStick={() => startBind({ kind: "stick", group: groupId, stick: "right" })}
-                onClear={() => void saveLayout(clearConsoleGroup(layout, groupId))}
+                onSetMode={(mode) => void saveLayout(setConsoleGroupMode(layout, playerKey, groupId, mode))}
+                onBindDpad={() => startBind({ kind: "dpad", group: groupId }, playerKey)}
+                onBindStick={() => startBind({ kind: "stick", group: groupId, stick: "right" }, playerKey)}
+                onClear={() => void saveLayout(clearConsoleGroup(layout, playerKey, groupId))}
                 dirIcons={RIGHT_STICK_SWITCH_ICONS}
               />
             </div>
@@ -140,8 +146,8 @@ export default function ConsoleControlsView(props: ConsoleControlsViewProps) {
                 .filter((x) => x.kind === "digital")
                 .map((item) => {
                   const id = item.id as string;
-                  const binding = getConsoleDigitalById(layout, id);
-                  const active = isDigitalPressed(binding);
+                  const binding = getConsoleDigitalById(layout, playerKey, id);
+                  const isPressed = binding ? isDigitalPressed(binding) : false;
                   const listening = bindStateActive && planEquals({ kind: "digital", path: id });
 
                   return (
@@ -150,10 +156,10 @@ export default function ConsoleControlsView(props: ConsoleControlsViewProps) {
                       title={item.label}
                       iconSrc={item.icon}
                       binding={binding}
-                      isActive={active}
+                      isActive={isPressed}
                       isListening={listening}
-                      onBind={() => startBind({ kind: "digital", path: id })}
-                      onClear={() => void saveLayout(clearConsoleDigitalById(layout, id))}
+                      onBind={() => startBind({ kind: "digital", path: id }, playerKey)}
+                      onClear={() => void saveLayout(clearConsoleDigitalById(layout, playerKey, id))}
                     />
                   );
                 })}

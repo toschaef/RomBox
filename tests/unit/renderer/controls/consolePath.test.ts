@@ -5,7 +5,7 @@ describe("consolePath", () => {
   const mockLayout: AnyConsoleLayout = {
     consoleId: "nes",
     name: "Nintendo",
-    bindings: {
+    player1: {
       a: { type: "key", code: "KeyZ" },
       shoulders: {
         bumperL: { type: "gp_button", token: "GP_L1" }
@@ -15,51 +15,51 @@ describe("consolePath", () => {
 
   describe("getConsoleDigital", () => {
     it("should resolve flat bindings directly", () => {
-      const binding = getConsoleDigital(mockLayout, "a");
+      const binding = getConsoleDigital(mockLayout, "player1", "a");
       expect(binding).toEqual({ type: "key", code: "KeyZ" });
     });
 
     it("should resolve dotted/nested group bindings", () => {
-      const binding = getConsoleDigital(mockLayout, "shoulders.bumperL");
+      const binding = getConsoleDigital(mockLayout, "player1", "shoulders.bumperL");
       expect(binding).toEqual({ type: "gp_button", token: "GP_L1" });
     });
 
     it("should return undefined if path does not exist", () => {
-      expect(getConsoleDigital(mockLayout, "nonexistent")).toBeUndefined();
-      expect(getConsoleDigital(mockLayout, "shoulders.nonexistent")).toBeUndefined();
+      expect(getConsoleDigital(mockLayout, "player1", "nonexistent")).toBeUndefined();
+      expect(getConsoleDigital(mockLayout, "player1", "shoulders.nonexistent")).toBeUndefined();
     });
   });
 
   describe("setConsoleDigital", () => {
     it("should set flat bindings correctly", () => {
       const nextValue: DigitalBinding = { type: "key", code: "KeyX" };
-      const updated = setConsoleDigital(mockLayout, "b", nextValue);
+      const updated = setConsoleDigital(mockLayout, "player1", "b", nextValue);
 
-      expect(getConsoleDigital(updated, "b")).toEqual(nextValue);
+      expect(getConsoleDigital(updated, "player1", "b")).toEqual(nextValue);
       // Verify original is untouched (pure function / structuredClone)
-      expect(getConsoleDigital(mockLayout, "b")).toBeUndefined();
+      expect(getConsoleDigital(mockLayout, "player1", "b")).toBeUndefined();
     });
 
     it("should set dotted/nested group bindings correctly", () => {
       const nextValue: DigitalBinding = { type: "key", code: "KeyC" };
-      const updated = setConsoleDigital(mockLayout, "shoulders.bumperR", nextValue);
+      const updated = setConsoleDigital(mockLayout, "player1", "shoulders.bumperR", nextValue);
 
-      expect(getConsoleDigital(updated, "shoulders.bumperR")).toEqual(nextValue);
-      expect(getConsoleDigital(mockLayout, "shoulders.bumperR")).toBeUndefined();
+      expect(getConsoleDigital(updated, "player1", "shoulders.bumperR")).toEqual(nextValue);
+      expect(getConsoleDigital(mockLayout, "player1", "shoulders.bumperR")).toBeUndefined();
     });
   });
 
   describe("clearConsoleDigital", () => {
     it("should clear flat bindings correctly", () => {
-      const updated = clearConsoleDigital(mockLayout, "a");
-      expect(getConsoleDigital(updated, "a")).toBeUndefined();
-      expect(getConsoleDigital(mockLayout, "a")).toEqual({ type: "key", code: "KeyZ" });
+      const updated = clearConsoleDigital(mockLayout, "player1", "a");
+      expect(getConsoleDigital(updated, "player1", "a")).toBeUndefined();
+      expect(getConsoleDigital(mockLayout, "player1", "a")).toEqual({ type: "key", code: "KeyZ" });
     });
 
     it("should clear dotted/nested bindings correctly", () => {
-      const updated = clearConsoleDigital(mockLayout, "shoulders.bumperL");
-      expect(getConsoleDigital(updated, "shoulders.bumperL")).toBeUndefined();
-      expect(getConsoleDigital(mockLayout, "shoulders.bumperL")).toEqual({ type: "gp_button", token: "GP_L1" });
+      const updated = clearConsoleDigital(mockLayout, "player1", "shoulders.bumperL");
+      expect(getConsoleDigital(updated, "player1", "shoulders.bumperL")).toBeUndefined();
+      expect(getConsoleDigital(mockLayout, "player1", "shoulders.bumperL")).toEqual({ type: "gp_button", token: "GP_L1" });
     });
   });
 });

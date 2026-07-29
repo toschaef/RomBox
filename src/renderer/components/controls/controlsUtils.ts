@@ -24,79 +24,79 @@ export function defaultDpad(): DpadBinding {
   return { type: "dpad" };
 }
 
-export function getDigital(p: ControlsProfile, path: DigitalPath): DigitalBinding | undefined {
+export function getDigital(p: ControlsProfile, playerKey: "player1" | "player2" | "player3" | "player4", path: DigitalPath): DigitalBinding | undefined {
   const [group, key] = path.split(".") as ["face" | "shoulders" | "system" | "sticks", string];
   // @ts-expect-error dynamic keying
-  return p.player1[group]?.[key];
+  return p[playerKey]?.[group]?.[key];
 }
 
-export function clearDigital(p: ControlsProfile, path: DigitalPath): ControlsProfile {
+export function clearDigital(p: ControlsProfile, playerKey: "player1" | "player2" | "player3" | "player4", path: DigitalPath): ControlsProfile {
   const next = structuredClone(p);
   const [group, key] = path.split(".") as ["face" | "shoulders" | "system" | "sticks", string];
   // @ts-expect-error dynamic keying
-  if (next.player1[group]) delete next.player1[group][key];
+  if (next[playerKey]?.[group]) delete next[playerKey][group][key];
   return next;
 }
 
-export function setGroupMode(p: ControlsProfile, group: "move" | "dpad" | "look", mode: "dpad" | "stick"): ControlsProfile {
+export function setGroupMode(p: ControlsProfile, playerKey: "player1" | "player2" | "player3" | "player4", group: "move" | "dpad" | "look", mode: "dpad" | "stick"): ControlsProfile {
   const next = structuredClone(p);
+  if (!next[playerKey]) next[playerKey] = {} as any;
+  if (!next[playerKey]) return next;
+  const player = next[playerKey];
 
   if (group === "move") {
-    next.player1.move = mode === "dpad" ? defaultDpad() : defaultStick("left");
+    player.move = mode === "dpad" ? defaultDpad() : defaultStick("left");
   } else if (group === "dpad") {
-    next.player1.dpad = defaultDpad();
+    player.dpad = defaultDpad();
   } else {
-    next.player1.look = mode === "dpad" ? defaultDpad() : defaultStick("right");
+    player.look = mode === "dpad" ? defaultDpad() : defaultStick("right");
   }
 
   return next;
 }
 
-export function clearGroup(p: ControlsProfile, group: "move" | "dpad" | "look"): ControlsProfile {
+export function clearGroup(p: ControlsProfile, playerKey: "player1" | "player2" | "player3" | "player4", group: "move" | "dpad" | "look"): ControlsProfile {
   const next = structuredClone(p);
+  const player = next[playerKey];
 
   if (group === "move") {
-    next.player1.move =
-      next.player1.move.type === "stick"
-        ? { type: "stick", stick: next.player1.move.stick, deadzone: next.player1.move.deadzone }
+    player.move =
+      player.move.type === "stick"
+        ? { type: "stick", stick: player.move.stick, deadzone: player.move.deadzone }
         : { type: "dpad" };
   } else if (group === "dpad") {
-    next.player1.dpad = { type: "dpad" };
+    player.dpad = { type: "dpad" };
   } else {
-    next.player1.look =
-      next.player1.look.type === "stick"
-        ? { type: "stick", stick: next.player1.look.stick, deadzone: next.player1.look.deadzone }
+    player.look =
+      player.look.type === "stick"
+        ? { type: "stick", stick: player.look.stick, deadzone: player.look.deadzone }
         : { type: "dpad" };
   }
 
   return next;
 }
 
-export function getConsoleGroupValue(layout: AnyConsoleLayout, group: ConsoleGroupId): DpadBinding | StickBinding {
-  const b = layout.bindings as Record<string, unknown>;
+export function getConsoleGroupValue(layout: AnyConsoleLayout, playerKey: "player1" | "player2" | "player3" | "player4", group: ConsoleGroupId): DpadBinding | StickBinding {
+  let v: unknown = layout[playerKey];
+  if (!v) return { type: "dpad" };
   const parts = group.split(".");
-  let v: unknown = b;
   for (const part of parts) {
-    v = (v && typeof v === "object") ? (v as Record<string, unknown>)[part] : undefined;
+    v = v && typeof v === "object" ? (v as Record<string, unknown>)[part] : undefined;
   }
-
-  const typedV = v as { type?: string } | null;
-  if (typedV && typeof typedV === "object" && (typedV.type === "dpad" || typedV.type === "stick")) {
-    return typedV as DpadBinding | StickBinding;
-  }
-
-  if (group === "move") return defaultDpad();
-  if (group === "dpad") return defaultDpad();
-  return defaultDpad();
+  if (!v || typeof v !== "object") return { type: "dpad" };
+  const t = (v as Record<string, unknown>).type;
+  if (t === "dpad" || t === "stick") return v as DpadBinding | StickBinding;
+  return { type: "dpad" };
 }
 
-export function setConsoleGroupMode(layout: AnyConsoleLayout, group: ConsoleGroupId, mode: "dpad" | "stick"): AnyConsoleLayout {
+export function setConsoleGroupMode(layout: AnyConsoleLayout, playerKey: "player1" | "player2" | "player3" | "player4", group: ConsoleGroupId, mode: "dpad" | "stick"): AnyConsoleLayout {
   const next = structuredClone(layout);
 
   const stick: "left" | "right" = (group === "special.c" || group === "look" || group === "special.tilt" || group === "special.ir") ? "right" : "left";
   const val = mode === "dpad" ? defaultDpad() : defaultStick(stick);
 
-  let parent: Record<string, unknown> = next.bindings as unknown as Record<string, unknown>;
+  if (!next[playerKey]) next[playerKey] = {} as any;
+  let parent: Record<string, unknown> = next[playerKey] as unknown as Record<string, unknown>;
   const parts = group.split(".");
   for (let i = 0; i < parts.length - 1; i++) {
     const part = parts[i];
@@ -110,10 +110,11 @@ export function setConsoleGroupMode(layout: AnyConsoleLayout, group: ConsoleGrou
   return next;
 }
 
-export function clearConsoleGroup(layout: AnyConsoleLayout, group: ConsoleGroupId): AnyConsoleLayout {
+export function clearConsoleGroup(layout: AnyConsoleLayout, playerKey: "player1" | "player2" | "player3" | "player4", group: ConsoleGroupId): AnyConsoleLayout {
   const next = structuredClone(layout);
 
-  let parent: Record<string, unknown> = next.bindings as unknown as Record<string, unknown>;
+  if (!next[playerKey]) return next;
+  let parent: Record<string, unknown> = next[playerKey] as unknown as Record<string, unknown>;
   const parts = group.split(".");
   for (let i = 0; i < parts.length - 1; i++) {
     const part = parts[i];

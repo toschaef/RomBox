@@ -32,11 +32,13 @@ export class MesenConfigurator extends BaseConfigurator {
 
     const svc = new ControlsService();
     const profile = svc.getDefaultProfile();
-    const p1 = await svc.getEffectiveConsoleBindings(this.consoleId, profile.id);
-
+    const layout = await svc.getEffectiveConsoleLayout(this.consoleId, profile.id);
     const effectiveProfile = {
       ...profile,
-      player1: p1,
+      player1: layout.player1,
+      player2: layout.player2,
+      player3: layout.player3,
+      player4: layout.player4,
     };
 
     const ctx = {
@@ -45,6 +47,7 @@ export class MesenConfigurator extends BaseConfigurator {
       player: 1,
       padPort: 1,
       configDir: configPath,
+      controllerId: layout.controllerId,
     };
 
     const patches = this.translator.translate(effectiveProfile, ctx);

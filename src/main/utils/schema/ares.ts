@@ -11,12 +11,12 @@ export const ARES = {
     select: "Select",
     start: "Start",
     a: "A..South",
-    b: "B..East",
+    b: "X..West",
     x: "X..West",
     y: "Y..North",
     l: "L-Bumper",
     r: "R-Bumper",
-    z: "L-Trigger",
+    z: "R-Trigger",
     rTrigger: "R-Trigger",
     lClick: "L-Stick..Click",
     rClick: "R-Stick..Click",
@@ -70,11 +70,33 @@ export const ARES_QUARTZ_KEYS = [
   "Keypad1","Keypad2","Keypad3","Keypad4","Keypad5","Keypad6","Keypad7","Keypad8","Keypad9","Keypad0",
   "Clear","Equals","Divide","Multiply","Subtract","Add","Enter","Decimal",
   "Up","Down","Left","Right",
-  "Tab","Return","Spacebar","Shift","Control","Option","Command",
+  "Tab","Return","Spacebar",
+  "LeftShift","RightShift","LeftControl","RightControl",
+  "LeftOption","RightOption","LeftCommand","RightCommand",
+] as const;
+
+export const ARES_WIN32_KEYS = [
+  "Escape",
+  "F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11","F12",
+  "PrintScreen","ScrollLock","Tilde",
+  "Num1","Num2","Num3","Num4","Num5","Num6","Num7","Num8","Num9","Num0",
+  "Dash","Equal","Backspace",
+  "Insert","Delete","Home","End","PageUp","PageDown",
+  "A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z",
+  "LeftBracket","RightBracket","Backslash","Semicolon","Apostrophe","Comma","Period","Slash",
+  "Keypad1","Keypad2","Keypad3","Keypad4","Keypad5","Keypad6","Keypad7","Keypad8","Keypad9","Keypad0",
+  "Point","Enter","Add","Subtract","Multiply","Divide",
+  "CapsLock",
+  "Up","Down","Left","Right",
+  "Tab","Return","Spacebar",
+  "LeftShift","RightShift","LeftControl","RightControl","LeftAlt","RightAlt","LeftSuper","RightSuper","Menu"
 ] as const;
 
 export const ARES_QUARTZ_KEY_INDEX: Record<string, number> =
   Object.assign(Object.create(null), Object.fromEntries(ARES_QUARTZ_KEYS.map((k, i) => [k, i])));
+
+export const ARES_WIN32_KEY_INDEX: Record<string, number> =
+  Object.assign(Object.create(null), Object.fromEntries(ARES_WIN32_KEYS.map((k, i) => [k, i])));
 
 const DOM_TO_ARES_KEY: Record<string, string> = Object.assign(Object.create(null), {
   Escape: "Escape",
@@ -83,7 +105,7 @@ const DOM_TO_ARES_KEY: Record<string, string> = Object.assign(Object.create(null
   Minus: "Dash",
   Equal: "Equal",
   Backspace: "Delete",
-  Delete: "Erase",
+  Delete: "Erase", // Note: Windows rawinput maps Delete to "Delete", Quartz to "Erase". This map is Quartz specific mostly.
 
   BracketLeft: "LeftBracket",
   BracketRight: "RightBracket",
@@ -108,14 +130,14 @@ const DOM_TO_ARES_KEY: Record<string, string> = Object.assign(Object.create(null
   PageUp: "PageUp",
   PageDown: "PageDown",
 
-  ShiftLeft: "Shift",
-  ShiftRight: "Shift",
-  ControlLeft: "Control",
-  ControlRight: "Control",
-  AltLeft: "Option",
-  AltRight: "Option",
-  MetaLeft: "Command",
-  MetaRight: "Command",
+  ShiftLeft: "LeftShift",
+  ShiftRight: "RightShift",
+  ControlLeft: "LeftControl",
+  ControlRight: "RightControl",
+  AltLeft: "LeftOption",
+  AltRight: "RightOption",
+  MetaLeft: "LeftCommand",
+  MetaRight: "RightCommand",
 
   Numpad0: "Keypad0",
   Numpad1: "Keypad1",
@@ -152,10 +174,35 @@ function domCodeToAresKeyName(code: string): string | null {
 }
 
 export function resolveQuartzKeyboardKeyIndex(code: string): number | null {
-  const aresName = domCodeToAresKeyName(code);
+  let aresName = DOM_TO_ARES_KEY[code];
+  if (!aresName) {
+    aresName = domCodeToAresKeyName(code);
+  }
   if (!aresName) return null;
   const idx = ARES_QUARTZ_KEY_INDEX[aresName];
-  return Number.isInteger(idx) ? idx : null;
+  return idx !== undefined ? idx : null;
+}
+
+export function resolveRawinputKeyboardKeyIndex(code: string): number | null {
+  // Mostly shares the same DOM_TO_ARES_KEY map, with some differences
+  let aresName = DOM_TO_ARES_KEY[code];
+  
+  // Apply Windows specific overrides
+  if (code === "Delete") aresName = "Delete";
+  else if (code === "NumLock") aresName = "NumLock"; 
+  else if (code === "NumpadDecimal") aresName = "Point";
+  else if (code === "AltLeft") aresName = "LeftAlt";
+  else if (code === "AltRight") aresName = "RightAlt";
+  else if (code === "MetaLeft") aresName = "LeftSuper";
+  else if (code === "MetaRight") aresName = "RightSuper";
+  else if (code === "ContextMenu") aresName = "Menu";
+
+  if (!aresName) {
+    aresName = domCodeToAresKeyName(code);
+  }
+  if (!aresName) return null;
+  const idx = ARES_WIN32_KEY_INDEX[aresName];
+  return idx !== undefined ? idx : null;
 }
 
 export function resolveAresKeyboardKeyIndex(

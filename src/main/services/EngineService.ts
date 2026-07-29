@@ -48,18 +48,33 @@ function resolveNativeHelperPath(helperName: string): string | null {
   return null;
 }
 
-function installAzaharSdlProbe(): { ok: boolean; dest?: string; reason?: string } {
+const SDL_PROBE_DIR = path.join(USERDATA, "native");
+
+export function getSdlProbePath(): string {
+  const destName = process.platform === "win32" ? "rombox-sdlprobe.exe" : "rombox-sdlprobe";
+  return path.join(SDL_PROBE_DIR, destName);
+}
+
+export function installSdlProbe(): { ok: boolean; dest?: string; reason?: string } {
   const srcName = process.platform === "win32" ? "sdl2probe.exe" : (process.platform === "darwin" ? "sdl2probe-macos" : "sdl2probe");
   const src = resolveNativeHelperPath(srcName);
   if (!src) return { ok: false, reason: `native helper missing: ${srcName}` };
 
-  const azConfigDir = osHandler.getEmulatorConfigPath("azahar");
-  ensureDir(azConfigDir);
+  ensureDir(SDL_PROBE_DIR);
 
-  const dest = path.join(azConfigDir, "rombox-azahar-sdlprobe");
+  const dest = getSdlProbePath();
   try {
     fs.copyFileSync(src, dest);
     tryChmod755(dest);
+
+    if (process.platform === "darwin") {
+      const frameworkSrc = path.join(path.dirname(src), "SDL2.framework");
+      const frameworkDest = path.join(SDL_PROBE_DIR, "SDL2.framework");
+      if (fs.existsSync(frameworkSrc) && !fs.existsSync(frameworkDest)) {
+        fs.cpSync(frameworkSrc, frameworkDest, { recursive: true });
+      }
+    }
+
     return { ok: true, dest };
   } catch (err) {
     return { ok: false, reason: (err as Error).message };
@@ -332,10 +347,12 @@ export const EngineService = {
       const needsWrapper = !!cfg.dependencies?.length;
       await osHandler.finalizeInstall(resolvedBinary, needsWrapper);
 
-      if (engineId === "azahar") {
-        const r = installAzaharSdlProbe();
+      if (engineId === "azahar" || engineId === "ares") {
+        const r = installSdlProbe();
         if (!r.ok) installLog.warn('SDL probe not installed', { reason: r.reason });
+      }
 
+      if (engineId === "azahar") {
         try {
           BiosService.ensureBiosInstalledFromCache("3ds");
         } catch (err) {

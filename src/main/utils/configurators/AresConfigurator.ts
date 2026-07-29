@@ -6,7 +6,11 @@ import { ControlsService } from "../../services/ControlsService";
 import { BmlEditor } from "../editors/bml";
 import { ARES } from "../schema/ares";
 import { AresTranslator } from "../translators/AresTranslator";
-import { EngineService } from "../../services/EngineService";
+import { EngineService, getSdlProbePath, installSdlProbe } from "../../services/EngineService";
+import { runSdlProbe } from "../azahar/sdlprobe";
+import { Logger } from "../logger";
+
+const log = Logger.create("AresConfigurator");
 
 function exists(p: string) {
   try { fs.accessSync(p, fs.constants.F_OK); return true; } catch { return false; }
@@ -76,12 +80,37 @@ export class AresConfigurator extends BaseConfigurator {
     const svc = new ControlsService();
     const profile = svc.getDefaultProfile();
     const consoleId = "n64" as const;
-    const p1 = await svc.getEffectiveConsoleBindings(consoleId, profile.id);
-
+    const layout = await svc.getEffectiveConsoleLayout(consoleId, profile.id);
     const effectiveProfile = {
       ...profile,
-      player1: p1,
+      player1: layout.player1,
+      player2: layout.player2,
+      player3: layout.player3,
+      player4: layout.player4,
     };
+
+    const probeHelperPath = getSdlProbePath();
+    if (!exists(probeHelperPath)) {
+      const installed = installSdlProbe();
+      log.info("SDL probe install-on-demand", { probeHelperPath, installed });
+    }
+
+    let learnedDevice: string | undefined;
+    let learnedBinds: unknown;
+    if (exists(probeHelperPath)) {
+      const probed = runSdlProbe({ helperPath: probeHelperPath, timeoutMs: 1500 });
+      log.info("SDL probe result", {
+        exitCode: probed.exitCode,
+        rawStderr: probed.rawStderr,
+        rawStdout: probed.rawStdout,
+        guid: probed.learned?.guid,
+        hasBinds: !!probed.learned?.binds,
+      });
+      if (probed.learned?.guid) learnedDevice = probed.learned.guid;
+      if (probed.learned?.binds) learnedBinds = probed.learned.binds;
+    } else {
+      log.warn("SDL probe helper still missing after install attempt", { probeHelperPath });
+    }
 
     const ctx = {
       platform: osHandler.getPlatform(),
@@ -89,17 +118,23 @@ export class AresConfigurator extends BaseConfigurator {
       player: 1,
       padPort: 1,
       configDir: path.dirname(bmlPath),
+      controllerId: layout.controllerId,
+      learnedDevice,
+      learnedBinds,
     };
 
     const patches = this.translator.translate(effectiveProfile, ctx);
 
-    const updates: Record<string, string> = {};
+    const updatesBySection = new Map<string, Record<string, string>>();
     for (const patch of patches) {
-      if (patch.kind === "ini-set" && patch.section === "VirtualPad1") {
-        updates[patch.key] = patch.value;
-      }
+      if (patch.kind !== "ini-set") continue;
+      const updates = updatesBySection.get(patch.section) ?? {};
+      updates[patch.key] = patch.value;
+      updatesBySection.set(patch.section, updates);
     }
 
-    BmlEditor.updateBml(bmlPath, ["VirtualPad1"], updates);
+    for (const [section, updates] of updatesBySection) {
+      BmlEditor.updateBml(bmlPath, [section], updates);
+    }
   }
 }

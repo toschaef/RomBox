@@ -22,6 +22,7 @@ import type { AzaharLearnedSDL } from "../azahar/sdlprobe";
 import { runSdlProbe } from "../azahar/sdlprobe";
 import { SettingsService } from "../../services/SettingsService";
 import { getResolutionMultiplier } from "../../../shared/resolution";
+import { getSdlProbePath, installSdlProbe } from "../../services/EngineService";
 
 
 function ensureQtConfigFile(configDir: string): string {
@@ -164,12 +165,14 @@ export class AzaharConfigurator extends BaseConfigurator {
   async configure(): Promise<void> {
     const svc = new ControlsService();
     const profile = svc.getDefaultProfile();
-    const bindings3ds = await svc.getEffectiveConsoleBindings("3ds", profile.id);
+    const layout = await svc.getEffectiveConsoleLayout("3ds", profile.id);
+    const bindings3ds = layout.player1;
 
     const configDir = osHandler.getEmulatorConfigPath("azahar");
     const qtIniPath = ensureQtConfigFile(configDir);
 
-    const helperPath = path.join(configDir, "rombox-azahar-sdlprobe");
+    const helperPath = getSdlProbePath();
+    if (!fs.existsSync(helperPath)) installSdlProbe();
     const cachePath = path.join(configDir, "rombox-azahar-learned.json");
 
     const preText = readTextIfExists(qtIniPath);

@@ -40,12 +40,14 @@ describe("KeycodeMapper", () => {
     });
 
     it("should map DOM key codes to Windows VK code/index on win32", () => {
-      // KeyA -> 65
-      expect(KeycodeMapper.toKeycode("ares", "KeyA", "win32")).toBe(65);
-      // KeyW -> 87
-      expect(KeycodeMapper.toKeycode("ares", "KeyW", "win32")).toBe(87);
-      // ArrowUp -> 38
-      expect(KeycodeMapper.toKeycode("ares", "ArrowUp", "win32")).toBe(38);
+      // Ares indexes into its rawinput key list on win32 (ares/ruby/input/keyboard/rawinput.cpp),
+      // not raw Windows VK codes.
+      // KeyA -> Index 35
+      expect(KeycodeMapper.toKeycode("ares", "KeyA", "win32")).toBe(35);
+      // KeyW -> Index 57
+      expect(KeycodeMapper.toKeycode("ares", "KeyW", "win32")).toBe(57);
+      // ArrowUp -> Index 86
+      expect(KeycodeMapper.toKeycode("ares", "ArrowUp", "win32")).toBe(86);
     });
   });
 
@@ -105,10 +107,10 @@ describe("KeycodeMapper", () => {
       expect(KeycodeMapper.toKeycode("mesen", "F1", "win32")).toBe(112);
       expect(KeycodeMapper.toKeycode("mesen", "Numpad0", "win32")).toBe(96);
 
-      // Ares win32 punctuation & F1-F12 & Numpad
-      expect(KeycodeMapper.toKeycode("ares", "Comma", "win32")).toBe(188);
-      expect(KeycodeMapper.toKeycode("ares", "F1", "win32")).toBe(112);
-      expect(KeycodeMapper.toKeycode("ares", "Numpad5", "win32")).toBe(101);
+      // Ares win32 punctuation & F1-F12 & Numpad (index into rawinput key list, not raw VK codes)
+      expect(KeycodeMapper.toKeycode("ares", "Comma", "win32")).toBe(66);
+      expect(KeycodeMapper.toKeycode("ares", "F1", "win32")).toBe(1);
+      expect(KeycodeMapper.toKeycode("ares", "Numpad5", "win32")).toBe(73);
 
       // Dolphin win32 & darwin
       expect(KeycodeMapper.toKeycode("dolphin", "Comma", "win32")).toBe("COMMA");

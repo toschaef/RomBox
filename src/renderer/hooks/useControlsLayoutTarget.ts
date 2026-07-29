@@ -50,7 +50,11 @@ export function useControlsLayoutTarget(args: {
         const saved = await controlsClient.saveConsoleLayout({
           consoleId: next.consoleId,
           profileId,
-          bindings: next.bindings,
+          controllerId: next.controllerId,
+          player1: next.player1,
+          player2: next.player2,
+          player3: next.player3,
+          player4: next.player4,
         });
         setConsoleLayout(saved);
       } finally {

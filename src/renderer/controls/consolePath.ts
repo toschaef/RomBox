@@ -1,7 +1,7 @@
 import type { AnyConsoleLayout, DigitalBinding } from "../../shared/types/controls";
 
-export function getConsoleDigital(layout: AnyConsoleLayout, id: string): DigitalBinding | undefined {
-  const b = (layout as unknown as { bindings?: Record<string, unknown> }).bindings ?? {};
+export function getConsoleDigital(layout: AnyConsoleLayout, playerKey: "player1" | "player2" | "player3" | "player4", id: string): DigitalBinding | undefined {
+  const b = (layout as unknown as Record<string, unknown>)[playerKey] as Record<string, unknown> ?? {};
 
   if (!id.includes(".")) {
     const v = b[id];
@@ -14,42 +14,39 @@ export function getConsoleDigital(layout: AnyConsoleLayout, id: string): Digital
   return isDigital(v) ? (v as DigitalBinding) : undefined;
 }
 
-export function setConsoleDigital(layout: AnyConsoleLayout, id: string, value: DigitalBinding): AnyConsoleLayout {
-  const next = structuredClone(layout) as unknown as {
-    bindings: Record<string, unknown>;
-  };
-  next.bindings ??= {};
+export function setConsoleDigital(layout: AnyConsoleLayout, playerKey: "player1" | "player2" | "player3" | "player4", path: string, value: DigitalBinding): AnyConsoleLayout {
+  const next = structuredClone(layout);
+  if (!next[playerKey]) next[playerKey] = {} as any;
+  let parent = next[playerKey] as unknown as Record<string, unknown>;
+  const parts = path.split(".");
 
-  if (!id.includes(".")) {
-    next.bindings[id] = value;
-    return next as unknown as AnyConsoleLayout;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const part = parts[i];
+    if (!parent[part] || typeof parent[part] !== "object") {
+      parent[part] = {};
+    }
+    parent = parent[part] as Record<string, unknown>;
   }
-
-  const [group, key] = id.split(".", 2);
-  if (!next.bindings[group] || typeof next.bindings[group] !== "object") {
-    next.bindings[group] = {};
-  }
-  (next.bindings[group] as Record<string, unknown>)[key] = value;
-  return next as unknown as AnyConsoleLayout;
+  parent[parts[parts.length - 1]] = value;
+  return next;
 }
 
-export function clearConsoleDigital(layout: AnyConsoleLayout, id: string): AnyConsoleLayout {
-  const next = structuredClone(layout) as unknown as {
-    bindings: Record<string, unknown>;
-  };
-  next.bindings ??= {};
+export function clearConsoleDigital(layout: AnyConsoleLayout, playerKey: "player1" | "player2" | "player3" | "player4", id: string): AnyConsoleLayout {
+  const next = structuredClone(layout);
+  if (!next[playerKey]) return next;
+  const b = next[playerKey] as unknown as Record<string, unknown>;
 
   if (!id.includes(".")) {
-    delete next.bindings[id];
-    return next as unknown as AnyConsoleLayout;
+    delete b[id];
+    return next;
   }
 
   const [group, key] = id.split(".", 2);
-  const groupObj = next.bindings[group];
+  const groupObj = b[group];
   if (groupObj && typeof groupObj === "object") {
     delete (groupObj as Record<string, unknown>)[key];
   }
-  return next as unknown as AnyConsoleLayout;
+  return next;
 }
 
 function isDigital(v: unknown): boolean {

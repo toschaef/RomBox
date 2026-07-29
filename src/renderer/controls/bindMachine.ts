@@ -6,57 +6,67 @@ export { AXIS_THRESHOLD, type InputEvent } from "../../shared/controls/inputType
 
 // generic accessor pattern
 
+export type PlayerKey = "player1" | "player2" | "player3" | "player4";
+
 export interface BindingAccessor<T> {
-  setDigital(data: T, path: string, value: DigitalBinding): T;
-  getDpad(data: T, group: string): DpadBinding;
-  setDpad(data: T, group: string, dpad: DpadBinding): T;
-  setStick(data: T, group: string, stick: StickBinding): T;
+  setDigital(data: T, playerKey: PlayerKey, path: string, value: DigitalBinding): T;
+  getDpad(data: T, playerKey: PlayerKey, group: string): DpadBinding;
+  setDpad(data: T, playerKey: PlayerKey, group: string, dpad: DpadBinding): T;
+  setStick(data: T, playerKey: PlayerKey, group: string, stick: StickBinding): T;
 }
 
 // profile accessor
 
 export const profileAccessor: BindingAccessor<ControlsProfile> = {
-  setDigital(profile, path, value) {
+  setDigital(profile, playerKey, path, value) {
     const p = structuredClone(profile);
     const [group, key] = path.split(".") as ["face" | "shoulders" | "system" | "sticks", string];
-    if (group === "sticks" && !p.player1.sticks) {
-      p.player1.sticks = { type: "sticks" };
+    if (!p[playerKey]) p[playerKey] = {} as any;
+    if (group === "sticks" && !p[playerKey]!.sticks) {
+      p[playerKey]!.sticks = { type: "sticks" };
     }
-    // @ts-expect-error dynamic keying into player1 binding groups
-    p.player1[group][key] = value;
+    if (!p[playerKey]![group]) {
+      p[playerKey]![group] = { type: group } as any;
+    }
+    // @ts-expect-error dynamic keying
+    p[playerKey]![group][key] = value;
     return p;
   },
 
-  getDpad(profile, group) {
+  getDpad(profile, playerKey, group) {
+    const player = profile[playerKey];
+    if (!player) return { type: "dpad" };
     if (group === "move") {
-      return profile.player1.move.type === "dpad" ? profile.player1.move : { type: "dpad" };
+      return player.move?.type === "dpad" ? player.move : { type: "dpad" };
     }
-    if (group === "dpad") return profile.player1.dpad;
-    // "look"
-    return profile.player1.look.type === "dpad" ? profile.player1.look : { type: "dpad" };
+    if (group === "dpad") return player.dpad ?? { type: "dpad" };
+    return player.look?.type === "dpad" ? player.look : { type: "dpad" };
   },
 
-  setDpad(profile, group, next) {
+  setDpad(profile, playerKey, group, next) {
     const p = structuredClone(profile);
-    if (group === "move") p.player1.move = next;
-    else if (group === "dpad") p.player1.dpad = next;
-    else p.player1.look = next;
+    if (!p[playerKey]) p[playerKey] = {} as any;
+    if (group === "move") p[playerKey]!.move = next;
+    else if (group === "dpad") p[playerKey]!.dpad = next;
+    else p[playerKey]!.look = next;
     return p;
   },
 
-  setStick(profile, group, next) {
+  setStick(profile, playerKey, group, next) {
     const p = structuredClone(profile);
-    if (group === "move") p.player1.move = next;
-    else p.player1.look = next;
+    if (!p[playerKey]) p[playerKey] = {} as any;
+    if (group === "move") p[playerKey]!.move = next;
+    else p[playerKey]!.look = next;
     return p;
   },
 };
 
 // console layout accessor
 
-function setConsoleNestedBinding(layout: AnyConsoleLayout, group: string, value: DpadBinding | StickBinding): AnyConsoleLayout {
+function setConsoleNestedBinding(layout: AnyConsoleLayout, playerKey: PlayerKey, group: string, value: DpadBinding | StickBinding): AnyConsoleLayout {
   const next = structuredClone(layout);
-  let parent = next.bindings as unknown as Record<string, unknown>;
+  if (!next[playerKey]) next[playerKey] = {} as any;
+  let parent = next[playerKey] as unknown as Record<string, unknown>;
   const parts = group.split(".");
   for (let i = 0; i < parts.length - 1; i++) {
     const part = parts[i];
@@ -70,12 +80,13 @@ function setConsoleNestedBinding(layout: AnyConsoleLayout, group: string, value:
 }
 
 export const consoleAccessor: BindingAccessor<AnyConsoleLayout> = {
-  setDigital(layout, path, value) {
-    return setConsoleDigital(layout, path, value);
+  setDigital(layout, playerKey, path, value) {
+    return setConsoleDigital(layout, playerKey, path, value);
   },
 
-  getDpad(layout, group) {
-    let v: unknown = layout.bindings;
+  getDpad(layout, playerKey, group) {
+    let v: unknown = layout[playerKey];
+    if (!v) return { type: "dpad" };
     const parts = group.split(".");
     for (const part of parts) {
       v = (v && typeof v === "object") ? (v as Record<string, unknown>)[part] : undefined;
@@ -86,12 +97,12 @@ export const consoleAccessor: BindingAccessor<AnyConsoleLayout> = {
     return { type: "dpad" };
   },
 
-  setDpad(layout, group, nextDpad) {
-    return setConsoleNestedBinding(layout, group, nextDpad);
+  setDpad(layout, playerKey, group, nextDpad) {
+    return setConsoleNestedBinding(layout, playerKey, group, nextDpad);
   },
 
-  setStick(layout, group, nextStick) {
-    return setConsoleNestedBinding(layout, group, nextStick);
+  setStick(layout, playerKey, group, nextStick) {
+    return setConsoleNestedBinding(layout, playerKey, group, nextStick);
   },
 };
 
@@ -106,7 +117,7 @@ export type BindPlanConsole = BindPlan;
 
 export type BindState =
   | { active: false }
-  | { active: true; plan: BindPlan; step: number; startedAt: number };
+  | { active: true; playerKey: PlayerKey; plan: BindPlan; step: number; startedAt: number };
 
 // core functions
 
@@ -155,10 +166,10 @@ export function applyBindEvent<T>(
     if (!d) return null;
 
     if (plan.kind === "digital") {
-      const nextData = accessor.setDigital(data, plan.path, d);
+      const nextData = accessor.setDigital(data, state.playerKey, plan.path, d);
       return { data: nextData, state: { active: false } };
     } else {
-      const current: DpadBinding = accessor.getDpad(data, plan.group);
+      const current: DpadBinding = accessor.getDpad(data, state.playerKey, plan.group);
       const next: DpadBinding = structuredClone(current);
 
       if (step === 0) next.up = d;
@@ -167,7 +178,7 @@ export function applyBindEvent<T>(
       else if (step === 3) next.right = d;
       else return { data, state: { active: false } };
 
-      const nextData = accessor.setDpad(data, plan.group, next);
+      const nextData = accessor.setDpad(data, state.playerKey, plan.group, next);
 
       const nextStep = step + 1;
       if (nextStep <= 3) return { data: nextData, state: { ...state, step: nextStep } };
@@ -188,7 +199,7 @@ export function applyBindEvent<T>(
       deadzone: 0.15,
     };
 
-    const nextData = accessor.setStick(data, plan.group, nextStick);
+    const nextData = accessor.setStick(data, state.playerKey, plan.group, nextStick);
 
     const nextStep = step + 1;
     if (nextStep <= 1) return { data: nextData, state: { ...state, step: nextStep } };

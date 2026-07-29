@@ -72,9 +72,9 @@ describe("ControlsService", () => {
 
     // Save customized layout
     const customBindings = {
-      ...layout.bindings,
+      ...layout.player1,
       face: {
-        ...layout.bindings.face,
+        ...layout.player1.face,
         primary: { type: "key" as const, code: "KeyZ" }
       }
     };
@@ -82,11 +82,11 @@ describe("ControlsService", () => {
     const saved = service.saveConsoleLayout({
       consoleId: "nes",
       profileId: profile.id,
-      bindings: customBindings
+      player1: customBindings
     });
 
     expect(saved.isUserModified).toBe(true);
-    expect(saved.bindings.face?.primary).toEqual({ type: "key", code: "KeyZ" });
+    expect(saved.player1.face?.primary).toEqual({ type: "key", code: "KeyZ" });
   });
 
   it("should delete profile and fallback to another default profile", () => {

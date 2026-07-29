@@ -155,19 +155,19 @@ describe("Milestone 3 Empirical Stress Test Harness - Cross-Platform Integration
         const bmlText = fs.readFileSync(settingsBmlPath, "utf-8");
         expect(bmlText).toContain("VirtualPad1");
 
+        // N64's B button writes to "X..West" (N64 core reads B from pad.west); tertiary (KeyO) has no
+        // N64 core input to write to, so it's omitted rather than colliding with B on "X..West".
         if (plat === "win32") {
-          expect(bmlText).toContain("Start: 0x1/0/84;;");
-          expect(bmlText).toContain("Select: 0x1/0/89;;");
-          expect(bmlText).toContain("A..South: 0x1/0/85;;");
-          expect(bmlText).toContain("B..East: 0x1/0/73;;");
-          expect(bmlText).toContain("X..West: 0x1/0/79;;");
-          expect(bmlText).toContain("Y..North: 0x1/0/80;;");
+          expect(bmlText).toContain("Start: 0x1/0/54;;");
+          expect(bmlText).toContain("Select: 0x1/0/59;;");
+          expect(bmlText).toContain("A..South: 0x1/0/55;;");
+          expect(bmlText).toContain("X..West: 0x1/0/43;;"); // KeyI (secondary/B)
+          expect(bmlText).toContain("Y..North: 0x1/0/50;;");
         } else {
           expect(bmlText).toContain("Start: 0x1/0/59;;");
           expect(bmlText).toContain("Select: 0x1/0/64;;");
           expect(bmlText).toContain("A..South: 0x1/0/60;;");
-          expect(bmlText).toContain("B..East: 0x1/0/48;;");
-          expect(bmlText).toContain("X..West: 0x1/0/54;;");
+          expect(bmlText).toContain("X..West: 0x1/0/48;;"); // KeyI (secondary/B)
           expect(bmlText).toContain("Y..North: 0x1/0/55;;");
         }
       });

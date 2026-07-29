@@ -1,6 +1,6 @@
 import type { Platform } from "../../../shared/types";
 import { APPLE_KEYCODE_BY_CODE, MESEN_KEYCODE_MAP_128 } from "../schema/mesen";
-import { resolveQuartzKeyboardKeyIndex } from "../schema/ares";
+import { resolveQuartzKeyboardKeyIndex, resolveRawinputKeyboardKeyIndex } from "../schema/ares";
 import { quartzKeyFromDomCode } from "../schema/dolphin";
 import { duckstationKeyFromDomCode } from "../schema/duckstation";
 import { osHandler } from "../../platform";
@@ -89,31 +89,9 @@ export class KeycodeMapper {
 
   private static toAresKeycode(domCode: string, platform: Platform): number | null {
     if (platform === "win32") {
-      return this.toAresWin32VK(domCode);
+      return resolveRawinputKeyboardKeyIndex(domCode);
     }
-
     return resolveQuartzKeyboardKeyIndex(domCode);
-  }
-
-  private static toAresWin32VK(domCode: string): number | null {
-    if (domCode.startsWith("Key") && domCode.length === 4) {
-      const char = domCode[3].toUpperCase();
-      return char.charCodeAt(0);
-    }
-    if (domCode.startsWith("Digit") && domCode.length === 6) {
-      const char = domCode[5];
-      return char.charCodeAt(0);
-    }
-    if (/^F([1-9]|1[0-2])$/.test(domCode)) {
-      const num = parseInt(domCode.slice(1), 10);
-      return 111 + num;
-    }
-    if (/^Numpad[0-9]$/.test(domCode)) {
-      const num = parseInt(domCode[6], 10);
-      return 96 + num;
-    }
-
-    return ARES_WIN32_VK_MAP[domCode] ?? null;
   }
 
   private static toDolphinKeycode(domCode: string, platform: Platform): string | null {

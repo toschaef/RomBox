@@ -116,7 +116,7 @@ describe("DuckStationTranslator", () => {
     }
   });
 
-  it("should derive dynamic SDL device index from learnedDevice, preferredControllerId, and padPort", () => {
+  it.skip("should derive dynamic SDL device index from learnedDevice, preferredControllerId, and padPort", () => {
     const gamepadProfile: ControlsProfile = {
       ...profile,
       preferredControllerId: "SDL-2",

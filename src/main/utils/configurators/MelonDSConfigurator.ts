@@ -21,7 +21,8 @@ export class MelonDSConfigurator extends BaseConfigurator {
     const profile = svc.getDefaultProfile();
 
     const consoleId = "ds" as const;
-    const p1 = await svc.getEffectiveConsoleBindings(consoleId, profile.id);
+    const layout = await svc.getEffectiveConsoleLayout(consoleId, profile.id);
+    const p1 = layout.player1;
 
     const configDir = osHandler.getEmulatorConfigPath("melonds");
     const tomlPath = path.join(configDir, "melonDS.toml");
@@ -59,6 +60,7 @@ export class MelonDSConfigurator extends BaseConfigurator {
     const ctx: TranslateContext = {
       platform: osHandler.getPlatform(),
       player: 1,
+      controllerId: layout.controllerId,
     };
 
     const joystickId = profile.melonJoystickId ?? 0;

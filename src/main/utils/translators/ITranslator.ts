@@ -19,6 +19,7 @@ export interface TranslateContext {
   learnedDevice?: string;
   learnedBinds?: any;
   deviceIndex?: number;
+  controllerId?: string;
 }
 
 export interface IEmulatorTranslator {

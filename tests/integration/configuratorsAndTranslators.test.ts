@@ -349,14 +349,15 @@ describe("Configurator and Translator Pairs Integration Tests", () => {
       const translator = new DolphinTranslator();
       const svc = new ControlsService();
       const baseProfile = svc.getDefaultProfile();
-      const bindings = await svc.getEffectiveConsoleBindings("gc", baseProfile.id);
+      const layout = await svc.getEffectiveConsoleLayout("gc", baseProfile.id);
+      const player1 = layout.player1;
       const patches = translator.translate(
         {
           ...baseProfile,
           player1: {
-            ...bindings,
+            ...player1,
             face: {
-              ...bindings.face,
+              ...player1.face,
               primary: { type: "gp_button", token: "GP_A" }
             }
           }
@@ -367,7 +368,7 @@ describe("Configurator and Translator Pairs Integration Tests", () => {
       const devicePatch = patches.find(p => p.kind === "ini-set" && p.key === "Device");
       expect(devicePatch).toBeDefined();
       if (devicePatch && devicePatch.kind === "ini-set") {
-        expect(devicePatch.value).toBe("XInput/1/Gamepad");
+        expect(devicePatch.value).toBe("XInput/0/Gamepad");
       }
     });
 
@@ -435,29 +436,32 @@ describe("Configurator and Translator Pairs Integration Tests", () => {
       expect(fs.existsSync(settingsBmlPath)).toBe(true);
 
       const bmlText = fs.readFileSync(settingsBmlPath, "utf-8");
-      // On win32, Ares uses VK code: KeyU -> 85 (0x55), KeyT -> 84 (0x54), ArrowUp -> 38 (0x26), Digit3 -> 51 (0x33)
-      expect(bmlText).toContain("A..South: 0x1/0/85;;");
-      expect(bmlText).toContain("Start: 0x1/0/84;;");
-      expect(bmlText).toContain("R-Up: 0x1/0/38;;");
-      expect(bmlText).toContain("Pad.Up: 0x1/0/51;;");
+      // On win32, Ares indexes into its rawinput key list (see ares/ruby/input/keyboard/rawinput.cpp):
+      // KeyU -> 55, KeyT -> 54, ArrowUp -> 86, Digit3 -> 18
+      expect(bmlText).toContain("A..South: 0x1/0/55;;");
+      expect(bmlText).toContain("Start: 0x1/0/54;;");
+      expect(bmlText).toContain("R-Up: 0x1/0/86;;");
+      expect(bmlText).toContain("Pad.Up: 0x1/0/18;;");
 
-      // Verify dynamic device indexing on win32 (e.g. deviceIndex = 2 -> 0x2/2/index)
+      // Verify gamepad bindings use the probed device id and the raw button index from probed binds.
       const translator = new AresTranslator();
       const svc = new ControlsService();
       const profile = svc.getDefaultProfile();
-      const bindings = await svc.getEffectiveConsoleBindings("n64", profile.id);
+      const layout = await svc.getEffectiveConsoleLayout("n64", profile.id);
+      const player1 = layout.player1;
       const updates = translator.translateFromPlayer(
         {
-          ...bindings,
+          ...player1,
           face: {
-            ...bindings.face,
+            ...player1.face,
             primary: { type: "gp_button", token: "GP_A" }
           }
         },
         "win32",
-        2
+        "0x54c0ce6",
+        { GP_A: { kind: "button", button: 0 } }
       );
-      expect(updates["A..South"]).toBe("0x2/2/0;;");
+      expect(updates["A..South"]).toBe("0x54c0ce6/3/0;;");
     });
 
     it("6. DuckStation: should configure DuckStation for win32 with Documents path and dynamic SDL device indexing", async () => {
@@ -478,26 +482,27 @@ describe("Configurator and Translator Pairs Integration Tests", () => {
       const translator = new DuckStationTranslator();
       const svc = new ControlsService();
       const profile = svc.getDefaultProfile();
-      const bindings = await svc.getEffectiveConsoleBindings("ps1", profile.id);
+      const layout = await svc.getEffectiveConsoleLayout("ps1", profile.id);
+      const player1 = layout.player1;
 
       const patches = translator.translate(
         {
           ...profile,
           player1: {
-            ...bindings,
+            ...player1,
             face: {
-              ...bindings.face,
+              ...player1.face,
               primary: { type: "gp_button", token: "GP_A" }
             }
           }
         },
-        { platform: "win32", configDir, deviceIndex: 2 }
+        { platform: "win32", configDir }
       );
 
       const crossPatch = patches.find(p => p.kind === "ini-set" && p.key === "Cross");
       expect(crossPatch).toBeDefined();
       if (crossPatch && crossPatch.kind === "ini-set") {
-        expect(crossPatch.value).toBe("SDL-2/A");
+        expect(crossPatch.value).toBe("SDL-0/A");
       }
     });
 
@@ -519,15 +524,16 @@ describe("Configurator and Translator Pairs Integration Tests", () => {
       const translator = new PCSX2Translator();
       const svc = new ControlsService();
       const profile = svc.getDefaultProfile();
-      const bindings = await svc.getEffectiveConsoleBindings("ps2", profile.id);
+      const layout = await svc.getEffectiveConsoleLayout("ps2", profile.id);
+      const player1 = layout.player1;
 
       const patches = translator.translate(
         {
           ...profile,
           player1: {
-            ...bindings,
+            ...player1,
             face: {
-              ...bindings.face,
+              ...player1.face,
               primary: { type: "gp_button", token: "GP_A" }
             }
           }
@@ -538,7 +544,7 @@ describe("Configurator and Translator Pairs Integration Tests", () => {
       const crossPatch = patches.find(p => p.kind === "ini-set" && p.key === "Cross");
       expect(crossPatch).toBeDefined();
       if (crossPatch && crossPatch.kind === "ini-set") {
-        expect(crossPatch.value).toBe("SDL-3/FaceSouth");
+        expect(crossPatch.value).toBe("SDL-0/FaceSouth");
       }
     });
   });

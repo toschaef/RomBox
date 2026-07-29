@@ -62,7 +62,7 @@ describe("profileRead", () => {
         type: "dpad",
         left: { type: "key", code: "KeyA" }
       };
-      expect(getDirFromMove(mockProfile, "left")).toEqual({ type: "key", code: "KeyA" });
+      expect(getDirFromMove(mockProfile, "player1", "left")).toEqual({ type: "key", code: "KeyA" });
     });
 
     it("should synthesize digital axis bindings if move is stick", () => {
@@ -71,7 +71,7 @@ describe("profileRead", () => {
         stick: "left",
         deadzone: 0.15
       };
-      const binding = getDirFromMove(mockProfile, "left");
+      const binding = getDirFromMove(mockProfile, "player1", "left");
       expect(binding).toEqual({
         type: "gp_axis_digital",
         stick: "left",
@@ -90,19 +90,19 @@ describe("profileRead", () => {
         invertY: true
       };
       // invertX inverts left (normal: neg) to pos
-      expect((getDirFromMove(mockProfile, "left") as unknown as { dir?: string })?.dir).toBe("pos");
-      expect((getDirFromMove(mockProfile, "right") as unknown as { dir?: string })?.dir).toBe("neg");
+      expect((getDirFromMove(mockProfile, "player1", "left") as unknown as { dir?: string })?.dir).toBe("pos");
+      expect((getDirFromMove(mockProfile, "player1", "right") as unknown as { dir?: string })?.dir).toBe("neg");
 
       // invertY inverts up (normal: neg) to pos
-      expect((getDirFromMove(mockProfile, "up") as unknown as { dir?: string })?.dir).toBe("pos");
-      expect((getDirFromMove(mockProfile, "down") as unknown as { dir?: string })?.dir).toBe("neg");
+      expect((getDirFromMove(mockProfile, "player1", "up") as unknown as { dir?: string })?.dir).toBe("pos");
+      expect((getDirFromMove(mockProfile, "player1", "down") as unknown as { dir?: string })?.dir).toBe("neg");
     });
   });
 
   describe("getStickDirFromMove", () => {
     it("should return undefined if move is dpad", () => {
       mockProfile.player1.move = { type: "dpad" };
-      expect(getStickDirFromMove(mockProfile, "up")).toBeUndefined();
+      expect(getStickDirFromMove(mockProfile, "player1", "up")).toBeUndefined();
     });
   });
 
@@ -111,8 +111,8 @@ describe("profileRead", () => {
       mockProfile.player1.dpad = { type: "dpad", up: { type: "key", code: "KeyUp" } };
       mockProfile.player1.move = { type: "dpad", down: { type: "key", code: "KeyDown" } };
 
-      expect(getDirUnion(mockProfile, "up")).toEqual({ type: "key", code: "KeyUp" });
-      expect(getDirUnion(mockProfile, "down")).toEqual({ type: "key", code: "KeyDown" });
+      expect(getDirUnion(mockProfile, "player1", "up")).toEqual({ type: "key", code: "KeyUp" });
+      expect(getDirUnion(mockProfile, "player1", "down")).toEqual({ type: "key", code: "KeyDown" });
     });
   });
 
@@ -123,7 +123,7 @@ describe("profileRead", () => {
         stick: "right",
         deadzone: 0.15
       };
-      expect(getDirFromLook(mockProfile, "up")).toEqual({
+      expect(getDirFromLook(mockProfile, "player1", "up")).toEqual({
         type: "gp_axis_digital",
         stick: "right",
         axis: "y",

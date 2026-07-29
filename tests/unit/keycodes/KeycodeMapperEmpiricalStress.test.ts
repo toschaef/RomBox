@@ -141,7 +141,7 @@ describe("Empirical KeycodeMapper & Key Translators Stress Test", () => {
       const aresDarwinA = KeycodeMapper.toKeycode("ares", "KeyA", "darwin");
       const aresWin32A = KeycodeMapper.toKeycode("ares", "KeyA", "win32");
       expect(aresDarwinA).toBe(40); // Quartz Index for 'A'
-      expect(aresWin32A).toBe(65); // ASCII / VK for 'A'
+      expect(aresWin32A).toBe(35); // RawInput Index for 'A'
 
       // Dolphin returns string key names
       const dolphDarwinUp = KeycodeMapper.toKeycode("dolphin", "ArrowUp", "darwin");
@@ -206,7 +206,7 @@ describe("Empirical KeycodeMapper & Key Translators Stress Test", () => {
 
       const patch0Darwin = patchesDarwin[0];
       const patch0Win32 = patchesWin32[0];
-      if (patch0Darwin.kind === "json-merge" && patch0Win32.kind === "json-merge") {
+      if (patch0Darwin.kind === "json-set" && patch0Win32.kind === "json-set") {
         const mapping1Darwin = (patch0Darwin.value as any).Port1.Mapping1;
         const mapping1Win32 = (patch0Win32.value as any).Port1.Mapping1;
 
@@ -216,7 +216,7 @@ describe("Empirical KeycodeMapper & Key Translators Stress Test", () => {
         // On win32, KeyJ -> charCodeAt(0) -> 74
         expect(mapping1Win32.A).toBe(74);
       } else {
-        fail("Expected json-merge patch kind");
+        throw new Error("Expected json-set patch kind");
       }
     });
 
@@ -234,7 +234,7 @@ describe("Empirical KeycodeMapper & Key Translators Stress Test", () => {
 
       // KeyJ -> 'J' Quartz index is 49 on macOS, VK 74 on win32
       expect(patchMapDarwin["A..South"]).toBe("0x1/0/49;;");
-      expect(patchMapWin32["A..South"]).toBe("0x1/0/74;;");
+      expect(patchMapWin32["A..South"]).toBe("0x1/0/44;;");
     });
 
     it("DuckStationTranslator outputs correct ini patches", () => {

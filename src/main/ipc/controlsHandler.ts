@@ -30,11 +30,15 @@ export default function registerControlsHandlers() {
 
   ipcMain.handle(
     "controls:saveConsoleLayout",
-    (_e, payload: { consoleId: ConsoleID; profileId: string; bindings: unknown }) =>
+    (_e, payload: { consoleId: ConsoleID; profileId: string; player1: unknown; player2?: unknown; player3?: unknown; player4?: unknown; controllerId?: string }) =>
       svc.saveConsoleLayout({
         consoleId: payload.consoleId,
         profileId: payload.profileId,
-        bindings: payload.bindings as PlayerBindings,
+        player1: payload.player1 as PlayerBindings,
+        player2: payload.player2 as PlayerBindings | undefined,
+        player3: payload.player3 as PlayerBindings | undefined,
+        player4: payload.player4 as PlayerBindings | undefined,
+        controllerId: payload.controllerId,
       })
   );
 

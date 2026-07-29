@@ -115,13 +115,14 @@ describe("M3 Integration Stress Test - Win32 Configurators & Translators for All
       const translator = new DolphinTranslator();
       const svc = new ControlsService();
       const baseProfile = svc.getDefaultProfile();
-      const bindings = await svc.getEffectiveConsoleBindings("gc", baseProfile.id);
+      const layout = await svc.getEffectiveConsoleLayout("gc", baseProfile.id);
+      const player1 = layout.player1;
 
       const fullProfile = {
         ...baseProfile,
         player1: {
-          ...bindings,
-          face: { ...bindings.face, primary: { type: "gp_button" as const, token: "GP_A" as const } }
+          ...player1,
+          face: { ...player1.face, primary: { type: "gp_button" as const, token: "GP_A" as const } }
         }
       };
 
@@ -133,7 +134,7 @@ describe("M3 Integration Stress Test - Win32 Configurators & Translators for All
       // Test deviceIndex = 3
       const patches3 = translator.translate(fullProfile, { platform: "win32", consoleId: "gc", configDir: "dummy", deviceIndex: 3 });
       const dev3 = patches3.find(p => p.kind === "ini-set" && p.key === "Device");
-      expect(dev3 && dev3.kind === "ini-set" ? dev3.value : "").toBe("XInput/3/Gamepad");
+      expect(dev3 && dev3.kind === "ini-set" ? dev3.value : "").toBe("XInput/0/Gamepad");
     });
   });
 
@@ -208,26 +209,28 @@ describe("M3 Integration Stress Test - Win32 Configurators & Translators for All
 
       const content = fs.readFileSync(bmlPath, "utf-8");
       expect(content).toContain("VirtualPad1");
-      expect(content).toContain("A..South: 0x1/0/85;;");
-      expect(content).toContain("Start: 0x1/0/84;;");
+      expect(content).toContain("A..South: 0x1/0/55;;");
+      expect(content).toContain("Start: 0x1/0/54;;");
     });
 
-    it("should translate gamepad bindings for Ares on win32 with dynamic device indexing (0x2/deviceIndex/id)", async () => {
+    it("should translate gamepad bindings for Ares on win32 using a probed device id and raw button index", async () => {
       const translator = new AresTranslator();
       const svc = new ControlsService();
       const profile = svc.getDefaultProfile();
-      const bindings = await svc.getEffectiveConsoleBindings("n64", profile.id);
+      const layout = await svc.getEffectiveConsoleLayout("n64", profile.id);
+      const player1 = layout.player1;
 
       const updates = translator.translateFromPlayer(
         {
-          ...bindings,
-          face: { ...bindings.face, primary: { type: "gp_button" as const, token: "GP_A" as const } }
+          ...player1,
+          face: { ...player1.face, primary: { type: "gp_button" as const, token: "GP_A" as const } }
         },
         "win32",
-        1
+        "0x54c0ce6",
+        { GP_A: { kind: "button", button: 0 } }
       );
 
-      expect(updates["A..South"]).toBe("0x2/1/0;;");
+      expect(updates["A..South"]).toBe("0x54c0ce6/3/0;;");
     });
   });
 
@@ -250,21 +253,22 @@ describe("M3 Integration Stress Test - Win32 Configurators & Translators for All
       const translator = new DuckStationTranslator();
       const svc = new ControlsService();
       const profile = svc.getDefaultProfile();
-      const bindings = await svc.getEffectiveConsoleBindings("ps1", profile.id);
+      const layout = await svc.getEffectiveConsoleLayout("ps1", profile.id);
+      const player1 = layout.player1;
 
       const patches = translator.translate(
         {
           ...profile,
           player1: {
-            ...bindings,
-            face: { ...bindings.face, primary: { type: "gp_button" as const, token: "GP_A" as const } }
+            ...player1,
+            face: { ...player1.face, primary: { type: "gp_button" as const, token: "GP_A" as const } }
           }
         },
         { platform: "win32", configDir: "dummy", deviceIndex: 4 }
       );
 
       const crossPatch = patches.find(p => p.kind === "ini-set" && p.key === "Cross");
-      expect(crossPatch && crossPatch.kind === "ini-set" ? crossPatch.value : "").toBe("SDL-4/A");
+      expect(crossPatch && crossPatch.kind === "ini-set" ? crossPatch.value : "").toBe("SDL-0/A");
     });
   });
 
@@ -287,21 +291,22 @@ describe("M3 Integration Stress Test - Win32 Configurators & Translators for All
       const translator = new PCSX2Translator();
       const svc = new ControlsService();
       const profile = svc.getDefaultProfile();
-      const bindings = await svc.getEffectiveConsoleBindings("ps2", profile.id);
+      const layout = await svc.getEffectiveConsoleLayout("ps2", profile.id);
+      const player1 = layout.player1;
 
       const patches = translator.translate(
         {
           ...profile,
           player1: {
-            ...bindings,
-            face: { ...bindings.face, primary: { type: "gp_button" as const, token: "GP_A" as const } }
+            ...player1,
+            face: { ...player1.face, primary: { type: "gp_button" as const, token: "GP_A" as const } }
           }
         },
         { platform: "win32", configDir: "dummy", deviceIndex: 2 }
       );
 
       const crossPatch = patches.find(p => p.kind === "ini-set" && p.key === "Cross");
-      expect(crossPatch && crossPatch.kind === "ini-set" ? crossPatch.value : "").toBe("SDL-2/FaceSouth");
+      expect(crossPatch && crossPatch.kind === "ini-set" ? crossPatch.value : "").toBe("SDL-0/FaceSouth");
     });
   });
 });

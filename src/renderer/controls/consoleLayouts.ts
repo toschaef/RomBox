@@ -87,6 +87,8 @@ export type ConsoleControlItem =
     | "face.secondary"
     | "face.tertiary"
     | "face.quaternary"
+    | "face.quinary"
+    | "face.senary"
     | "shoulders.bumperL"
     | "shoulders.bumperR"
     | "shoulders.triggerL"
@@ -371,7 +373,67 @@ const FALLBACK_COMMON: ConsoleControlItem[] = [
   { kind: "digital", id: "system.select", label: "Select", icon: switchMinus, section: "system" },
 ];
 
-export function getConsoleLayoutItems(consoleId: ConsoleID): ConsoleControlItem[] {
+export function getConsoleLayoutItems(consoleId: ConsoleID, controllerId?: string): ConsoleControlItem[] {
+  if (consoleId === "pce" && controllerId === "pad6") {
+    return [
+      { kind: "group", id: "move", label: "Move", section: "leftStick" },
+      { kind: "group", id: "dpad", label: "D-Pad", section: "dpad" },
+      { kind: "digital", id: "face.primary", label: "I", icon: switchA, section: "face" },
+      { kind: "digital", id: "face.secondary", label: "II", icon: switchB, section: "face" },
+      { kind: "digital", id: "face.tertiary", label: "III", icon: switchX, section: "face" },
+      { kind: "digital", id: "face.quaternary", label: "IV", icon: switchY, section: "face" },
+      { kind: "digital", id: "face.quinary", label: "V", icon: switchL, section: "face" },
+      { kind: "digital", id: "face.senary", label: "VI", icon: switchR, section: "face" },
+      { kind: "digital", id: "system.start", label: "Run", icon: switchPlus, section: "system" },
+      { kind: "digital", id: "system.select", label: "Select", icon: switchMinus, section: "system" },
+    ];
+  }
+
+  if (consoleId === "wii") {
+    if (controllerId === "wiimote_sideways") {
+      return [
+        { kind: "group", id: "dpad", label: "D-Pad (Sideways)", section: "dpad" },
+        { kind: "digital", id: "special.wiimote1", label: "1", icon: wii1, section: "face" },
+        { kind: "digital", id: "special.wiimote2", label: "2", icon: wii2, section: "face" },
+        { kind: "digital", id: "special.wiimoteA", label: "A", icon: wiiA, section: "special" },
+        { kind: "digital", id: "special.wiimoteB", label: "B", icon: wiiB, section: "special" },
+        { kind: "digital", id: "special.wiimotePlus", label: "+", icon: wiiPlus, section: "system" },
+        { kind: "digital", id: "special.wiimoteMinus", label: "-", icon: wiiMinus, section: "system" },
+        { kind: "digital", id: "special.home", label: "Home", icon: switchPlus, section: "special" },
+      ];
+    }
+    if (controllerId === "wiimote") {
+      return [
+        { kind: "group", id: "dpad", label: "D-Pad", section: "dpad" },
+        { kind: "digital", id: "special.wiimoteA", label: "A", icon: wiiA, section: "special" },
+        { kind: "digital", id: "special.wiimoteB", label: "B", icon: wiiB, section: "special" },
+        { kind: "digital", id: "special.wiimote1", label: "1", icon: wii1, section: "face" },
+        { kind: "digital", id: "special.wiimote2", label: "2", icon: wii2, section: "face" },
+        { kind: "digital", id: "special.wiimotePlus", label: "+", icon: wiiPlus, section: "system" },
+        { kind: "digital", id: "special.wiimoteMinus", label: "-", icon: wiiMinus, section: "system" },
+        { kind: "digital", id: "special.home", label: "Home", icon: switchPlus, section: "special" },
+      ];
+    }
+    if (controllerId === "wiimote_nunchuk") {
+      return [
+        { kind: "group", id: "move", label: "Nunchuk Stick", section: "leftStick" },
+        { kind: "digital", id: "special.nunchuckC", label: "Nunchuk C", icon: wiiC, section: "special" },
+        { kind: "digital", id: "special.nunchuckZ", label: "Nunchuk Z", icon: wiiZ, section: "special" },
+        { kind: "group", id: "dpad", label: "D-Pad", section: "dpad" },
+        { kind: "digital", id: "special.wiimoteA", label: "A", icon: wiiA, section: "special" },
+        { kind: "digital", id: "special.wiimoteB", label: "B", icon: wiiB, section: "special" },
+        { kind: "digital", id: "special.wiimote1", label: "1", icon: wii1, section: "face" },
+        { kind: "digital", id: "special.wiimote2", label: "2", icon: wii2, section: "face" },
+        { kind: "digital", id: "special.wiimotePlus", label: "+", icon: wiiPlus, section: "system" },
+        { kind: "digital", id: "special.wiimoteMinus", label: "-", icon: wiiMinus, section: "system" },
+        { kind: "digital", id: "special.home", label: "Home", icon: switchPlus, section: "special" },
+      ];
+    }
+    if (controllerId === "classic" || controllerId === "gamecube") {
+      return CONSOLE_LAYOUTS["gc"]; 
+    }
+  }
+
   return CONSOLE_LAYOUTS[consoleId] ?? FALLBACK_COMMON;
 }
 

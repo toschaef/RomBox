@@ -48,7 +48,11 @@ export const controlsClient = {
   saveConsoleLayout: (payload: {
     consoleId: ConsoleID;
     profileId: string;
-    bindings: unknown;
+    controllerId?: string;
+    player1: unknown;
+    player2?: unknown;
+    player3?: unknown;
+    player4?: unknown;
   }) =>
     window.electron.invoke("controls:saveConsoleLayout", payload) as Promise<AnyConsoleLayout>,
 

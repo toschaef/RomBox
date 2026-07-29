@@ -34,9 +34,9 @@ export function useControlsBinding(mode: Mode) {
   modeRef.current = mode;
 
   const startBind = useCallback(
-    (plan: BindPlan) => {
+    (plan: BindPlan, playerKey: "player1" | "player2" | "player3" | "player4") => {
       clearLastDetectedInput();
-      setBindState({ active: true, plan, step: 0, startedAt: performance.now() });
+      setBindState({ active: true, playerKey, plan, step: 0, startedAt: performance.now() });
     },
     [clearLastDetectedInput]
   );

@@ -90,34 +90,44 @@ export class DolphinConfigurator extends BaseConfigurator {
       Settings: { InternalResolution: resScale },
     });
 
+    const svc = new ControlsService();
+    const profile = svc.getDefaultProfile();
+    const layout = await svc.getEffectiveConsoleLayout(this.game.consoleId, profile.id);
+    const bindings: PlayerBindings = layout.player1;
+
     if (this.game.consoleId === "wii") {
       const wiiNewPath = DOLPHIN.wiimoteNewPath(configDir);
+      let extension = "Classic";
+      let sideways = "False";
+      if (layout.controllerId === "wiimote_nunchuk") extension = "Nunchuk";
+      if (layout.controllerId === "wiimote" || layout.controllerId === "wiimote_sideways") extension = "None";
+      if (layout.controllerId === "wiimote_sideways") sideways = "True";
+
       IniEditor.updateIni(wiiNewPath, {
         Wiimote1: {
-          Extension: "Classic",
+          Extension: extension,
+          "Options/Sideways Wiimote": sideways,
         },
       });
     }
-
-    const svc = new ControlsService();
-    const profile = svc.getDefaultProfile();
-
-    const bindings: PlayerBindings = await svc.getEffectiveConsoleBindings(this.game.consoleId, profile.id);
 
     const detected = detectDolphinPadDevice(configDir);
     const effectiveProfile = {
       ...profile,
       preferredControllerId: profile.preferredControllerId,
-      player1: bindings,
+      player1: layout.player1,
+      player2: layout.player2,
+      player3: layout.player3,
+      player4: layout.player4,
     };
 
     const ctx: TranslateContext = {
       platform: osHandler.getPlatform(),
       consoleId: this.game.consoleId,
-      gameId: dolphinGameIdFromGame(this.game),
-      player: 1,
+      gameId: this.game.id,
       padPort: 1,
       configDir,
+      controllerId: layout.controllerId,
     };
 
     const translator = new DolphinTranslator();

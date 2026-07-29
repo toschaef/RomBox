@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import ControlsHeader from "../controls/ControlsHeader";
 import ListeningOverlay from "../controls/ListeningOverlay";
 import PageLayout from "../layout/PageLayout";
@@ -12,8 +12,11 @@ import type { AnyConsoleLayout, ControlsProfile } from "../../../shared/types/co
 import type { BindPlan, BindPlanConsole } from "../../controls/bindMachine";
 import StandardControlsView from "../controls/StandardControlsView";
 import ConsoleControlsView from "../controls/ConsoleControlsView";
+import { getSupportedControllers, getDefaultControllerId } from "../../../shared/controls/controllerModels";
 
 export default function Controls() {
+  const [activePlayer, setActivePlayer] = useState<"player1" | "player2" | "player3" | "player4">("player1");
+
   const {
     profiles,
     activeProfileId,
@@ -67,6 +70,14 @@ export default function Controls() {
     useControlsBinding(mode ?? fallbackMode);
 
   const { isDigitalPressed, isDpadPressed, isStickPressed } = useControlsPressed(currentlyPressed);
+
+  const isHandheld = layoutApi.isConsoleMode && ["gb", "gba", "gg", "ds", "3ds"].includes(layoutApi.consoleId ?? "");
+  
+  useEffect(() => {
+    if (isHandheld && activePlayer !== "player1") {
+      setActivePlayer("player1");
+    }
+  }, [isHandheld, activePlayer]);
 
   if (!profile || !activeProfileId) {
     return <div className="h-full w-full p-8 text-fg-muted">Loading...</div>;
@@ -157,6 +168,30 @@ export default function Controls() {
             </button>
           </div>
 
+          {!isHandheld ? (
+            <div className="flex border border-border-subtle bg-bg-secondary ml-4">
+              {(["player1", "player2", "player3", "player4"] as const).map((pk, idx) => (
+                <button
+                  key={pk}
+                  type="button"
+                  onClick={() => {
+                    cancelBind();
+                    setActivePlayer(pk);
+                  }}
+                  className={`px-3 py-1.5 text-xs font-bold transition-colors ${
+                    idx < 3 ? "border-r border-border-subtle" : ""
+                  } ${
+                    activePlayer === pk
+                      ? "bg-accent-secondary text-white"
+                      : "text-fg-secondary hover:text-accent-secondary hover:bg-bg-muted"
+                  }`}
+                >
+                  P{idx + 1}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
           {layoutApi.isConsoleMode ? (
             <div className="relative">
               <select
@@ -179,6 +214,34 @@ export default function Controls() {
               </div>
             </div>
           ) : null}
+
+          {layoutApi.isConsoleMode && layoutApi.consoleId && getSupportedControllers(layoutApi.consoleId).length > 1 ? (
+            <div className="relative">
+              <select
+                value={layoutApi.consoleLayout?.controllerId ?? getDefaultControllerId(layoutApi.consoleId)}
+                onChange={(e) => {
+                  cancelBind();
+                  if (layoutApi.consoleLayout) {
+                    layoutApi.saveConsoleLayout({
+                      ...layoutApi.consoleLayout,
+                      controllerId: e.target.value
+                    });
+                  }
+                  e.target.blur();
+                }}
+                className="appearance-none pl-3 pr-8 py-1.5 text-xs font-bold bg-bg-secondary text-fg-primary border border-border-subtle hover:border-border-muted transition-colors rounded-none focus:outline-none focus:border-accent-primary"
+              >
+                {getSupportedControllers(layoutApi.consoleId).map((c) => (
+                  <option key={c.id} value={c.id} className="bg-bg-secondary text-fg-primary">
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[8px] text-fg-secondary">
+                ▼
+              </div>
+            </div>
+          ) : null}
         </div>
 
         {bindStateActive ? <ListeningOverlay listeningFor={overlayLabel} guided={false} /> : null}
@@ -187,9 +250,10 @@ export default function Controls() {
           layoutApi.consoleLayout ? (
             <ConsoleControlsView
               layout={layoutApi.consoleLayout}
+              playerKey={activePlayer}
               saveLayout={(l) => void layoutApi.saveConsoleLayout(l)}
               bindStateActive={bindStateActive}
-              startBind={(p) => startBind(p)}
+              startBind={(p) => startBind(p, activePlayer)}
               planEquals={(p) => planEqualsConsole(p)}
               isDigitalPressed={isDigitalPressed}
               isDpadPressed={isDpadPressed}
@@ -199,9 +263,10 @@ export default function Controls() {
         ) : (
           <StandardControlsView
             profile={profile}
+            playerKey={activePlayer}
             saveProfile={(p) => void saveProfile(p)}
             bindStateActive={bindStateActive}
-            startBind={(p) => startBind(p)}
+            startBind={(p) => startBind(p, activePlayer)}
             planEquals={planEqualsStd}
             isDigitalPressed={isDigitalPressed}
             isDpadPressed={isDpadPressed}

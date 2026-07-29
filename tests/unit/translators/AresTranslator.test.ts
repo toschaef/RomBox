@@ -14,7 +14,7 @@ describe("AresTranslator", () => {
 
   it("should translate bindings via AresTranslator correctly", () => {
     const translator = new AresTranslator();
-    const result = translator.translateFromPlayer(profile.player1);
+    const result = translator.translateFromPlayer(profile.player1, "darwin");
     expect(result).toBeDefined();
 
     // Verify specific button mappings map to the correct Ares keyboard code strings:
@@ -55,8 +55,8 @@ describe("AresTranslator", () => {
     };
     const translator = new AresTranslator();
     const result = translator.translateFromPlayer(specialProfile.player1);
-    // KeyZ -> Index 65 -> "0x1/0/65;;" (maps to L-Trigger in Ares schema)
-    expect(result["L-Trigger"]).toBe("0x1/0/65;;");
+    // KeyZ -> Index 65 -> "0x1/0/65;;" (Z maps to R-Trigger; N64 core reads Z from pad.r_trigger)
+    expect(result["R-Trigger"]).toBe("0x1/0/65;;");
     // KeyI -> Index 48 -> "0x1/0/48;;" (C Up, maps to R-Up)
     expect(result["R-Up"]).toBe("0x1/0/48;;");
   });
@@ -77,12 +77,53 @@ describe("AresTranslator", () => {
       }
     };
     const translator = new AresTranslator();
-    const result = translator.translateFromPlayer(specialProfile.player1);
-    // Gamepad stick axis GP_RS_UP (index 23) -> "0x2/0/23;;"
-    expect(result["R-Up"]).toBe("0x2/0/23;;");
+    // No deviceID (as if no controller was probed) - gamepad bindings should be omitted entirely,
+    // never written with a guessed/fallback device id (ares would show it as "(disconnected)").
+    const resultNoDevice = translator.translateFromPlayer(specialProfile.player1);
+    expect(resultNoDevice["R-Up"]).toBeUndefined();
+
+    const result = translator.translateFromPlayer(specialProfile.player1, "darwin", "0xdeadbeef");
+    // Right stick Up: groupID=0 (Axis), right stick base index 2 + vertical(1) = 3, up = "Lo"
+    // qualifier (empirically confirmed scheme: negative axis excursion = Lo, positive = Hi).
+    expect(result["R-Up"]).toBe("0xdeadbeef/0/3/Lo;;");
   });
 
-  it("should translate gamepad button and axis bindings for Ares correctly on darwin and win32", () => {
+  it("should prefer the SDL probe's real axis mapping for stick directions over the hardcoded layout", () => {
+    // Some controllers/drivers don't put the right stick at raw axes 2/3 (e.g. analog triggers can
+    // land there instead), so the probe's per-device GP_RS_* binds must win over encodeStickDirection's
+    // guess when available - this is what makes N64 C-Buttons (right stick) reliable across hardware.
+    const specialProfile: ControlsProfile = {
+      ...profile,
+      player1: {
+        ...profile.player1,
+        special: {
+          type: "n64",
+          c: {
+            type: "stick",
+            stick: "right",
+            deadzone: 0.15,
+          }
+        }
+      }
+    };
+    const translator = new AresTranslator();
+    const binds = {
+      GP_RS_UP: { kind: "axis" as const, axis: 5, direction: "-" as const, threshold: 0.5 },
+      GP_RS_DOWN: { kind: "axis" as const, axis: 5, direction: "+" as const, threshold: 0.5 },
+      GP_RS_LEFT: { kind: "axis" as const, axis: 4, direction: "-" as const, threshold: 0.5 },
+      GP_RS_RIGHT: { kind: "axis" as const, axis: 4, direction: "+" as const, threshold: 0.5 },
+    };
+    const result = translator.translateFromPlayer(specialProfile.player1, "darwin", "0xdeadbeef", binds);
+    // Probed axis 5 (not the hardcoded index 3) with "-" direction -> "Lo".
+    expect(result["R-Up"]).toBe("0xdeadbeef/0/5/Lo;;");
+    expect(result["R-Left"]).toBe("0xdeadbeef/0/4/Lo;;");
+
+    // No probe data for this token -> falls back to the hardcoded standard layout, unchanged.
+    const resultNoBinds = translator.translateFromPlayer(specialProfile.player1, "darwin", "0xdeadbeef", {});
+    expect(resultNoBinds["R-Up"]).toBe("0xdeadbeef/0/3/Lo;;");
+  });
+
+  it("should translate gamepad button and axis bindings for Ares using probed device id and binds", () => {
     const gamepadProfile: ControlsProfile = {
       ...profile,
       player1: {
@@ -104,26 +145,29 @@ describe("AresTranslator", () => {
       }
     };
     const translator = new AresTranslator();
+    const binds = {
+      GP_A: { kind: "button" as const, button: 0 },
+      GP_B: { kind: "button" as const, button: 1 },
+      GP_L2: { kind: "axis" as const, axis: 4, direction: "+" as const, threshold: 0.5 },
+    };
 
-    // Test macOS (darwin)
-    const resultMac = translator.translateFromPlayer(gamepadProfile.player1, "darwin");
-    expect(resultMac["A..South"]).toBe("0x2/0/0;;"); // GP_A -> 0
-    expect(resultMac["B..East"]).toBe("0x2/0/1;;");  // GP_B -> 1
-    expect(resultMac["L-Up"]).toBe("0x2/0/19;;");   // GP_LS_UP -> 19
-    expect(resultMac["L-Trigger"]).toBe("0x2/0/12;;"); // GP_L2 -> 12
+    // Platform shouldn't affect gamepad encoding at all (only keyboard encoding is platform-specific).
+    for (const platform of ["darwin", "win32"] as const) {
+      const result = translator.translateFromPlayer(gamepadProfile.player1, platform, "0xdeadbeef", binds);
+      expect(result["A..South"]).toBe("0xdeadbeef/3/0;;");    // GP_A: button kind, raw index 0
+      expect(result["X..West"]).toBe("0xdeadbeef/3/1;;");     // GP_B: button kind, raw index 1 (B maps to West for N64)
+      expect(result["L-Up"]).toBe("0xdeadbeef/0/1/Lo;;");     // GP_LS_UP: left stick, vertical index 1, Lo
+      expect(result["R-Trigger"]).toBe("0xdeadbeef/0/4/Hi;;"); // GP_L2: axis kind, "+" direction -> Hi (Z maps to R-Trigger)
+    }
 
-    // Test Windows (win32)
-    const resultWin = translator.translateFromPlayer(gamepadProfile.player1, "win32");
-    expect(resultWin["A..South"]).toBe("0x2/0/0;;");
-    expect(resultWin["B..East"]).toBe("0x2/0/1;;");
-    expect(resultWin["L-Up"]).toBe("0x2/0/19;;");
-    expect(resultWin["L-Trigger"]).toBe("0x2/0/12;;");
+    // A different probed device id changes the prefix but not the button/axis layout.
+    const resultOtherDevice = translator.translateFromPlayer(gamepadProfile.player1, "darwin", "0x54c0ce6", binds);
+    expect(resultOtherDevice["A..South"]).toBe("0x54c0ce6/3/0;;");
+    expect(resultOtherDevice["L-Up"]).toBe("0x54c0ce6/0/1/Lo;;");
 
-    // Test with custom device index (deviceIndex = 2)
-    const resultIdx2 = translator.translateFromPlayer(gamepadProfile.player1, "darwin", 2);
-    expect(resultIdx2["A..South"]).toBe("0x2/2/0;;");
-    expect(resultIdx2["B..East"]).toBe("0x2/2/1;;");
-    expect(resultIdx2["L-Trigger"]).toBe("0x2/2/12;;");
+    // No binds entry for a button -> omitted, not guessed.
+    const resultNoBinds = translator.translateFromPlayer(gamepadProfile.player1, "darwin", "0xdeadbeef");
+    expect(resultNoBinds["A..South"]).toBeUndefined();
   });
 
   it("should translate bindings for win32 platform via AresTranslator correctly", () => {
@@ -131,14 +175,14 @@ describe("AresTranslator", () => {
     const resultWin = translator.translateFromPlayer(profile.player1, "win32");
     expect(resultWin).toBeDefined();
 
-    // 'KeyT' for Start -> VK_T (84) -> "0x1/0/84;;"
-    expect(resultWin["Start"]).toBe("0x1/0/84;;");
+    // 'KeyT' for Start -> Index 54 -> "0x1/0/54;;"
+    expect(resultWin["Start"]).toBe("0x1/0/54;;");
 
-    // 'KeyU' for A -> VK_U (85) -> "0x1/0/85;;"
-    expect(resultWin["A..South"]).toBe("0x1/0/85;;");
+    // 'KeyU' for A -> Index 55 -> "0x1/0/55;;"
+    expect(resultWin["A..South"]).toBe("0x1/0/55;;");
 
-    // 'KeyW' for Analog Up -> VK_W (87) -> "0x1/0/87;;"
-    expect(resultWin["L-Up"]).toBe("0x1/0/87;;");
+    // 'KeyW' for Analog Up -> Index 57 -> "0x1/0/57;;"
+    expect(resultWin["L-Up"]).toBe("0x1/0/57;;");
   });
 });
 

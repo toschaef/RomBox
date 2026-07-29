@@ -95,7 +95,24 @@ export function getMesenBucket(consoleId: ConsoleID): string | null {
   return MESEN_BUCKET_BY_CONSOLE[consoleId] ?? null;
 }
 
-export function getMesenControllerType(consoleId: ConsoleID): string | null {
+export function getMesenControllerType(consoleId: ConsoleID, controllerId?: string): string | null {
+  if (consoleId === 'nes') {
+    if (controllerId === 'zapper') return "NesZapper";
+    if (controllerId === 'power_pad') return "PowerPadSideA";
+    if (controllerId === 'power_pad_b') return "PowerPadSideB";
+    if (controllerId === 'arkanoid') return "NesArkanoidController";
+    return "NesController";
+  }
+  if (consoleId === 'snes') {
+    if (controllerId === 'mouse') return "SnesMouse";
+    if (controllerId === 'super_scope' || controllerId === 'superscope') return "SuperScope";
+    if (controllerId === 'rumble') return "SnesRumbleController";
+    return "SnesController";
+  }
+  if (consoleId === 'pce') {
+    if (controllerId === 'pad6') return "PceAvenuePad6";
+    return "PceController";
+  }
   return MESEN_PORT_TYPE_BY_CONSOLE[consoleId] ?? null;
 }
 

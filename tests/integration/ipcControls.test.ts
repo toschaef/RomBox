@@ -90,16 +90,16 @@ describe("IPC Controls Handler Integration Tests", () => {
     const layout = (await ipcMain._invoke("controls:getConsoleLayout", {
       consoleId: "nes",
       profileId: defaultProfile.id
-    })) as { consoleId: string; isUserModified: boolean; bindings: PlayerBindings };
+    })) as { consoleId: string; isUserModified: boolean; player1: PlayerBindings };
 
     expect(layout.consoleId).toBe("nes");
     expect(layout.isUserModified).toBe(false);
 
     // 3. Save console layout
     const customBindings = {
-      ...layout.bindings,
+      ...layout.player1,
       face: {
-        ...layout.bindings.face,
+        ...layout.player1.face,
         primary: { type: "key", code: "KeyZ" }
       }
     };
@@ -107,11 +107,11 @@ describe("IPC Controls Handler Integration Tests", () => {
     const savedLayout = (await ipcMain._invoke("controls:saveConsoleLayout", {
       consoleId: "nes",
       profileId: defaultProfile.id,
-      bindings: customBindings
-    })) as { consoleId: string; isUserModified: boolean; bindings: PlayerBindings };
+      player1: customBindings
+    })) as { consoleId: string; isUserModified: boolean; player1: PlayerBindings };
 
     expect(savedLayout.isUserModified).toBe(true);
-    expect(savedLayout.bindings.face.primary).toEqual({ type: "key", code: "KeyZ" });
+    expect(savedLayout.player1.face.primary).toEqual({ type: "key", code: "KeyZ" });
 
     // 4. Get all console layouts for profile
     const layouts = (await ipcMain._invoke("controls:getConsoleLayouts", defaultProfile.id)) as { console_id: string }[];

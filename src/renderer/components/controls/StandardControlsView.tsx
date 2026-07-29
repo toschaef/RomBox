@@ -1,27 +1,33 @@
 import { useMemo } from "react";
-import type { ControlsProfile, DigitalBinding, DpadBinding, StickBinding } from "../../../shared/types/controls";
+import type { ControlsProfile, DigitalBinding, DpadBinding, StickBinding, PlayerBindings } from "../../../shared/types/controls";
 import type { BindPlan } from "../../controls/bindMachine";
 import { SECTION_ORDER, STANDARD_LAYOUT, DIR_ICONS, LEFT_STICK_SWITCH_ICONS, RIGHT_STICK_SWITCH_ICONS } from "../../controls/layout";
 import GroupBindingCard from "./GroupBindingCard";
 import DigitalBindingCard from "./DigitalBindingCard";
 import { getDigital, clearDigital, setGroupMode, clearGroup, type DigitalPath } from "./controlsUtils";
 
-interface StandardControlsViewProps {
+export default function StandardControlsView(props: {
   profile: ControlsProfile;
+  playerKey: "player1" | "player2" | "player3" | "player4";
   saveProfile: (p: ControlsProfile) => void;
-
   bindStateActive: boolean;
-  startBind: (plan: BindPlan) => void;
-  planEquals: (p: BindPlan) => boolean;
-
-  isDigitalPressed: (d?: DigitalBinding) => boolean;
-  isDpadPressed: (d: DpadBinding) => boolean;
-  isStickPressed: (s: StickBinding) => boolean;
-}
-
-export default function StandardControlsView(props: StandardControlsViewProps) {
-  const { profile, saveProfile, bindStateActive, startBind, planEquals, isDigitalPressed, isDpadPressed, isStickPressed } =
-    props;
+  startBind: (plan: BindPlan, playerKey: "player1" | "player2" | "player3" | "player4") => void;
+  planEquals: (plan: BindPlan) => boolean;
+  isDigitalPressed: (token: DigitalBinding) => boolean;
+  isDpadPressed: (dpad: DpadBinding, dir: "up" | "down" | "left" | "right") => boolean;
+  isStickPressed: (stick: StickBinding, axis: "x" | "y", val: -1 | 1) => boolean;
+}) {
+  const {
+    profile,
+    playerKey,
+    saveProfile,
+    bindStateActive,
+    startBind,
+    planEquals,
+    isDigitalPressed,
+    isDpadPressed,
+    isStickPressed,
+  } = props;
 
   const sectionItems = useMemo(() => {
     const map = new Map<string, Array<typeof STANDARD_LAYOUT[number]>>();
@@ -39,8 +45,8 @@ export default function StandardControlsView(props: StandardControlsViewProps) {
         const items = sectionItems.get(sec.key) ?? [];
 
         if (sec.key === "leftStick") {
-          const v = profile.player1.move;
-          const active = v.type === "stick" ? isStickPressed(v) : isDpadPressed(v);
+          const v = profile[playerKey]?.move ?? { type: "dpad" };
+          const active = v.type === "stick" ? isStickPressed(v, "x", 1) : isDpadPressed(v, "up");
 
           return (
             <div key={sec.key} className="mb-4">
@@ -53,10 +59,10 @@ export default function StandardControlsView(props: StandardControlsViewProps) {
                 }
                 active={active}
                 isPressed={isDigitalPressed}
-                onSetMode={(mode) => void saveProfile(setGroupMode(profile, "move", mode))}
-                onBindDpad={() => startBind({ kind: "dpad", group: "move" })}
-                onBindStick={() => startBind({ kind: "stick", group: "move", stick: "left" })}
-                onClear={() => void saveProfile(clearGroup(profile, "move"))}
+                onSetMode={(mode) => void saveProfile(setGroupMode(profile, playerKey, "move", mode))}
+                onBindDpad={() => startBind({ kind: "dpad", group: "move" }, playerKey)}
+                onBindStick={() => startBind({ kind: "stick", group: "move", stick: "left" }, playerKey)}
+                onClear={() => void saveProfile(clearGroup(profile, playerKey, "move"))}
                 dirIcons={LEFT_STICK_SWITCH_ICONS}
               />
             </div>
@@ -64,8 +70,8 @@ export default function StandardControlsView(props: StandardControlsViewProps) {
         }
 
         if (sec.key === "dpad") {
-          const v = profile.player1.dpad;
-          const active = isDpadPressed(v);
+          const v = profile[playerKey]?.dpad ?? { type: "dpad" };
+          const active = isDpadPressed(v, "up");
 
           return (
             <div key={sec.key} className="mb-4">
@@ -76,9 +82,9 @@ export default function StandardControlsView(props: StandardControlsViewProps) {
                 active={active}
                 isPressed={isDigitalPressed}
                 onSetMode={() => void 0}
-                onBindDpad={() => startBind({ kind: "dpad", group: "dpad" })}
+                onBindDpad={() => startBind({ kind: "dpad", group: "dpad" }, playerKey)}
                 onBindStick={() => void 0}
-                onClear={() => void saveProfile(clearGroup(profile, "dpad"))}
+                onClear={() => void saveProfile(clearGroup(profile, playerKey, "dpad"))}
                 dirIcons={DIR_ICONS}
               />
             </div>
@@ -86,8 +92,8 @@ export default function StandardControlsView(props: StandardControlsViewProps) {
         }
 
         if (sec.key === "rightStick") {
-          const v = profile.player1.look;
-          const active = v.type === "stick" ? isStickPressed(v) : isDpadPressed(v);
+          const v = profile[playerKey]?.look ?? { type: "dpad" };
+          const active = v.type === "stick" ? isStickPressed(v, "x", 1) : isDpadPressed(v, "up");
 
           return (
             <div key={sec.key} className="mb-4">
@@ -100,10 +106,10 @@ export default function StandardControlsView(props: StandardControlsViewProps) {
                 }
                 active={active}
                 isPressed={isDigitalPressed}
-                onSetMode={(mode) => void saveProfile(setGroupMode(profile, "look", mode))}
-                onBindDpad={() => startBind({ kind: "dpad", group: "look" })}
-                onBindStick={() => startBind({ kind: "stick", group: "look", stick: "right" })}
-                onClear={() => void saveProfile(clearGroup(profile, "look"))}
+                onSetMode={(mode) => void saveProfile(setGroupMode(profile, playerKey, "look", mode))}
+                onBindDpad={() => startBind({ kind: "dpad", group: "look" }, playerKey)}
+                onBindStick={() => startBind({ kind: "stick", group: "look", stick: "right" }, playerKey)}
+                onClear={() => void saveProfile(clearGroup(profile, playerKey, "look"))}
                 dirIcons={RIGHT_STICK_SWITCH_ICONS}
               />
             </div>
@@ -117,8 +123,8 @@ export default function StandardControlsView(props: StandardControlsViewProps) {
                 .filter((x) => x.kind === "digital")
                 .map((item) => {
                   const path = item.id as DigitalPath;
-                  const binding = getDigital(profile, path);
-                  const active = isDigitalPressed(binding);
+                  const binding = getDigital(profile, playerKey, path);
+                  const isPressed = binding ? isDigitalPressed(binding) : false;
                   const listening = bindStateActive && planEquals({ kind: "digital", path });
 
                   return (
@@ -127,10 +133,12 @@ export default function StandardControlsView(props: StandardControlsViewProps) {
                       title={item.label}
                       iconSrc={item.icon}
                       binding={binding}
-                      isActive={active}
+                      isActive={isPressed}
                       isListening={listening}
-                      onBind={() => startBind({ kind: "digital", path })}
-                      onClear={() => void saveProfile(clearDigital(profile, path))}
+                      onBind={() => startBind({ kind: "digital", path }, playerKey)}
+                      onClear={() => {
+                        saveProfile(clearDigital(profile, playerKey, path));
+                      }}
                     />
                   );
                 })}

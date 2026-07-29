@@ -1,4 +1,6 @@
+# Temp
 emulators/
+**/*.local.md
 
 # Logs
 logs
