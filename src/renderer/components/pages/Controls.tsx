@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import ControlsHeader from "../controls/ControlsHeader";
 import ListeningOverlay from "../controls/ListeningOverlay";
 import PageLayout from "../layout/PageLayout";
@@ -8,14 +8,21 @@ import { useControlsLayoutTarget } from "../../hooks/useControlsLayoutTarget";
 import { useControlsPressed } from "../../hooks/useControlsPressed";
 import { useControlsBinding } from "../../hooks/useControlsBinding";
 import type { ConsoleID } from "../../../shared/types";
-import type { AnyConsoleLayout, ControlsProfile } from "../../../shared/types/controls";
+import type { AnyConsoleLayout, ControlsProfile, PlayerKey } from "../../../shared/types/controls";
 import type { BindPlan, BindPlanConsole } from "../../controls/bindMachine";
 import StandardControlsView from "../controls/StandardControlsView";
 import ConsoleControlsView from "../controls/ConsoleControlsView";
-import { getSupportedControllers, getDefaultControllerId } from "../../../shared/controls/controllerModels";
+import { getSupportedControllers, getDefaultControllerId, getPlayerControllerId, withPlayerControllerId } from "../../../shared/controls/controllerModels";
+import { PLAYER_KEYS, movePlayerSlot, reorderProfilePlayers, reorderConsoleLayoutPlayers } from "../../controls/reorderPlayers";
 
 export default function Controls() {
   const [activePlayer, setActivePlayer] = useState<"player1" | "player2" | "player3" | "player4">("player1");
+  const [dragPlayerIndex, setDragPlayerIndex] = useState<number | null>(null);
+  const [dragOverPlayerIndex, setDragOverPlayerIndex] = useState<number | null>(null);
+  const [dragOffsetX, setDragOffsetX] = useState(0);
+  const playerTabContainerRef = useRef<HTMLDivElement | null>(null);
+  const playerTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const dragTabWidthRef = useRef(0);
 
   const {
     profiles,
@@ -78,6 +85,90 @@ export default function Controls() {
       setActivePlayer("player1");
     }
   }, [isHandheld, activePlayer]);
+
+  const commitPlayerReorder = (sourceIndex: number, targetIndex: number): void => {
+    if (sourceIndex === targetIndex) return;
+
+    cancelBind();
+    const order = movePlayerSlot(sourceIndex, targetIndex);
+    if (layoutApi.isConsoleMode && layoutApi.consoleLayout) {
+      void layoutApi.saveConsoleLayout(reorderConsoleLayoutPlayers(layoutApi.consoleLayout, order, profile ?? undefined));
+    } else if (profile) {
+      void saveProfile(reorderProfilePlayers(profile, order));
+    }
+    setActivePlayer(PLAYER_KEYS[targetIndex] as PlayerKey);
+  };
+
+  const getNeighborOffset = (i: number): number => {
+    if (dragPlayerIndex === null || dragOverPlayerIndex === null || i === dragPlayerIndex) return 0;
+    const from = dragPlayerIndex;
+    const to = dragOverPlayerIndex;
+    const width = dragTabWidthRef.current;
+    if (from < to && i > from && i <= to) return -width;
+    if (from > to && i >= to && i < from) return width;
+    return 0;
+  };
+
+  const handlePlayerPointerDown = (
+    idx: number,
+    pk: "player1" | "player2" | "player3" | "player4"
+  ) => (e: React.PointerEvent<HTMLButtonElement>): void => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+
+    const target = e.currentTarget;
+    const container = playerTabContainerRef.current;
+    if (!container) return;
+
+    const startX = e.clientX;
+    const originalRect = target.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    const minOffset = containerRect.left - originalRect.left;
+    const maxOffset = containerRect.right - originalRect.right;
+    dragTabWidthRef.current = originalRect.width;
+
+    const slotRects = playerTabRefs.current.map((el) => (el ? el.getBoundingClientRect() : null));
+
+    let hoverIndex = idx;
+    let moved = false;
+
+    target.setPointerCapture(e.pointerId);
+    setDragPlayerIndex(idx);
+    setDragOverPlayerIndex(idx);
+
+    const handleMove = (ev: PointerEvent): void => {
+      const raw = ev.clientX - startX;
+      if (Math.abs(raw) > 4) moved = true;
+      setDragOffsetX(Math.min(maxOffset, Math.max(minOffset, raw)));
+
+      let next = idx;
+      slotRects.forEach((r, i) => {
+        if (!r) return;
+        if (ev.clientX >= r.left && ev.clientX <= r.right) next = i;
+      });
+      hoverIndex = next;
+      setDragOverPlayerIndex(next);
+    };
+
+    const handleUp = (): void => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+      target.releasePointerCapture(e.pointerId);
+
+      setDragPlayerIndex(null);
+      setDragOverPlayerIndex(null);
+      setDragOffsetX(0);
+
+      if (!moved) {
+        cancelBind();
+        setActivePlayer(pk);
+      } else {
+        commitPlayerReorder(idx, hoverIndex);
+      }
+    };
+
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+  };
 
   if (!profile || !activeProfileId) {
     return <div className="h-full w-full p-8 text-fg-muted">Loading...</div>;
@@ -169,22 +260,27 @@ export default function Controls() {
           </div>
 
           {!isHandheld ? (
-            <div className="flex border border-border-subtle bg-bg-secondary ml-4">
+            <div ref={playerTabContainerRef} className="flex border border-border-subtle bg-bg-secondary ml-4">
               {(["player1", "player2", "player3", "player4"] as const).map((pk, idx) => (
                 <button
                   key={pk}
                   type="button"
-                  onClick={() => {
-                    cancelBind();
-                    setActivePlayer(pk);
+                  ref={(el) => {
+                    playerTabRefs.current[idx] = el;
                   }}
-                  className={`px-3 py-1.5 text-xs font-bold transition-colors ${
+                  onPointerDown={handlePlayerPointerDown(idx, pk)}
+                  style={
+                    dragPlayerIndex === idx
+                      ? { transform: `translateX(${dragOffsetX}px)`, transition: "none", zIndex: 10 }
+                      : { transform: `translateX(${getNeighborOffset(idx)}px)` }
+                  }
+                  className={`relative px-3 py-1.5 text-xs font-bold select-none touch-none cursor-grab active:cursor-grabbing transition-[transform,background-color,color,box-shadow] duration-150 ease-out ${
                     idx < 3 ? "border-r border-border-subtle" : ""
                   } ${
                     activePlayer === pk
                       ? "bg-accent-secondary text-white"
                       : "text-fg-secondary hover:text-accent-secondary hover:bg-bg-muted"
-                  }`}
+                  } ${dragPlayerIndex === idx ? "opacity-90 shadow-lg" : ""}`}
                 >
                   P{idx + 1}
                 </button>
@@ -218,14 +314,16 @@ export default function Controls() {
           {layoutApi.isConsoleMode && layoutApi.consoleId && getSupportedControllers(layoutApi.consoleId).length > 1 ? (
             <div className="relative">
               <select
-                value={layoutApi.consoleLayout?.controllerId ?? getDefaultControllerId(layoutApi.consoleId)}
+                value={
+                  (layoutApi.consoleLayout ? getPlayerControllerId(layoutApi.consoleLayout, activePlayer) : undefined) ??
+                  getDefaultControllerId(layoutApi.consoleId)
+                }
                 onChange={(e) => {
                   cancelBind();
                   if (layoutApi.consoleLayout) {
-                    layoutApi.saveConsoleLayout({
-                      ...layoutApi.consoleLayout,
-                      controllerId: e.target.value
-                    });
+                    layoutApi.saveConsoleLayout(
+                      withPlayerControllerId(layoutApi.consoleLayout, activePlayer, e.target.value)
+                    );
                   }
                   e.target.blur();
                 }}

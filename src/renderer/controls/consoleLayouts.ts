@@ -373,6 +373,34 @@ const FALLBACK_COMMON: ConsoleControlItem[] = [
   { kind: "digital", id: "system.select", label: "Select", icon: switchMinus, section: "system" },
 ];
 
+// Classic Controller only - no Wiimote A/B/1/2, Nunchuk, Shake, Tilt, or IR
+// Pointer here. Those are physical-Wiimote-only inputs (the Wiimote's own IR
+// camera/accelerometer, independent of whatever's plugged into its extension
+// port); a player using a plain gamepad translated to Classic Controller isn't
+// holding/aiming a real Wiimote, so exposing them here just invites binding
+// something like IR Pointer to the same stick already driving Classic Right
+// Stick, making the on-screen pointer jitter across the screen during normal
+// camera movement.
+const WII_CLASSIC_ITEMS: ConsoleControlItem[] = [
+  { kind: "group", id: "move", label: "Classic Left Stick", section: "leftStick" },
+  { kind: "group", id: "look", label: "Classic Right Stick", section: "rightStick" },
+  { kind: "group", id: "dpad", label: "Classic D-Pad", section: "dpad" },
+
+  { kind: "digital", id: "face.primary", label: "Classic A", icon: switchA, section: "face" },
+  { kind: "digital", id: "face.secondary", label: "Classic B", icon: switchB, section: "face" },
+  { kind: "digital", id: "face.tertiary", label: "Classic X", icon: switchX, section: "face" },
+  { kind: "digital", id: "face.quaternary", label: "Classic Y", icon: switchY, section: "face" },
+
+  { kind: "digital", id: "shoulders.bumperL", label: "Classic L", icon: switchL, section: "shoulders" },
+  { kind: "digital", id: "shoulders.bumperR", label: "Classic R", icon: switchR, section: "shoulders" },
+  { kind: "digital", id: "shoulders.triggerL", label: "Classic ZL", icon: switchZL, section: "shoulders" },
+  { kind: "digital", id: "shoulders.triggerR", label: "Classic ZR", icon: switchZR, section: "shoulders" },
+
+  { kind: "digital", id: "system.start", label: "Classic Plus", icon: switchPlus, section: "system" },
+  { kind: "digital", id: "system.select", label: "Classic Minus", icon: switchMinus, section: "system" },
+  { kind: "digital", id: "special.home", label: "Classic Home", icon: switchPlus, section: "system" },
+];
+
 export function getConsoleLayoutItems(consoleId: ConsoleID, controllerId?: string): ConsoleControlItem[] {
   if (consoleId === "pce" && controllerId === "pad6") {
     return [
@@ -429,8 +457,11 @@ export function getConsoleLayoutItems(consoleId: ConsoleID, controllerId?: strin
         { kind: "digital", id: "special.home", label: "Home", icon: switchPlus, section: "special" },
       ];
     }
-    if (controllerId === "classic" || controllerId === "gamecube") {
-      return CONSOLE_LAYOUTS["gc"]; 
+    if (controllerId === "classic") {
+      return WII_CLASSIC_ITEMS;
+    }
+    if (controllerId === "gamecube") {
+      return CONSOLE_LAYOUTS["gc"];
     }
   }
 

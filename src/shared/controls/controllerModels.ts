@@ -1,9 +1,35 @@
 import type { ConsoleID } from "../types";
+import type { PlayerKey } from "../types/controls";
 
 export type ControllerModel = {
   id: string;
   name: string;
 };
+
+type PlayerControllerIds = {
+  controllerId?: string;
+  player2ControllerId?: string;
+  player3ControllerId?: string;
+  player4ControllerId?: string;
+};
+
+export function getPlayerControllerId(source: PlayerControllerIds, playerKey: PlayerKey): string | undefined {
+  if (playerKey === "player1") return source.controllerId;
+  if (playerKey === "player2") return source.player2ControllerId;
+  if (playerKey === "player3") return source.player3ControllerId;
+  return source.player4ControllerId;
+}
+
+export function withPlayerControllerId<T extends PlayerControllerIds>(
+  source: T,
+  playerKey: PlayerKey,
+  controllerId: string
+): T {
+  if (playerKey === "player1") return { ...source, controllerId };
+  if (playerKey === "player2") return { ...source, player2ControllerId: controllerId };
+  if (playerKey === "player3") return { ...source, player3ControllerId: controllerId };
+  return { ...source, player4ControllerId: controllerId };
+}
 
 export const CONTROLLER_MODELS: Record<ConsoleID, ControllerModel[]> = {
   nes: [

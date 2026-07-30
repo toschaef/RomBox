@@ -3,6 +3,7 @@ import type { AnyConsoleLayout, DigitalBinding, DpadBinding, StickBinding } from
 import type { BindPlanConsole } from "../../controls/bindMachine";
 import { SECTION_ORDER, LEFT_STICK_SWITCH_ICONS, RIGHT_STICK_SWITCH_ICONS } from "../../controls/layout";
 import { getConsoleLayoutItems, getConsoleDpadIcons } from "../../controls/consoleLayouts";
+import { getPlayerControllerId } from "../../../shared/controls/controllerModels";
 import GroupBindingCard from "./GroupBindingCard";
 import DigitalBindingCard from "./DigitalBindingCard";
 import {
@@ -39,7 +40,11 @@ export default function ConsoleControlsView(props: {
     isStickPressed,
   } = props;
 
-  const consoleItems = useMemo(() => getConsoleLayoutItems(layout.consoleId, layout.controllerId), [layout.consoleId, layout.controllerId]);
+  const playerControllerId = getPlayerControllerId(layout, playerKey);
+  const consoleItems = useMemo(
+    () => getConsoleLayoutItems(layout.consoleId, playerControllerId),
+    [layout.consoleId, playerControllerId]
+  );
   const dpadIcons = useMemo(() => getConsoleDpadIcons(layout.consoleId), [layout.consoleId]);
 
   const sectionMap = useMemo(() => {

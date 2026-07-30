@@ -165,14 +165,25 @@ int main(int argc, char** argv) {
     return 2;
   }
 
+  if (desired_index < 0) desired_index = 0;
+
   int num = SDL_NumJoysticks();
   int chosen = -1;
 
-  if (desired_index >= 0 && desired_index < num && SDL_IsGameController(desired_index)) {
-    chosen = desired_index;
-  } else {
-    for (int i = 0; i < num; i++) {
-      if (SDL_IsGameController(i)) { chosen = i; break; }
+  // Enumerate only the joysticks SDL recognizes as game controllers, and pick
+  // the desired_index-th one - not the desired_index-th raw joystick slot,
+  // and never silently substitute a different controller when that many
+  // don't exist. Falling back to "the first available" here (the previous
+  // behavior) meant a second player's --index 1 request would silently
+  // resolve to the exact same physical controller as player 1 whenever only
+  // one was connected, instead of correctly reporting none found - Dolphin
+  // then had two virtual controllers claiming the same hardware, and the
+  // second one to claim it went dead.
+  int gamepadIdx = 0;
+  for (int i = 0; i < num; i++) {
+    if (SDL_IsGameController(i)) {
+      if (gamepadIdx == desired_index) { chosen = i; break; }
+      gamepadIdx++;
     }
   }
 
@@ -214,7 +225,7 @@ int main(int argc, char** argv) {
   print_json_string(guid_str);
   printf(",\"name\":");
   print_json_string(SDL_GameControllerName(gc));
-  printf(",\"port\":0,\"binds\":{");
+  printf(",\"port\":%d,\"binds\":{", chosen);
 
   int first = 1;
 

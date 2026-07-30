@@ -49,6 +49,9 @@ export const controlsClient = {
     consoleId: ConsoleID;
     profileId: string;
     controllerId?: string;
+    player2ControllerId?: string;
+    player3ControllerId?: string;
+    player4ControllerId?: string;
     player1: unknown;
     player2?: unknown;
     player3?: unknown;

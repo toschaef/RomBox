@@ -30,7 +30,18 @@ export default function registerControlsHandlers() {
 
   ipcMain.handle(
     "controls:saveConsoleLayout",
-    (_e, payload: { consoleId: ConsoleID; profileId: string; player1: unknown; player2?: unknown; player3?: unknown; player4?: unknown; controllerId?: string }) =>
+    (_e, payload: {
+      consoleId: ConsoleID;
+      profileId: string;
+      player1: unknown;
+      player2?: unknown;
+      player3?: unknown;
+      player4?: unknown;
+      controllerId?: string;
+      player2ControllerId?: string;
+      player3ControllerId?: string;
+      player4ControllerId?: string;
+    }) =>
       svc.saveConsoleLayout({
         consoleId: payload.consoleId,
         profileId: payload.profileId,
@@ -39,6 +50,9 @@ export default function registerControlsHandlers() {
         player3: payload.player3 as PlayerBindings | undefined,
         player4: payload.player4 as PlayerBindings | undefined,
         controllerId: payload.controllerId,
+        player2ControllerId: payload.player2ControllerId,
+        player3ControllerId: payload.player3ControllerId,
+        player4ControllerId: payload.player4ControllerId,
       })
   );
 

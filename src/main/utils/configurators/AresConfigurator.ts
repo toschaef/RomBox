@@ -9,8 +9,32 @@ import { AresTranslator } from "../translators/AresTranslator";
 import { EngineService, getSdlProbePath, installSdlProbe } from "../../services/EngineService";
 import { runSdlProbe } from "../azahar/sdlprobe";
 import { Logger } from "../logger";
+import type { PlayerBindings, DigitalBinding } from "../../../shared/types/controls";
 
 const log = Logger.create("AresConfigurator");
+
+// The physical gamepad probed below can only ever be assigned to whichever
+// player slot the user actually bound it to - it's not always player1 (e.g.
+// keyboard-P1/gamepad-P2 setups). Detect that slot by inspecting which
+// player's bindings actually use gp_button/gp_axis_digital tokens, mirroring
+// DolphinTranslator's per-player detectDeviceKindFromProfile.
+function looksLikeGamepadPlayer(p?: PlayerBindings): boolean {
+  if (!p) return false;
+  const all: (DigitalBinding | undefined)[] = [
+    p.face?.primary, p.face?.secondary, p.face?.tertiary, p.face?.quaternary,
+    p.shoulders?.bumperL, p.shoulders?.bumperR, p.shoulders?.triggerL, p.shoulders?.triggerR,
+    p.system?.start, p.system?.select,
+    p.dpad?.up, p.dpad?.down, p.dpad?.left, p.dpad?.right,
+  ];
+
+  if (p.move?.type === "dpad") all.push(p.move.up, p.move.down, p.move.left, p.move.right);
+  if (p.look?.type === "dpad") all.push(p.look.up, p.look.down, p.look.left, p.look.right);
+
+  const special = p.special;
+  if (special?.type === "n64" || special?.type === "gc") all.push(special.z);
+
+  return all.some((b) => b?.type === "gp_button" || b?.type === "gp_axis_digital");
+}
 
 function exists(p: string) {
   try { fs.accessSync(p, fs.constants.F_OK); return true; } catch { return false; }
@@ -89,6 +113,12 @@ export class AresConfigurator extends BaseConfigurator {
       player4: layout.player4,
     };
 
+    const players: (PlayerBindings | undefined)[] = [
+      effectiveProfile.player1, effectiveProfile.player2, effectiveProfile.player3, effectiveProfile.player4,
+    ];
+    const gamepadPlayerIndex = players.findIndex((p) => looksLikeGamepadPlayer(p));
+    log.info("Resolved gamepad player slot", { gamepadPlayerIndex });
+
     const probeHelperPath = getSdlProbePath();
     if (!exists(probeHelperPath)) {
       const installed = installSdlProbe();
@@ -97,7 +127,9 @@ export class AresConfigurator extends BaseConfigurator {
 
     let learnedDevice: string | undefined;
     let learnedBinds: unknown;
-    if (exists(probeHelperPath)) {
+    if (gamepadPlayerIndex === -1) {
+      log.info("No player bound to a gamepad - skipping SDL probe");
+    } else if (exists(probeHelperPath)) {
       const probed = runSdlProbe({ helperPath: probeHelperPath, timeoutMs: 1500 });
       log.info("SDL probe result", {
         exitCode: probed.exitCode,
@@ -119,6 +151,7 @@ export class AresConfigurator extends BaseConfigurator {
       padPort: 1,
       configDir: path.dirname(bmlPath),
       controllerId: layout.controllerId,
+      gamepadPlayerIndex,
       learnedDevice,
       learnedBinds,
     };

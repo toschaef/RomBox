@@ -1,6 +1,6 @@
 import type { DigitalBinding, DpadBinding, StickBinding, ControlsProfile, AnyConsoleLayout } from "../../shared/types/controls";
 import { AXIS_THRESHOLD, type InputEvent } from "../../shared/controls/inputTypes";
-import { setConsoleDigital } from "./consolePath";
+import { setConsoleDigital, specialTypeForConsole } from "./consolePath";
 
 export { AXIS_THRESHOLD, type InputEvent } from "../../shared/controls/inputTypes";
 
@@ -71,7 +71,7 @@ function setConsoleNestedBinding(layout: AnyConsoleLayout, playerKey: PlayerKey,
   for (let i = 0; i < parts.length - 1; i++) {
     const part = parts[i];
     if (!parent[part] || typeof parent[part] !== "object") {
-      parent[part] = {};
+      parent[part] = part === "special" ? { type: specialTypeForConsole(next.consoleId) } : {};
     }
     parent = parent[part] as Record<string, unknown>;
   }

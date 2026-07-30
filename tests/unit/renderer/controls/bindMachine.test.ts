@@ -178,5 +178,23 @@ describe("bindMachine", () => {
       const res2 = applyBindEvent(consoleAccessor, res1.data, res1.state, { kind: "key", code: "ArrowDown", at: 300 });
       expect(res2?.state).toEqual({ ...state1, step: 2 });
     });
+
+    it("should seed a freshly-created 'special' group (e.g. N64 C-buttons) with the console's discriminant type", () => {
+      // Regression: binding N64's C-buttons as a stick via the console layout UI
+      // used to create `special` as a bare {} with no `type` field, so
+      // AresTranslator/DolphinTranslator (which gate on `special.type === "n64"`)
+      // silently ignored the binding and fell back to a default that could
+      // collide with an unrelated player's binding.
+      const n64Layout: AnyConsoleLayout = { ...mockLayout, consoleId: "n64" };
+      const state1 = { active: true as const, playerKey: "player1" as const, plan: { kind: "stick" as const, group: "special.c" as const, stick: "right" as const }, step: 0, startedAt: 100 };
+
+      const res1 = applyBindEvent(consoleAccessor, n64Layout, state1, { kind: "gp_axis", stick: "right", axis: "x", value: 1.0, at: 200 });
+      if (!res1) throw new Error("Expected res1 to be defined");
+      const res2 = applyBindEvent(consoleAccessor, res1.data, res1.state, { kind: "gp_axis", stick: "right", axis: "y", value: 1.0, at: 300 });
+
+      const player1 = res2!.data.player1 as unknown as { special: { type: string; c: unknown } };
+      expect(player1.special.type).toBe("n64");
+      expect(player1.special.c).toEqual({ type: "stick", stick: "right", deadzone: 0.15 });
+    });
   });
 });

@@ -19,7 +19,14 @@ export interface TranslateContext {
   learnedDevice?: string;
   learnedBinds?: any;
   deviceIndex?: number;
+  // 0-based index into [player1..player4] of the player slot the probed
+  // physical gamepad (learnedDevice/learnedBinds) should be applied to. -1 or
+  // undefined means no player is bound to a gamepad.
+  gamepadPlayerIndex?: number;
   controllerId?: string;
+  player2ControllerId?: string;
+  player3ControllerId?: string;
+  player4ControllerId?: string;
 }
 
 export interface IEmulatorTranslator {

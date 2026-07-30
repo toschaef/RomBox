@@ -38,6 +38,13 @@ export function initDB() {
     db.exec("ALTER TABLE console_layouts ADD COLUMN controller_id TEXT");
   }
 
+  // v0.10.0 migration: per-player controller model
+  for (const col of ['player2_controller_id', 'player3_controller_id', 'player4_controller_id']) {
+    if (!clColumns.some(c => c.name === col)) {
+      db.exec(`ALTER TABLE console_layouts ADD COLUMN ${col} TEXT`);
+    }
+  }
+
   console.log("Database initialized");
 }
 

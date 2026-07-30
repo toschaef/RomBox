@@ -30,11 +30,13 @@ export function runSdlProbe(args: {
   timeoutMs?: number;
   preferredGuid?: string;
   listen?: boolean;
+  deviceIndex?: number;
 }): { learned: AzaharLearnedSDL | null; rawStdout: string; rawStderr: string; exitCode: number | null } {
-  const { helperPath, timeoutMs = 1500, preferredGuid, listen } = args;
+  const { helperPath, timeoutMs = 1500, preferredGuid, listen, deviceIndex } = args;
 
   const helperArgs: string[] = [];
   if (preferredGuid) helperArgs.push("--guid", preferredGuid);
+  if (deviceIndex !== undefined) helperArgs.push("--index", String(deviceIndex));
   if (listen) helperArgs.push("--listen");
 
   const res = spawnSync(helperPath, helperArgs, {

@@ -26,6 +26,9 @@ type RawLayoutRow = {
   updated_at: number;
   is_user_modified: number;
   controller_id: string | null;
+  player2_controller_id: string | null;
+  player3_controller_id: string | null;
+  player4_controller_id: string | null;
   bindings_json: string;
 };
 
@@ -278,7 +281,9 @@ export class ControlsService {
 
     const row = db
       .prepare(
-        `SELECT id, console_id, profile_id, created_at, updated_at, is_user_modified, controller_id, bindings_json
+        `SELECT id, console_id, profile_id, created_at, updated_at, is_user_modified,
+                controller_id, player2_controller_id, player3_controller_id, player4_controller_id,
+                bindings_json
         FROM console_layouts
         WHERE console_id = ? AND profile_id = ?
         LIMIT 1`
@@ -301,6 +306,9 @@ export class ControlsService {
       updatedAt: row.updated_at,
       isUserModified: row.is_user_modified === 1,
       controllerId: row.controller_id || undefined,
+      player2ControllerId: row.player2_controller_id || undefined,
+      player3ControllerId: row.player3_controller_id || undefined,
+      player4ControllerId: row.player4_controller_id || undefined,
       player1: parsed.player1,
       player2: parsed.player2,
       player3: parsed.player3,
@@ -308,7 +316,18 @@ export class ControlsService {
     };
   }
 
-  saveConsoleLayout(args: { consoleId: ConsoleID; profileId: string; player1: PlayerBindings; player2?: PlayerBindings; player3?: PlayerBindings; player4?: PlayerBindings; controllerId?: string }): ConsoleLayout {
+  saveConsoleLayout(args: {
+    consoleId: ConsoleID;
+    profileId: string;
+    player1: PlayerBindings;
+    player2?: PlayerBindings;
+    player3?: PlayerBindings;
+    player4?: PlayerBindings;
+    controllerId?: string;
+    player2ControllerId?: string;
+    player3ControllerId?: string;
+    player4ControllerId?: string;
+  }): ConsoleLayout {
     const db = getDB();
     this.getProfile(args.profileId);
 
@@ -317,7 +336,7 @@ export class ControlsService {
       .get(args.consoleId, args.profileId) as { id: string } | undefined;
 
     const ts = now();
-    
+
     const players: LayoutPlayers = {
       player1: args.player1,
       player2: args.player2,
@@ -329,18 +348,26 @@ export class ControlsService {
       const id = randomUUID();
       db.prepare(
         `INSERT INTO console_layouts
-        (id, console_id, profile_id, created_at, updated_at, is_user_modified, controller_id, bindings_json)
-        VALUES (?, ?, ?, ?, ?, 1, ?, ?)`
-      ).run(id, args.consoleId, args.profileId, ts, ts, args.controllerId || null, bindingsJson(players));
+        (id, console_id, profile_id, created_at, updated_at, is_user_modified, controller_id, player2_controller_id, player3_controller_id, player4_controller_id, bindings_json)
+        VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)`
+      ).run(
+        id, args.consoleId, args.profileId, ts, ts,
+        args.controllerId || null, args.player2ControllerId || null, args.player3ControllerId || null, args.player4ControllerId || null,
+        bindingsJson(players)
+      );
 
       return this.getConsoleLayout(args.consoleId, args.profileId);
     }
 
     db.prepare(
       `UPDATE console_layouts
-      SET bindings_json = ?, updated_at = ?, is_user_modified = 1, controller_id = ?
+      SET bindings_json = ?, updated_at = ?, is_user_modified = 1, controller_id = ?, player2_controller_id = ?, player3_controller_id = ?, player4_controller_id = ?
       WHERE id = ?`
-    ).run(bindingsJson(players), ts, args.controllerId || null, existing.id);
+    ).run(
+      bindingsJson(players), ts,
+      args.controllerId || null, args.player2ControllerId || null, args.player3ControllerId || null, args.player4ControllerId || null,
+      existing.id
+    );
 
     return this.getConsoleLayout(args.consoleId, args.profileId);
   }

@@ -27,7 +27,7 @@ export default function ProfileModals({ type, initialValue = "", onClose, onSubm
   const isDelete = type === "delete";
 
   return (
-    <div className="fixed inset-0 bg-bg-primary/80 z-60 flex items-center justify-center backdrop-blur-sm animate-in fade-in duration-150">
+    <div className="fixed inset-0 bg-bg-primary/80 z-500 flex items-center justify-center backdrop-blur-sm animate-in fade-in duration-150">
       <form 
         onSubmit={handleSubmit}
         className="bg-bg-secondary p-6 rounded-2xl border border-border-muted shadow-2xl w-full max-w-sm"

@@ -1,6 +1,7 @@
 import { ControlsService } from "../../../src/main/services/ControlsService";
 import { initDB, getDB } from "../../../src/main/data/db";
 import { createDefaultProfileShape } from "../../../src/shared/controls/layoutDefaults";
+import { movePlayerSlot, reorderConsoleLayoutPlayers } from "../../../src/renderer/controls/reorderPlayers";
 
 describe("ControlsService", () => {
   let service: ControlsService;
@@ -87,6 +88,101 @@ describe("ControlsService", () => {
 
     expect(saved.isUserModified).toBe(true);
     expect(saved.player1.face?.primary).toEqual({ type: "key", code: "KeyZ" });
+  });
+
+  it("should persist a distinct controller model per player (Mario Kart Wii: P1 Classic, P2 Wii Remote + Nunchuk)", () => {
+    const profile = service.getDefaultProfile();
+    const layout = service.getConsoleLayout("wii", profile.id);
+
+    const saved = service.saveConsoleLayout({
+      consoleId: "wii",
+      profileId: profile.id,
+      player1: layout.player1,
+      player2: layout.player1,
+      controllerId: "classic",
+      player2ControllerId: "wiimote_nunchuk",
+    });
+
+    expect(saved.controllerId).toBe("classic");
+    expect(saved.player2ControllerId).toBe("wiimote_nunchuk");
+    expect(saved.player3ControllerId).toBeUndefined();
+    expect(saved.player4ControllerId).toBeUndefined();
+
+    // Reload from a fresh read to prove it round-trips through the DB, not just
+    // the in-memory return value of saveConsoleLayout.
+    const reloaded = service.getConsoleLayout("wii", profile.id);
+    expect(reloaded.controllerId).toBe("classic");
+    expect(reloaded.player2ControllerId).toBe("wiimote_nunchuk");
+  });
+
+  it("should update one player's controller model without disturbing another's", () => {
+    const profile = service.getDefaultProfile();
+    const layout = service.getConsoleLayout("wii", profile.id);
+
+    service.saveConsoleLayout({
+      consoleId: "wii",
+      profileId: profile.id,
+      player1: layout.player1,
+      player2: layout.player1,
+      controllerId: "classic",
+      player2ControllerId: "wiimote_nunchuk",
+    });
+
+    // Simulate switching to the P2 tab and picking a different controller,
+    // the way Controls.tsx's per-player dropdown does.
+    const updated = service.saveConsoleLayout({
+      consoleId: "wii",
+      profileId: profile.id,
+      player1: layout.player1,
+      player2: layout.player1,
+      controllerId: "classic",
+      player2ControllerId: "wiimote_sideways",
+    });
+
+    expect(updated.controllerId).toBe("classic");
+    expect(updated.player2ControllerId).toBe("wiimote_sideways");
+  });
+
+  it("propagates a player1/player2 swap (drag-reorder in Console mode) all the way through to launch", async () => {
+    const profile = service.getDefaultProfile();
+
+    // Distinctly mark player1 vs player2 so a swap is unambiguous to detect,
+    // and customize this console's layout (isUserModified = true) - matching
+    // the real-world state after any prior per-console customization.
+    const player1Marked = { ...profile.player1, face: { ...profile.player1.face, primary: { type: "key" as const, code: "KeyP1MARK" } } };
+    const player2Marked = { ...profile.player1, face: { ...profile.player1.face, primary: { type: "key" as const, code: "KeyP2MARK" } } };
+
+    service.saveConsoleLayout({
+      consoleId: "gc",
+      profileId: profile.id,
+      player1: player1Marked,
+      player2: player2Marked,
+    });
+
+    const before = service.getConsoleLayout("gc", profile.id);
+    expect(before.isUserModified).toBe(true);
+
+    // Drag player2 (index 1) into player1's slot (index 0), exactly like
+    // Controls.tsx's console-mode reorder path.
+    const order = movePlayerSlot(1, 0);
+    const reordered = reorderConsoleLayoutPlayers(before, order);
+    service.saveConsoleLayout({
+      consoleId: "gc",
+      profileId: profile.id,
+      player1: reordered.player1,
+      player2: reordered.player2,
+      player3: reordered.player3,
+      player4: reordered.player4,
+      controllerId: reordered.controllerId,
+      player2ControllerId: reordered.player2ControllerId,
+    });
+
+    // This is what DolphinConfigurator (and any other configurator) actually
+    // reads at launch time - the swap must be visible here, not just in the
+    // raw saved row.
+    const effective = await service.getEffectiveConsoleLayout("gc", profile.id);
+    expect(effective.player1.face.primary).toEqual({ type: "key", code: "KeyP2MARK" });
+    expect(effective.player2?.face.primary).toEqual({ type: "key", code: "KeyP1MARK" });
   });
 
   it("should delete profile and fallback to another default profile", () => {

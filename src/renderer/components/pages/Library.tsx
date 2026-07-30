@@ -134,14 +134,23 @@ export default function Library() {
 
   const filteredGames = useMemo(() => {
     if (!search.trim()) return sortedGames;
-    const term = search.toLowerCase().replace(/\s+/g, '');
+
+    const term = search.toLowerCase().replace(/[\s-]+/g, '');
+
     return sortedGames.filter(g => {
       const title = g.title.toLowerCase();
-      const titleNoSpaces = title.replace(/\s+/g, '');
-      const acronym = title.split(/\s+/).map(w => w[0]).filter(Boolean).join('');
-      return title.includes(search.toLowerCase())
-        || titleNoSpaces.includes(term)
-        || acronym.startsWith(term);
+      const cleanTitle = title.replace(/[\s-]+/g, '');
+
+      const tokens = title.split(/[\s-]+/).filter(Boolean);
+
+      const acronym = tokens
+        .map(token => (/^\d+$/.test(token) ? token : token[0]))
+        .join('');
+
+      return (
+        cleanTitle.includes(term) ||
+        acronym.startsWith(term)
+      );
     });
   }, [sortedGames, search]);
 

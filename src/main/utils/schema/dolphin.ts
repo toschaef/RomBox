@@ -3,6 +3,8 @@ import * as fs from "fs";
 import { app } from "electron";
 import { spawnSync } from "child_process";
 import type { GamepadToken } from "../../../shared/controls/gamepadTokens";
+import { getSdlProbePath, installSdlProbe } from "../../services/EngineService";
+import { runSdlProbe } from "../azahar/sdlprobe";
 
 export const DOLPHIN = {
   GC_PROFILE_NAME: "RomBox_P1",
@@ -18,6 +20,20 @@ export const DOLPHIN = {
     return path.join(configDir, this.WIIMOTE_NEW_INI);
   },
 };
+
+// A Wii player's slot is either a GameCube controller (SI port) or a Wiimote
+// (Wiimote source) - never both. Shared between DolphinConfigurator (writes
+// the global Dolphin.ini SIDeviceN/WiimoteSourceN) and DolphinTranslator
+// (writes the same values into the per-game GameSettings/<id>.ini PadTypeN
+// override) so the two can never diverge - a per-game override that only
+// covers PadType0 while leaving PadType1-3 unspecified is enough to make
+// Dolphin treat the other ports as forced-off for that game, regardless of
+// what the global Dolphin.ini says.
+export function wiiPortSources(playerExists: boolean, controllerId: string | undefined): { siDevice: string; wiimoteSource: string } {
+  if (!playerExists) return { siDevice: "0", wiimoteSource: "0" };
+  if (controllerId === "gamecube") return { siDevice: "6", wiimoteSource: "0" };
+  return { siDevice: "0", wiimoteSource: "1" };
+}
 
 export function quartzKeyFromDomCode(code: string): string | null {
   if (code.startsWith("Key") && code.length === 4) return code.slice(3);
@@ -117,18 +133,12 @@ export function dolphinExprForGamepadToken(tok: GamepadToken, platform = "win32"
   
   return expr;
 }
-export function detectDolphinPadDevice(configDir: string): string | null {
-  try {
-    const p = path.join(configDir, "GCPadNew.ini");
-    if (fs.existsSync(p)) {
-      const content = fs.readFileSync(p, "utf-8");
-      const match = content.match(/^Device\s*=\s*(.+)$/m);
-      if (match) return match[1].trim();
-    }
-  } catch (err) { /* ignore */ }
-  return null;
-}
-
+// No on-disk caching or fallback to a previously-written Device= line here,
+// deliberately - a user tweaking their bindings expects each relaunch to
+// reflect whatever's actually plugged in right now, not whatever happened to
+// be true the last time this ran. Every call re-probes live and returns
+// whatever's currently true (or a generic index-based guess if nothing can be
+// detected); nothing here is ever read back from a previous run's ini file.
 export function getPlatformGamepadDevice(
   platform = "win32",
   deviceIndex = 0,
@@ -147,7 +157,29 @@ export function getPlatformGamepadDevice(
     }
     return { deviceString };
   }
-  if (platform === "win32") return { deviceString: preferredControllerId ?? `XInput/${deviceIndex}/Gamepad` };
+  if (platform === "win32") {
+    // Dolphin (2407) identifies controllers through its SDL backend on Windows
+    // too - even non-Xbox pads like a PS5 DualSense show up as
+    // "SDL/<port>/<real device name>", not as an XInput device. Blindly
+    // assuming XInput here means anything that isn't a genuine Xbox-style
+    // controller silently fails to register at all.
+    try {
+      let helperPath = getSdlProbePath();
+      if (!fs.existsSync(helperPath)) {
+        const installed = installSdlProbe();
+        if (installed.dest) helperPath = installed.dest;
+      }
+      if (fs.existsSync(helperPath)) {
+        const probed = runSdlProbe({ helperPath, timeoutMs: 1500, deviceIndex });
+        if (probed.learned?.ok && probed.learned.name) {
+          return { deviceString: `SDL/${probed.learned.port}/${probed.learned.name}`, learnedBinds: probed.learned.binds };
+        }
+      }
+    } catch (e) {
+      console.error("Failed to run sdl2probe for Dolphin (win32)", e);
+    }
+    return { deviceString: preferredControllerId ?? `XInput/${deviceIndex}/Gamepad` };
+  }
 
   if (platform === "darwin") {
     try {
@@ -158,7 +190,7 @@ export function getPlatformGamepadDevice(
         const altPath = path.join(process.cwd(), "bin/mac/sdl3probe-macos");
         if (fs.existsSync(altPath)) helperPath = altPath;
       }
-      const res = spawnSync(helperPath, [], { encoding: "utf8", timeout: 1500 });
+      const res = spawnSync(helperPath, ["--index", String(deviceIndex)], { encoding: "utf8", timeout: 1500 });
       if (res.stdout) {
         const parsed = JSON.parse(res.stdout);
         if (parsed.ok && parsed.name) {
@@ -176,6 +208,6 @@ export function getPlatformGamepadDevice(
     }
     return { deviceString: preferredControllerId ?? `SDL/${deviceIndex}/Gamepad` };
   }
-  
+
   return { deviceString: preferredControllerId ?? `evdev/${deviceIndex}/Gamepad` };
 }

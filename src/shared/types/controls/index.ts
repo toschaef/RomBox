@@ -136,6 +136,8 @@ export type ControlsProfile = {
   preferredControllerId?: string;
 };
 
+export type PlayerKey = "player1" | "player2" | "player3" | "player4";
+
 export type ConsoleLayoutBase = {
   id: string;
   consoleId: ConsoleID;
@@ -144,6 +146,9 @@ export type ConsoleLayoutBase = {
   updatedAt: number;
   isUserModified: boolean;
   controllerId?: string;
+  player2ControllerId?: string;
+  player3ControllerId?: string;
+  player4ControllerId?: string;
 };
 
 export type ConsoleLayout<C extends ConsoleID = ConsoleID> = ConsoleLayoutBase & {

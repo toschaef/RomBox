@@ -9,6 +9,7 @@ jest.mock("os", () => {
 
 import path from "path";
 import fs from "fs";
+import child_process from "child_process";
 import { initDB, closeDB } from "../../src/main/data/db";
 import { DolphinConfigurator } from "../../src/main/utils/configurators/DolphinConfigurator";
 import { MesenConfigurator } from "../../src/main/utils/configurators/MesenConfigurator";
@@ -111,13 +112,14 @@ describe("Configurator and Translator Pairs Integration Tests", () => {
       // Verify written Dolphin.ini
       const dolphinIniPath = path.join(configDir, "Dolphin.ini");
       expect(fs.existsSync(dolphinIniPath)).toBe(true);
-      const dolphinText = fs.readFileSync(dolphinIniPath, "utf-8");
-      expect(dolphinText).toContain("WiimoteSource0 = 1");
 
-      // Verify written WiimoteNew.ini (Wii controls with Classic extension)
+      // Verify written WiimoteNew.ini (Wii controls with Classic extension).
+      // Wiimote enablement is [Wiimote1] Source here (1 = Emulated) - Dolphin
+      // does not read Dolphin.ini's [Controls] WiimoteSource0.
       const wiimoteNewPath = path.join(configDir, "WiimoteNew.ini");
       expect(fs.existsSync(wiimoteNewPath)).toBe(true);
       const wiiText = fs.readFileSync(wiimoteNewPath, "utf-8");
+      expect(wiiText).toMatch(/\[Wiimote1\][\s\S]*?Source = 1/);
       expect(wiiText).toContain("Extension = Classic");
       expect(wiiText).toContain("Classic/Buttons/A = U");
       expect(wiiText).toContain("Classic/Buttons/+ = T");
@@ -346,6 +348,12 @@ describe("Configurator and Translator Pairs Integration Tests", () => {
       expect(gcPadText).toContain("Device = DInput/0/Keyboard Mouse");
 
       // Test Gamepad profile translation for win32 with dynamic device indexing (e.g. deviceIndex = 1 -> XInput/1/Gamepad)
+      // Simulates no controller detected by the win32 SDL probe, so the translator
+      // falls back to its static XInput/<index>/Gamepad naming - this test isn't
+      // asserting on real hardware, which would make the result depend on whatever
+      // happens to be plugged into the machine running the test.
+      jest.spyOn(child_process, "spawnSync").mockReturnValue({ stdout: "" } as any);
+
       const translator = new DolphinTranslator();
       const svc = new ControlsService();
       const baseProfile = svc.getDefaultProfile();

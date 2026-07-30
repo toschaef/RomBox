@@ -19,9 +19,12 @@ static void print_json_string(const char* s) {
 
 int main(int argc, char** argv) {
   int listen = 0;
+  int wantIndex = 0;
   for (int i=1; i<argc; i++) {
     if (strcmp(argv[i], "--listen") == 0) listen = 1;
+    if (strcmp(argv[i], "--index") == 0 && i+1 < argc) wantIndex = atoi(argv[i+1]);
   }
+  if (wantIndex < 0) wantIndex = 0;
 
   if (!SDL_Init(SDL_INIT_GAMEPAD | SDL_INIT_JOYSTICK)) {
     printf("{\"ok\":false,\"error\":\"SDL_Init failed\"}\n");
@@ -32,15 +35,22 @@ int main(int argc, char** argv) {
   SDL_JoystickID* joysticks = SDL_GetJoysticks(&count);
   SDL_JoystickID chosen = 0;
 
+  // Enumerate only the joysticks SDL recognizes as gamepads, and pick the
+  // wantIndex-th one so each player slot maps to a distinct physical
+  // controller instead of every slot re-discovering the same first device.
+  int gamepadIdx = 0;
   for (int i=0; i<count; i++) {
     if (SDL_IsGamepad(joysticks[i])) {
-      chosen = joysticks[i];
-      break;
+      if (gamepadIdx == wantIndex) {
+        chosen = joysticks[i];
+        break;
+      }
+      gamepadIdx++;
     }
   }
 
   if (chosen == 0) {
-    printf("{\"ok\":false,\"error\":\"No game controller found\"}\n");
+    printf("{\"ok\":false,\"error\":\"No game controller found at index %d\"}\n", wantIndex);
     SDL_Quit();
     return 1;
   }
@@ -76,7 +86,7 @@ int main(int argc, char** argv) {
 
     printf("{\"ok\":true,\"guid\":\"%s\",\"name\":", guid_str);
     print_json_string(name);
-    printf(",\"port\":0,\"binds\":{");
+    printf(",\"port\":%d,\"binds\":{", wantIndex);
     int count = 0;
     SDL_GamepadBinding **bindings = SDL_GetGamepadBindings(gc, &count);
     int first = 1;

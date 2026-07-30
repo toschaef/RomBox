@@ -107,9 +107,15 @@ export class AresTranslator implements IEmulatorTranslator {
 
     const deviceID = ctx.learnedDevice ? buildGamepadDeviceID(ctx.learnedDevice) : null;
     const binds = ctx.learnedBinds as GamepadBinds | undefined;
+    // Which player slot the probed physical gamepad belongs to - not always
+    // player1 (e.g. keyboard-P1/gamepad-P2 setups). ctx.player/padPort are
+    // legacy single-player fields left at their defaults; this is the field
+    // AresConfigurator actually resolves per-profile.
+    const gamepadPlayerIndex = ctx.gamepadPlayerIndex ?? 0;
     log.info("Resolved gamepad device", {
       learnedDeviceGuid: ctx.learnedDevice,
       deviceID,
+      gamepadPlayerIndex,
       bindsKeyCount: binds ? Object.keys(binds).length : 0,
     });
 
@@ -117,10 +123,11 @@ export class AresTranslator implements IEmulatorTranslator {
       const p = players[i];
       if (!profile[p.key]) continue;
 
-      const updates = this.translateFromPlayer(profile[p.key]!, platform, i === 0 ? deviceID : null, i === 0 ? binds : undefined);
-      if (i === 0) {
+      const isGamepadPlayer = i === gamepadPlayerIndex;
+      const updates = this.translateFromPlayer(profile[p.key]!, platform, isGamepadPlayer ? deviceID : null, isGamepadPlayer ? binds : undefined);
+      if (isGamepadPlayer) {
         const gamepadKeys = Object.entries(updates).filter(([, v]) => deviceID && v.startsWith(deviceID));
-        log.info("player1 VirtualPad1 patches", {
+        log.info(`${p.key} ${p.section} patches`, {
           totalKeys: Object.keys(updates).length,
           gamepadKeys: gamepadKeys.map(([k]) => k),
         });
@@ -176,6 +183,16 @@ export class AresTranslator implements IEmulatorTranslator {
     set(k.rDown, getDirFromBinding(cDpad, "down") ?? getDirFromBinding(p1.look, "down"));
     set(k.rLeft, getDirFromBinding(cDpad, "left") ?? getDirFromBinding(p1.look, "left"));
     set(k.rRight, getDirFromBinding(cDpad, "right") ?? getDirFromBinding(p1.look, "right"));
+
+    // Explicitly clear (Ares' own "unbound" convention) any pad key this
+    // player doesn't have a binding for this round, rather than leaving it
+    // unwritten. BmlEditor.updateBml only patches keys it's told about, so an
+    // omitted key silently keeps whatever was on disk from a previous
+    // run/player/bug (e.g. a stale gamepad binding left over from before a
+    // player was reassigned to keyboard) and keeps firing forever.
+    for (const key of ARES.allPadKeys) {
+      if (!(key in updates)) updates[key] = ";;";
+    }
 
     return updates;
   }

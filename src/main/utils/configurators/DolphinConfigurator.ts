@@ -7,10 +7,10 @@ import { ControlsService } from "../../services/ControlsService";
 import type { Game } from "../../../shared/types";
 import { DolphinTranslator } from "../translators/DolphinTranslator";
 import type { EmulatorPatch, TranslateContext } from "../translators/ITranslator";
-import type { PlayerBindings } from "../../../shared/types/controls";
-import { DOLPHIN, detectDolphinPadDevice } from "../schema/dolphin";
+import { DOLPHIN, wiiPortSources } from "../schema/dolphin";
 import { SettingsService } from "../../services/SettingsService";
 import { getResolutionMultiplier } from "../../../shared/resolution";
+import { getPlayerControllerId } from "../../../shared/controls/controllerModels";
 
 
 function iniGetAll(text: string, section: string, key: string): string[] {
@@ -43,9 +43,11 @@ function ensureDirs(configDir: string) {
   fs.mkdirSync(path.join(configDir, "GameSettings"), { recursive: true });
 }
 
-function dolphinGameIdFromGame(game: Game): string | undefined {
-  return (game as Game & { dolphinGameId?: string }).dolphinGameId;
-}
+// NB: no per-game GameSettings/<id>.ini override is written. Dolphin resolves
+// those by the disc's 6-character game ID (GameConfigLoader.cpp's
+// GetGameIniFilenames), so a file named after RomBox's own internal game UUID
+// is never read by anything - port enablement has to live in Dolphin.ini.
+const PLAYER_BINDINGS_KEYS = ["player1", "player2", "player3", "player4"] as const;
 
 export class DolphinConfigurator extends BaseConfigurator {
   constructor(private game: Game) {
@@ -63,6 +65,10 @@ export class DolphinConfigurator extends BaseConfigurator {
     const resolution = settingsSvc.get("launch.resolution");
     const resScale = String(getResolutionMultiplier(resolution, "dolphin"));
 
+    const svc = new ControlsService();
+    const profile = svc.getDefaultProfile();
+    const layout = await svc.getEffectiveConsoleLayout(this.game.consoleId, profile.id);
+
     const iniUpdate: any = {
       Display: { RenderToMain: "False", Fullscreen: fs_flag },
       Interface: {
@@ -75,12 +81,39 @@ export class DolphinConfigurator extends BaseConfigurator {
       },
       General: { RecursiveISOPaths: "False" },
       Analytics: { PermissionAsked: "True" },
+      // NB: SIDevice0-3 belong in [Core], NOT [Controls] - verified against
+      // Dolphin's own Config/MainSettings.cpp:
+      //   Info<SIDevices>{{System::Main, "Core", "SIDevice0"}, ...}
+      // Writing them under [Controls] (as this used to) is silently ignored,
+      // leaving Dolphin's defaults in force: SIDevice0 = SIDEVICE_GC_CONTROLLER
+      // and SIDevice1-3 = SIDEVICE_NONE. That's exactly why player 1 appeared
+      // to work while players 2-4 never did - their ports were never enabled.
+      // Value 6 = SIDEVICE_GC_CONTROLLER, 0 = SIDEVICE_NONE (SI_Device.h enum).
       Core: { BackgroundInput: "True" },
-      Controls: { SIDevice0: "6" },
     };
 
-    if (this.game.consoleId === "wii") {
-      iniUpdate.Controls.WiimoteSource0 = "1";
+    // Every port is written explicitly (not just the enabled ones) so a port
+    // left on by an earlier session - or by Dolphin's own GUI - doesn't stay
+    // on forever: Dolphin.ini is patched, not rewritten, so an untouched key
+    // keeps its last value.
+    const siDevices: string[] = [];
+    const wiimoteSources: string[] = [];
+
+    for (let idx = 0; idx < PLAYER_BINDINGS_KEYS.length; idx++) {
+      const playerKey = PLAYER_BINDINGS_KEYS[idx];
+      // Player 1 always exists; 2-4 only if actually configured.
+      const playerExists = idx === 0 || !!layout[playerKey];
+
+      if (this.game.consoleId === "wii") {
+        const { siDevice, wiimoteSource } = wiiPortSources(playerExists, getPlayerControllerId(layout, playerKey));
+        siDevices.push(siDevice);
+        wiimoteSources.push(wiimoteSource);
+      } else {
+        siDevices.push(playerExists ? "6" : "0");
+        wiimoteSources.push("0");
+      }
+
+      iniUpdate.Core[`SIDevice${idx}`] = siDevices[idx];
     }
 
     IniEditor.updateIni(dolphinIni, iniUpdate);
@@ -90,28 +123,6 @@ export class DolphinConfigurator extends BaseConfigurator {
       Settings: { InternalResolution: resScale },
     });
 
-    const svc = new ControlsService();
-    const profile = svc.getDefaultProfile();
-    const layout = await svc.getEffectiveConsoleLayout(this.game.consoleId, profile.id);
-    const bindings: PlayerBindings = layout.player1;
-
-    if (this.game.consoleId === "wii") {
-      const wiiNewPath = DOLPHIN.wiimoteNewPath(configDir);
-      let extension = "Classic";
-      let sideways = "False";
-      if (layout.controllerId === "wiimote_nunchuk") extension = "Nunchuk";
-      if (layout.controllerId === "wiimote" || layout.controllerId === "wiimote_sideways") extension = "None";
-      if (layout.controllerId === "wiimote_sideways") sideways = "True";
-
-      IniEditor.updateIni(wiiNewPath, {
-        Wiimote1: {
-          Extension: extension,
-          "Options/Sideways Wiimote": sideways,
-        },
-      });
-    }
-
-    const detected = detectDolphinPadDevice(configDir);
     const effectiveProfile = {
       ...profile,
       preferredControllerId: profile.preferredControllerId,
@@ -128,12 +139,33 @@ export class DolphinConfigurator extends BaseConfigurator {
       padPort: 1,
       configDir,
       controllerId: layout.controllerId,
+      player2ControllerId: layout.player2ControllerId,
+      player3ControllerId: layout.player3ControllerId,
+      player4ControllerId: layout.player4ControllerId,
     };
 
     const translator = new DolphinTranslator();
     const patches = translator.translate(effectiveProfile, ctx);
 
     this.applyPatches(patches);
+
+    if (this.game.consoleId === "wii") {
+      // Wiimote enablement lives in WiimoteNew.ini as [WiimoteN] Source - NOT
+      // as Dolphin.ini [Controls] WiimoteSourceN, which is what this used to
+      // write and which Dolphin silently ignores. Verified against Dolphin's
+      // Config/WiimoteSettings.cpp:
+      //   Info<WiimoteSource>{{System::WiiPad, "Wiimote1", "Source"}, ...}
+      // with System::WiiPad -> WiimoteNew.ini (CommonPaths.h WIIPAD_CONFIG).
+      // Defaults are Wiimote1 = Emulated, Wiimote2-4 = None, which is why
+      // player 1 worked by luck while players 2-4 were never enabled at all.
+      // Values: 0 = None, 1 = Emulated, 2 = Real (HW/Wiimote.h WiimoteSource).
+      const wiiNewPath = DOLPHIN.wiimoteNewPath(configDir);
+      const wiimoteSourceUpdate: Record<string, Record<string, string>> = {};
+      for (let idx = 0; idx < wiimoteSources.length; idx++) {
+        wiimoteSourceUpdate[`Wiimote${idx + 1}`] = { Source: wiimoteSources[idx] };
+      }
+      IniEditor.updateIni(wiiNewPath, wiimoteSourceUpdate);
+    }
 
     if (this.game.consoleId === "wii") {
       try {

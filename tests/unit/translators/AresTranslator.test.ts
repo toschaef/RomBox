@@ -77,10 +77,12 @@ describe("AresTranslator", () => {
       }
     };
     const translator = new AresTranslator();
-    // No deviceID (as if no controller was probed) - gamepad bindings should be omitted entirely,
-    // never written with a guessed/fallback device id (ares would show it as "(disconnected)").
+    // No deviceID (as if no controller was probed) - gamepad bindings should be
+    // explicitly cleared (";;", Ares' unbound convention), never written with a
+    // guessed/fallback device id (ares would show it as "(disconnected)"), and
+    // never just left as whatever was previously on disk.
     const resultNoDevice = translator.translateFromPlayer(specialProfile.player1);
-    expect(resultNoDevice["R-Up"]).toBeUndefined();
+    expect(resultNoDevice["R-Up"]).toBe(";;");
 
     const result = translator.translateFromPlayer(specialProfile.player1, "darwin", "0xdeadbeef");
     // Right stick Up: groupID=0 (Axis), right stick base index 2 + vertical(1) = 3, up = "Lo"
@@ -165,9 +167,62 @@ describe("AresTranslator", () => {
     expect(resultOtherDevice["A..South"]).toBe("0x54c0ce6/3/0;;");
     expect(resultOtherDevice["L-Up"]).toBe("0x54c0ce6/0/1/Lo;;");
 
-    // No binds entry for a button -> omitted, not guessed.
+    // No binds entry for a button -> cleared (";;"), not guessed.
     const resultNoBinds = translator.translateFromPlayer(gamepadProfile.player1, "darwin", "0xdeadbeef");
-    expect(resultNoBinds["A..South"]).toBeUndefined();
+    expect(resultNoBinds["A..South"]).toBe(";;");
+  });
+
+  it("should route the probed gamepad to whichever player it's actually bound to, not always player1", () => {
+    // Regression: translate() used to hardcode `i === 0` when deciding which
+    // player slot gets the probed device/binds, so a keyboard-P1/gamepad-P2
+    // setup ended up with P2's gamepad bindings silently dropped (falling back
+    // to whatever was already on disk for VirtualPad2 - often a stale copy of
+    // P1's keyboard bindings).
+    const mixedProfile: ControlsProfile = {
+      ...profile,
+      player1: {
+        ...profile.player1,
+        face: { type: "face", primary: { type: "key", code: "KeyU" }, secondary: { type: "key", code: "KeyI" } },
+      },
+      player2: {
+        ...profile.player1,
+        face: {
+          type: "face",
+          primary: { type: "gp_button", token: "GP_A" },
+          secondary: { type: "gp_button", token: "GP_B" },
+        },
+        shoulders: {
+          type: "shoulders",
+          bumperL: { type: "gp_button", token: "GP_L1" },
+        },
+      },
+    };
+
+    const translator = new AresTranslator();
+    const binds = {
+      GP_A: { kind: "button" as const, button: 0 },
+      GP_B: { kind: "button" as const, button: 1 },
+      GP_L1: { kind: "button" as const, button: 9 },
+    };
+
+    const patches = translator.translate(mixedProfile, {
+      platform: "darwin",
+      configDir: "/tmp",
+      gamepadPlayerIndex: 1,
+      learnedDevice: "030057564c050000e60c000000016800",
+      learnedBinds: binds,
+    });
+
+    const vp1 = patches.filter((p) => p.kind === "ini-set" && p.section === "VirtualPad1") as Extract<typeof patches[number], { kind: "ini-set" }>[];
+    const vp2 = patches.filter((p) => p.kind === "ini-set" && p.section === "VirtualPad2") as Extract<typeof patches[number], { kind: "ini-set" }>[];
+
+    // Player1 (keyboard) must not pick up the gamepad device at all.
+    expect(vp1.find((p) => p.key === "A..South")?.value).toBe("0x1/0/60;;");
+    expect(vp1.some((p) => p.value.startsWith("0x1054c0ce6"))).toBe(false);
+
+    // Player2 (gamepad) gets the real probed device/button indices.
+    expect(vp2.find((p) => p.key === "A..South")?.value).toBe("0x1054c0ce6/3/0;;");
+    expect(vp2.find((p) => p.key === "L-Bumper")?.value).toBe("0x1054c0ce6/3/9;;");
   });
 
   it("should translate bindings for win32 platform via AresTranslator correctly", () => {

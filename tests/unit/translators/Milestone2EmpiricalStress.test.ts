@@ -8,7 +8,7 @@ import { PCSX2Translator } from "../../../src/main/utils/translators/PCSX2Transl
 import { MelonDSTranslator } from "../../../src/main/utils/translators/MelonDSTranslator";
 import { MesenTranslator } from "../../../src/main/utils/translators/MesenTranslator";
 import { getSDLDeviceIndex, parseSDLDeviceIndex } from "../../../src/main/utils/schema/duckstation";
-import { detectDolphinPadDevice, getPlatformGamepadDevice, DOLPHIN } from "../../../src/main/utils/schema/dolphin";
+import { getPlatformGamepadDevice, DOLPHIN } from "../../../src/main/utils/schema/dolphin";
 import { createDefaultProfileShape } from "../../../src/shared/controls/layoutDefaults";
 import type { ControlsProfile, DigitalBinding, PlayerBindings } from "../../../src/shared/types/controls";
 import type { TranslateContext } from "../../../src/main/utils/translators/ITranslator";
@@ -336,11 +336,17 @@ describe("Milestone 2 Empirical Stress Tests", () => {
       }
     });
 
-    it("should use detectDolphinPadDevice when existing GCPadNew.ini has a non-keyboard device", () => {
+    it("never consults a cached Device= on disk - always the live probe result, even when the probe finds nothing", () => {
+      // A user iterating on their bindings relaunches the game repeatedly
+      // while changing controls. Caching a "last known good" device here
+      // would mean some of those relaunches keep silently using stale state
+      // instead of whatever's actually true right now - so this is checked
+      // even in the "probe found nothing" case, where it would have been
+      // tempting to fall back to whatever's cached on disk.
       const gcPadPath = DOLPHIN.gcPadNewPath(tmpDir);
       fs.writeFileSync(
         gcPadPath,
-        `[GCPad1]\nDevice = WGUS/0/Wireless Controller\nButtons/A = \`Button A\`\n`
+        `[GCPad1]\nDevice = WGUS/0/Stale Cached Controller\nButtons/A = \`Button A\`\n`
       );
 
       const gpProfile = createBaseProfile({
@@ -359,10 +365,13 @@ describe("Milestone 2 Empirical Stress Tests", () => {
       const translator = new DolphinTranslator();
       const ctx: TranslateContext = { configDir: tmpDir, platform: "darwin" };
 
+      // beforeEach mocks spawnSync to return empty stdout, so the live probe
+      // finds nothing and falls back to its generic index-based guess.
       const patches = translator.translate(gpProfile, ctx);
       const devPatch = patches.find((p) => p.kind === "ini-set" && p.section === "GCPad1" && p.key === "Device");
       if (devPatch && devPatch.kind === "ini-set") {
-        expect(devPatch.value).toBe("WGUS/0/Wireless Controller");
+        expect(devPatch.value).toBe("SDL/0/Gamepad");
+        expect(devPatch.value).not.toBe("WGUS/0/Stale Cached Controller");
       }
     });
 
@@ -399,22 +408,6 @@ describe("Milestone 2 Empirical Stress Tests", () => {
       }
     });
 
-    it("should write game INI patch when ctx.gameId is provided", () => {
-      const profile = createBaseProfile();
-      const translator = new DolphinTranslator();
-      const ctx: TranslateContext = { configDir: tmpDir, platform: "darwin", gameId: "GALE01" };
-
-      const patches = translator.translate(profile, ctx);
-      const gamePatch = patches.find((p) => p.absPath?.includes("GALE01.ini"));
-      expect(gamePatch).toBeDefined();
-      expect(gamePatch).toEqual({
-        kind: "ini-set",
-        absPath: path.join(tmpDir, "GameSettings", "GALE01.ini"),
-        section: "Controls",
-        key: "PadType0",
-        value: "6",
-      });
-    });
   });
 
   // =========================================================================

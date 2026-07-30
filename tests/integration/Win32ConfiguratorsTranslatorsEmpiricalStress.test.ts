@@ -9,6 +9,7 @@ jest.mock("os", () => {
 
 import path from "path";
 import fs from "fs";
+import child_process from "child_process";
 import { initDB } from "../../src/main/data/db";
 import { DolphinConfigurator } from "../../src/main/utils/configurators/DolphinConfigurator";
 import { MesenConfigurator } from "../../src/main/utils/configurators/MesenConfigurator";
@@ -112,6 +113,11 @@ describe("M3 Integration Stress Test - Win32 Configurators & Translators for All
     });
 
     it("should translate Dolphin gamepad profile with varying XInput device indices (0, 1, 3)", async () => {
+      // Simulates no controller detected by the win32 SDL probe, so the translator
+      // falls back to its static XInput/<index>/Gamepad naming - otherwise this
+      // would depend on whatever's actually plugged into the test machine.
+      jest.spyOn(child_process, "spawnSync").mockReturnValue({ stdout: "" } as any);
+
       const translator = new DolphinTranslator();
       const svc = new ControlsService();
       const baseProfile = svc.getDefaultProfile();
