@@ -7,8 +7,8 @@ describe('resolution utility', () => {
   });
 
   it('should return 1 for engines with no native height config', () => {
-    // RMG is not in NATIVE_HEIGHTS
-    expect(getResolutionMultiplier(1080, 'rmg')).toBe(1);
+    // Ares is not in NATIVE_HEIGHTS
+    expect(getResolutionMultiplier(1080, 'ares')).toBe(1);
   });
 
   it('should compute the correct multiplier for supported engines', () => {

@@ -36,8 +36,6 @@ function getSaveExtensions(engineId: EngineID): string[] {
       return [".sav"];
     case "ares":
       return [".sav", ".srm"];
-    case "rmg":
-      return [".sav", ".eep", ".sra", ".fla"];
     case "duckstation":
       return [".mcd", ".mcr"];
     case "pcsx2":

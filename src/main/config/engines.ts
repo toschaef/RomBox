@@ -4,7 +4,6 @@ import fs from "fs";
 import path from "path";
 
 export const MESEN_VERSION = '2.1.1';
-export const RMG_VERSION = '0.6.5';
 export const ARES_VERSION = '146';
 export const MELON_VERSION = '1.1';
 export const AZAHAR_VERSION = '2123.3';
@@ -122,21 +121,6 @@ export const ENGINES: Record<string, EngineDefinition> = {
       args.push(game.filePath);
       return args;
     },
-  },
-
-  rmg: {
-    engineId: "rmg",
-    name: "RMG",
-    consoles: ["n64"],
-    downloads: {
-      win32: `https://github.com/Rosalie241/RMG/releases/download/v${RMG_VERSION}/RMG-Portable-Windows64-v${RMG_VERSION}.zip`,
-      linux: `https://github.com/Rosalie241/RMG/releases/download/v${RMG_VERSION}/RMG-Portable-Linux64-v${RMG_VERSION}.AppImage`,
-    },
-    binaries: {
-      win32: "RMG.exe",
-      linux: `RMG-Portable-Linux64-v${RMG_VERSION}.AppImage`,
-    },
-    getLaunchCommand: (game, binPath) => [binPath, "--nogui", game.filePath],
   },
 
   duckstation: {

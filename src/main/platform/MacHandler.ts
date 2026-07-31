@@ -206,8 +206,6 @@ export class MacHandler implements PlatformHandler {
         return path.join(home, "Library", "Application Support", "Azahar", "sdmc");
       case "ares":
         return path.join(home, "Library", "Application Support", "ares", "Saves");
-      case "rmg":
-        return path.join(home, "Library", "Application Support", "RMG", "Save");
       case "duckstation":
         return path.join(home, "Library", "Application Support", "DuckStation", "memcards");
       case "pcsx2":

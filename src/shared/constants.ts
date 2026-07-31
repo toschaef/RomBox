@@ -48,7 +48,6 @@ export const getEngineIdFromConsoleId = (id: ConsoleID) => CONSOLEID_ENGINEID_MA
 export const ENGINEID_CONSOLEID_MAP: Record<EngineID, ConsoleID> = {
   'mesen': 'nes',
   'ares': 'n64',
-  'rmg': 'n64',
   'melonds': 'ds',
   'azahar': '3ds',
   'dolphin': 'gc',

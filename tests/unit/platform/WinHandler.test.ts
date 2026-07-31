@@ -203,13 +203,6 @@ describe("WinHandler", () => {
       );
     });
 
-    it("should return correct path for rmg", () => {
-      const game = { engineId: "rmg" } as Game;
-      expect(handler.getSavePath(game)).toBe(
-        path.join("C:\\Users\\TestUser", "AppData", "Local", "RMG", "Save")
-      );
-    });
-
     it("should return correct path for duckstation", () => {
       const game = { engineId: "duckstation" } as Game;
       expect(handler.getSavePath(game)).toBe(

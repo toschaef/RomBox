@@ -122,44 +122,25 @@ describe("M3 Empirical Stress Test - WinHandler Edge Cases", () => {
   });
 
   describe("3. Engine ID Validation and Unsupported Engine Handling", () => {
-    const invalidEngines = ["rmg", "invalid_engine", "", "unknown", "null"] as EngineID[];
+    const invalidEngines = ["invalid_engine", "", "unknown", "null"] as unknown as EngineID[];
 
     invalidEngines.forEach((engineId) => {
-      if (engineId === "rmg") {
-        it(`should throw error for rmg in getEmulatorConfigPath`, () => {
-          expect(() => handler.getEmulatorConfigPath(engineId)).toThrow(`[Win] Emulator config path not found for: rmg`);
-        });
+      it(`should throw error for invalid engine ID '${engineId}' in getEmulatorConfigPath`, () => {
+        expect(() => handler.getEmulatorConfigPath(engineId)).toThrow(`[Win] Emulator config path not found for: ${engineId}`);
+      });
 
-        it(`should throw error for rmg in getEmulatorBasePath`, () => {
-          expect(() => handler.getEmulatorBasePath(engineId)).toThrow(`[Win] Emulator base path not found for: rmg`);
-        });
+      it(`should throw error for invalid engine ID '${engineId}' in getEmulatorBasePath`, () => {
+        expect(() => handler.getEmulatorBasePath(engineId)).toThrow(`[Win] Emulator base path not found for: ${engineId}`);
+      });
 
-        it(`should throw error for rmg in getBiosDir`, () => {
-          expect(() => handler.getBiosDir(engineId)).toThrow(`[Win] BIOS dir not found for: rmg`);
-        });
+      it(`should throw error for invalid engine ID '${engineId}' in getBiosDir`, () => {
+        expect(() => handler.getBiosDir(engineId)).toThrow(`[Win] BIOS dir not found for: ${engineId}`);
+      });
 
-        it(`should return path for rmg in getSavePath`, () => {
-          const game = { engineId } as Game;
-          expect(handler.getSavePath(game)).toContain("RMG");
-        });
-      } else {
-        it(`should throw error for invalid engine ID '${engineId}' in getEmulatorConfigPath`, () => {
-          expect(() => handler.getEmulatorConfigPath(engineId)).toThrow(`[Win] Emulator config path not found for: ${engineId}`);
-        });
-
-        it(`should throw error for invalid engine ID '${engineId}' in getEmulatorBasePath`, () => {
-          expect(() => handler.getEmulatorBasePath(engineId)).toThrow(`[Win] Emulator base path not found for: ${engineId}`);
-        });
-
-        it(`should throw error for invalid engine ID '${engineId}' in getBiosDir`, () => {
-          expect(() => handler.getBiosDir(engineId)).toThrow(`[Win] BIOS dir not found for: ${engineId}`);
-        });
-
-        it(`should throw error for invalid engine ID '${engineId}' in getSavePath`, () => {
-          const game = { engineId } as Game;
-          expect(() => handler.getSavePath(game)).toThrow(`[SaveService] Unknown engine: ${engineId}`);
-        });
-      }
+      it(`should throw error for invalid engine ID '${engineId}' in getSavePath`, () => {
+        const game = { engineId } as Game;
+        expect(() => handler.getSavePath(game)).toThrow(`[SaveService] Unknown engine: ${engineId}`);
+      });
     });
   });
 

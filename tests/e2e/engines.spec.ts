@@ -67,7 +67,6 @@ test.describe('RomBox Engines E2E Suite', () => {
       'Azahar',
       'Dolphin',
       'Ares',
-      'RMG',
       'DuckStation',
       'PCSX2'
     ];

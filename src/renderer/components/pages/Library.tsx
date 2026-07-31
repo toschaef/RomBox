@@ -17,7 +17,6 @@ import ImportButton from '../library/ImportButton';
 const ENGINE_DISPLAY_NAMES: Record<EngineID, string> = {
   'mesen': 'Mesen',
   'ares': 'Ares',
-  'rmg': 'RMG',
   'melonds': 'MelonDS',
   'azahar': 'Azahar',
   'dolphin': 'Dolphin',

@@ -152,8 +152,6 @@ export class WinHandler implements PlatformHandler {
         return path.join(appData, "Azahar", "sdmc");
       case "ares":
         return path.join(localAppData, "ares", "Saves");
-      case "rmg":
-        return path.join(localAppData, "RMG", "Save"); // RMG is generally portable but maybe it uses AppData if not
       case "duckstation":
         return path.join(docs, "DuckStation", "memcards");
       case "pcsx2":

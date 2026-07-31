@@ -50,7 +50,6 @@ const PRIMARY_CONSOLE_FOR_EMULATOR: Record<EngineID, ConsoleID> = {
   azahar: "3ds",
   melonds: "ds",
   ares: "n64",
-  rmg: "n64",
   mesen: "snes",
   duckstation: "ps1",
   pcsx2: "ps2",
@@ -125,7 +124,7 @@ export default function Engines() {
   const rows = useMemo<EmulatorRow[]>(() => {
     const list = engines ?? [];
 
-    const PREFERRED_ORDER: EngineID[] = ["dolphin", "azahar", "melonds", "ares", "rmg", "mesen"];
+    const PREFERRED_ORDER: EngineID[] = ["dolphin", "azahar", "melonds", "ares", "mesen"];
     const orderIndex = new Map<EngineID, number>(PREFERRED_ORDER.map((id, i) => [id, i]));
 
     return list
