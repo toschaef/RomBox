@@ -68,7 +68,7 @@ describe("WinHandler", () => {
 
     it("should return correct path for mesen", () => {
       expect(handler.getEmulatorConfigPath("mesen")).toBe(
-        path.join("C:\\Users\\TestUser", "AppData", "Roaming", "Mesen2")
+        path.join("C:\\Users\\TestUser", "Documents", "Mesen2")
       );
     });
 
@@ -118,7 +118,7 @@ describe("WinHandler", () => {
 
     it("should return correct base path for mesen", () => {
       expect(handler.getEmulatorBasePath("mesen")).toBe(
-        path.join("C:\\Users\\TestUser", "AppData", "Roaming", "Mesen2")
+        path.join("C:\\Users\\TestUser", "Documents", "Mesen2")
       );
     });
 
@@ -163,10 +163,10 @@ describe("WinHandler", () => {
     it("should return correct save path for mesen", () => {
       const game = { engineId: "mesen", filePath: "C:/roms/game.nes" } as Game;
       expect(handler.getSavePath(game)).toBe(
-        path.join("C:\\Users\\TestUser", "AppData", "Roaming", "Mesen2", "Saves")
+        path.join("C:\\Users\\TestUser", "Documents", "Mesen2", "Saves")
       );
       expect(handler.getSaveDir(game)).toBe(
-        path.join("C:\\Users\\TestUser", "AppData", "Roaming", "Mesen2", "Saves")
+        path.join("C:\\Users\\TestUser", "Documents", "Mesen2", "Saves")
       );
     });
 

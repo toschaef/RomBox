@@ -88,8 +88,8 @@ describe("M3 Empirical Stress Test - WinHandler Edge Cases", () => {
       process.env.APPDATA = "C:\\Users\\José & María\\App Data (Roaming)";
       process.env.LOCALAPPDATA = "C:\\Users\\José & María\\App Data (Local)";
 
-      expect(handler.getEmulatorConfigPath("mesen")).toBe(
-        path.join("C:\\Users\\José & María\\App Data (Roaming)", "Mesen2")
+      expect(handler.getEmulatorConfigPath("azahar")).toBe(
+        path.join("C:\\Users\\José & María\\App Data (Roaming)", "Azahar", "config")
       );
       expect(handler.getEmulatorConfigPath("melonds")).toBe(
         path.join("C:\\Users\\José & María\\App Data (Local)", "melonDS")
@@ -207,7 +207,7 @@ describe("M3 Empirical Stress Test - WinHandler Edge Cases", () => {
   });
 
   describe("5. clearPlatformData and File Operations Resilience", () => {
-    it("should clean all 8 default Windows emulator configuration paths if they exist", async () => {
+    it("should clean all 9 default Windows emulator configuration paths if they exist", async () => {
       process.env.APPDATA = "C:\\AppData\\Roaming";
       process.env.LOCALAPPDATA = "C:\\AppData\\Local";
       process.env.USERPROFILE = "C:\\Users\\Test";
@@ -216,7 +216,11 @@ describe("M3 Empirical Stress Test - WinHandler Edge Cases", () => {
 
       await handler.clearPlatformData();
 
-      expect(fs.promises.rm).toHaveBeenCalledTimes(8);
+      expect(fs.promises.rm).toHaveBeenCalledTimes(9);
+      expect(fs.promises.rm).toHaveBeenCalledWith(
+        path.join("C:\\Users\\Test", "Documents", "Mesen2"),
+        { recursive: true, force: true }
+      );
       expect(fs.promises.rm).toHaveBeenCalledWith(
         path.join("C:\\AppData\\Roaming", "Mesen2"),
         { recursive: true, force: true }

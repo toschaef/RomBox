@@ -2,6 +2,8 @@ import { ControlsService } from "../../../src/main/services/ControlsService";
 import { initDB, getDB } from "../../../src/main/data/db";
 import { createDefaultProfileShape } from "../../../src/shared/controls/layoutDefaults";
 import { movePlayerSlot, reorderConsoleLayoutPlayers } from "../../../src/renderer/controls/reorderPlayers";
+import { setConsoleDigital, clearConsoleDigital } from "../../../src/renderer/controls/consolePath";
+import type { PlayerBindings } from "../../../src/shared/types/controls";
 
 describe("ControlsService", () => {
   let service: ControlsService;
@@ -141,6 +143,72 @@ describe("ControlsService", () => {
 
     expect(updated.controllerId).toBe("classic");
     expect(updated.player2ControllerId).toBe("wiimote_sideways");
+  });
+
+  it("keeps a player's inherited bindings when they get their first per-console override", async () => {
+    // Regression: binding a single console-specific control for player 2 (the
+    // Wii page is full of them - Wiimote A/B/1/2, Nunchuk C/Z) used to wipe
+    // every other binding that player had. The renderer builds the override by
+    // writing into an empty object (consolePath.setConsoleDigital), and the
+    // moment `layout.player2` existed at all, getEffectiveConsoleLayout stopped
+    // falling back to the standard profile - so player 2 launched with one
+    // binding and nothing else, i.e. a dead controller.
+    const profile = service.getDefaultProfile();
+    service.saveProfile({ ...profile, player2: profile.player1 });
+
+    const raw = service.getConsoleLayout("wii", profile.id);
+    const partialPlayer2 = setConsoleDigital(
+      raw as never,
+      "player2",
+      "special.wiimoteA",
+      { type: "key", code: "KeyM" }
+    ).player2 as PlayerBindings;
+
+    // What the UI sends up: only the control that was just bound.
+    expect(Object.keys(partialPlayer2)).toEqual(["special"]);
+
+    service.saveConsoleLayout({
+      consoleId: "wii",
+      profileId: profile.id,
+      player1: raw.player1,
+      player2: partialPlayer2,
+    });
+
+    const effective = await service.getEffectiveConsoleLayout("wii", profile.id);
+    expect(effective.player2?.face?.primary).toEqual(profile.player1.face.primary);
+    expect(effective.player2?.move).toEqual(profile.player1.move);
+    expect(effective.player2?.system?.start).toEqual(profile.player1.system.start);
+    // ...and the newly bound control is still applied on top.
+    expect(effective.player2?.special).toMatchObject({ wiimoteA: { type: "key", code: "KeyM" } });
+  });
+
+  it("lets a later save clear a single binding once the player has an override", async () => {
+    // The flip side of the seeding above: seeding must only happen the first
+    // time a player's override is created, otherwise clearing a binding on the
+    // console page would just resurrect it from the standard profile.
+    const profile = service.getDefaultProfile();
+    service.saveProfile({ ...profile, player2: profile.player1 });
+
+    service.saveConsoleLayout({
+      consoleId: "wii",
+      profileId: profile.id,
+      player1: profile.player1,
+      player2: { ...profile.player1, special: { type: "wii", wiimoteA: { type: "key", code: "KeyM" } } },
+    });
+
+    const stored = service.getConsoleLayout("wii", profile.id);
+    const cleared = clearConsoleDigital(stored as never, "player2", "face.primary");
+
+    service.saveConsoleLayout({
+      consoleId: "wii",
+      profileId: profile.id,
+      player1: stored.player1,
+      player2: cleared.player2 as PlayerBindings,
+    });
+
+    const effective = await service.getEffectiveConsoleLayout("wii", profile.id);
+    expect(effective.player2?.face?.primary).toBeUndefined();
+    expect(effective.player2?.face?.secondary).toEqual(profile.player1.face.secondary);
   });
 
   it("propagates a player1/player2 swap (drag-reorder in Console mode) all the way through to launch", async () => {

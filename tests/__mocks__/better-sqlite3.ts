@@ -208,7 +208,13 @@ class MockDatabase {
           const prop = expr.substring(1);
           val = params[0] ? (params[0] as Record<string, unknown>)[prop] : undefined;
         } else {
-          if (expr.startsWith("'") && expr.endsWith("'")) {
+          if (expr.toUpperCase() === 'NULL') {
+            // Real SQLite stores a NULL here; without this the literal string
+            // "NULL" gets stored instead, which is truthy and silently defeats
+            // any `?? default` / `|| undefined` handling the code under test
+            // relies on for unset columns.
+            val = null;
+          } else if (expr.startsWith("'") && expr.endsWith("'")) {
             val = expr.slice(1, -1);
           } else if (expr.startsWith('"') && expr.endsWith('"')) {
             val = expr.slice(1, -1);
@@ -218,7 +224,7 @@ class MockDatabase {
             val = expr;
           }
         }
-        
+
         row[col] = val;
       }
       
@@ -292,7 +298,9 @@ class MockDatabase {
               const prop = expr.substring(1);
               val = params[0] ? (params[0] as Record<string, unknown>)[prop] : undefined;
             } else {
-              if (expr.startsWith("'") && expr.endsWith("'")) {
+              if (expr.toUpperCase() === 'NULL') {
+                val = null; // see note in the INSERT path above
+              } else if (expr.startsWith("'") && expr.endsWith("'")) {
                 val = expr.slice(1, -1);
               } else if (!isNaN(Number(expr))) {
                 val = Number(expr);

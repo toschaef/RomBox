@@ -113,16 +113,19 @@ describe("Configurator and Translator Pairs Integration Tests", () => {
       const dolphinIniPath = path.join(configDir, "Dolphin.ini");
       expect(fs.existsSync(dolphinIniPath)).toBe(true);
 
-      // Verify written WiimoteNew.ini (Wii controls with Classic extension).
-      // Wiimote enablement is [Wiimote1] Source here (1 = Emulated) - Dolphin
-      // does not read Dolphin.ini's [Controls] WiimoteSource0.
+      // Verify written WiimoteNew.ini. Wiimote enablement is [Wiimote1] Source
+      // here (1 = Emulated) - Dolphin does not read Dolphin.ini's [Controls]
+      // WiimoteSource0. With no controller model picked, the default is the
+      // console's first supported model (a plain Wii Remote, matching the
+      // Controls page), so the Wii Remote's own buttons get bound rather than
+      // Classic/* keys that an unextended Wiimote never reads.
       const wiimoteNewPath = path.join(configDir, "WiimoteNew.ini");
       expect(fs.existsSync(wiimoteNewPath)).toBe(true);
       const wiiText = fs.readFileSync(wiimoteNewPath, "utf-8");
       expect(wiiText).toMatch(/\[Wiimote1\][\s\S]*?Source = 1/);
-      expect(wiiText).toContain("Extension = Classic");
-      expect(wiiText).toContain("Classic/Buttons/A = U");
-      expect(wiiText).toContain("Classic/Buttons/+ = T");
+      expect(wiiText).toContain("Extension = None");
+      expect(wiiText).toContain("Buttons/A = U");
+      expect(wiiText).toContain("Buttons/+ = T");
     });
 
     it("should configure MesenConfigurator (NES) and MesenTranslator correctly", async () => {

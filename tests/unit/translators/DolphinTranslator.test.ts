@@ -71,6 +71,7 @@ describe("DolphinTranslator", () => {
       platform: "darwin",
       configDir: "/mock/config/dir",
       consoleId: "wii",
+      controllerId: "classic",
     };
     const translator = new DolphinTranslator();
     const result = translator.translate(profile, wiiContext);
@@ -89,6 +90,77 @@ describe("DolphinTranslator", () => {
     if (buttonPlus && buttonPlus.kind === "ini-set") {
       expect(buttonPlus.value).toBe("T");
     }
+  });
+
+  it("binds the Wii Remote's own buttons (not inert Classic/* keys) when no controller model is picked", () => {
+    // Regression: an unset controller model defaulted to the Classic extension
+    // here while the Controls page displayed "Wii Remote (Vertical)". Every
+    // binding went to Classic/* keys, which an emulated Wii Remote with no
+    // Classic extension attached never reads - so the controller did nothing
+    // on Wii, and what did get configured looked like a Classic/GameCube pad
+    // no matter what the UI showed.
+    const wiiContext: TranslateContext = {
+      platform: "darwin",
+      configDir: "/mock/config/dir",
+      consoleId: "wii",
+      // controllerId deliberately unset - must resolve to the console's first
+      // supported model, matching what the Controls page shows.
+    };
+    const translator = new DolphinTranslator();
+    const result = translator.translate(profile, wiiContext);
+
+    const get = (key: string) => {
+      const p = result.find(x => x.kind === "ini-set" && x.section === "Wiimote1" && x.key === key);
+      return p && p.kind === "ini-set" ? p.value : undefined;
+    };
+
+    expect(get("Extension")).toBe("None");
+    expect(get("Buttons/A")).toBe("U");   // face.primary
+    expect(get("Buttons/B")).toBe("I");   // face.secondary
+    expect(get("Buttons/+")).toBe("T");   // system.start
+    expect(get("D-Pad/Up")).toBe("3");    // dpad.up
+    // Classic/* keys are meaningless without the extension attached.
+    expect(result.find(p => p.kind === "ini-set" && p.key === "Classic/Buttons/A")).toBeUndefined();
+  });
+
+  it("binds the Nunchuk's analog stick and buttons in Wii Remote + Nunchuk mode", () => {
+    const wiiContext: TranslateContext = {
+      platform: "darwin",
+      configDir: "/mock/config/dir",
+      consoleId: "wii",
+      controllerId: "wiimote_nunchuk",
+    };
+    // ControlsService seeds the console-specific `special` group before the
+    // translator ever sees a layout; a raw profile has none, so supply it here.
+    const nunchukProfile: ControlsProfile = {
+      ...profile,
+      player1: {
+        ...profile.player1,
+        special: {
+          type: "wii",
+          nunchuckC: { type: "key", code: "Equal" },
+          nunchuckZ: { type: "key", code: "Minus" },
+        },
+      },
+    };
+
+    const translator = new DolphinTranslator();
+    const result = translator.translate(nunchukProfile, wiiContext);
+
+    const get = (key: string) => {
+      const p = result.find(x => x.kind === "ini-set" && x.section === "Wiimote1" && x.key === key);
+      return p && p.kind === "ini-set" ? p.value : undefined;
+    };
+
+    expect(get("Extension")).toBe("Nunchuk");
+    // Movement lives on the Nunchuk's stick in this mode - previously unbound
+    // entirely, so Nunchuk players couldn't move.
+    expect(get("Nunchuk/Stick/Up")).toBe("W");
+    expect(get("Nunchuk/Stick/Left")).toBe("A");
+    // "Equal"/"Minus" are the real DOM codes; the old "Key="/"Key-" fell
+    // through the keycode mapper unmapped.
+    expect(get("Nunchuk/Buttons/C")).toBe("=");
+    expect(get("Nunchuk/Buttons/Z")).toBe("-");
   });
 
   it("Mario Kart Wii scenario: P1 on Classic Controller, P2 on Wii Remote + Nunchuk get independent Wiimote extensions", () => {
@@ -337,6 +409,30 @@ describe("DolphinTranslator", () => {
     if (devicePatch && devicePatch.kind === "ini-set") {
       expect(devicePatch.value).toBe("SDL/0/Controller");
     }
+  });
+
+  it("still configures every other player when one player's bindings are incomplete", () => {
+    // Regression: `profile[playerKey]?.face.primary` stops its optional chain at
+    // the player, not the group, so a player carrying only a partial binding set
+    // threw a TypeError out of translate(). LaunchService swallows configure()
+    // errors as a warning, so the game still launched - with GCPadNew.ini and
+    // WiimoteNew.ini never written at all, leaving every player's controller dead.
+    const partialPlayer2: ControlsProfile = {
+      ...profile,
+      player2: { special: { type: "wii", wiimoteA: { type: "key", code: "KeyM" } } } as never,
+    };
+
+    const translator = new DolphinTranslator();
+    const wiiCtx: TranslateContext = { platform: "darwin", configDir: "/mock/config/dir", consoleId: "wii" };
+
+    expect(() => translator.translate(partialPlayer2, wiiCtx)).not.toThrow();
+
+    const result = translator.translate(partialPlayer2, wiiCtx);
+    // Player 1 is fully configured despite player 2 being incomplete.
+    expect(result.some(p => p.kind === "ini-set" && p.section === "Wiimote1" && p.key === "Buttons/A")).toBe(true);
+    // And player 2 still gets what it does have.
+    const p2a = result.find(p => p.kind === "ini-set" && p.section === "Wiimote2" && p.key === "Buttons/A");
+    expect(p2a && p2a.kind === "ini-set" ? p2a.value : null).toBe("M");
   });
 
   describe("multiplayer device assignment (regression coverage for the P1/P2 collision bug)", () => {

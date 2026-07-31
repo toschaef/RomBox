@@ -103,12 +103,44 @@ describe("DolphinConfigurator", () => {
     const wiimoteNew = path.join(configDir, "WiimoteNew.ini");
     expect(fs.existsSync(wiimoteNew)).toBe(true);
     const wiiText = fs.readFileSync(wiimoteNew, "utf-8");
+    const wm1 = iniSection(wiiText, "Wiimote1");
     // Wiimote enablement is [Wiimote1] Source in WiimoteNew.ini (1 = Emulated),
     // NOT Dolphin.ini's [Controls] WiimoteSource0, which Dolphin never reads.
-    expect(iniSection(wiiText, "Wiimote1")).toContain("Source = 1");
-    expect(wiiText).toContain("Extension = Classic");
-    expect(wiiText).toContain("Classic/Buttons/A = U");
-    expect(wiiText).toContain("Classic/Buttons/+ = T");
+    expect(wm1).toContain("Source = 1");
+    // With no controller model picked, the default is the console's first
+    // supported model - a plain Wii Remote, matching the Controls page - and
+    // its own buttons are what get bound.
+    expect(wm1).toContain("Extension = None");
+    expect(wm1).toContain("Buttons/A = U");
+    expect(wm1).toContain("Buttons/+ = T");
+  });
+
+  it("binds Z to a key that doesn't collide with the R trigger on GameCube", async () => {
+    // Regression: GameCube's default special.z was Digit0 - the same key the
+    // default profile already uses for shoulders.triggerR - so pressing "0"
+    // fired Z and R-Analog together and Z appeared mis-bound.
+    const game: Game = {
+      id: "melee-z",
+      title: "Super Smash Bros. Melee",
+      filePath: "/roms/melee.iso",
+      consoleId: "gc",
+      engineId: "dolphin",
+      playtimeSeconds: 0,
+      lastPlayedAt: 0,
+    };
+    await new DolphinConfigurator(game).configure();
+
+    const configDir = osHandler.getEmulatorConfigPath("dolphin");
+    const pad1 = iniSection(fs.readFileSync(path.join(configDir, "GCPadNew.ini"), "utf-8"), "GCPad1");
+
+    const valueOf = (key: string) => pad1.match(new RegExp(`^${key.replace("/", "\\/")} = (.*)$`, "m"))?.[1];
+    const z = valueOf("Buttons/Z");
+
+    expect(z).toBeDefined();
+    expect(z).not.toBe(valueOf("Triggers/R-Analog"));
+    expect(z).not.toBe(valueOf("Triggers/L-Analog"));
+    expect(z).not.toBe(valueOf("Triggers/R"));
+    expect(z).not.toBe(valueOf("Triggers/L"));
   });
 
   it("should configure independent, non-colliding gamepad devices for player 1 and player 2", async () => {

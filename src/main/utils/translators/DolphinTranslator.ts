@@ -4,7 +4,7 @@ import { axisToDigitalToken } from "../../../shared/controls/gamepadTokens";
 import { getDirFromDpad, getDirFromLook, getDirFromMove } from "../profileRead";
 import { DOLPHIN, dolphinExprForGamepadToken, getPlatformGamepadDevice } from "../schema/dolphin";
 import { KeycodeMapper } from "../keycodes/KeycodeMapper";
-import { getPlayerControllerId } from "../../../shared/controls/controllerModels";
+import { getPlayerControllerId, getDefaultControllerId } from "../../../shared/controls/controllerModels";
 
 
 type DolphinConsole = "gc" | "wii";
@@ -119,17 +119,6 @@ function addIniPatch(
   patches.push({ kind: "ini-set", absPath, section, key, value });
 }
 
-// Every key the Wiimote-only "fallback" block below can write. When a player
-// isn't in Wiimote-family mode, these are actively cleared (set to an empty
-// value) rather than just left unwritten - IniEditor.updateIni only patches
-// keys it's told about, so a stale IR/Tilt binding from a previous config (or
-// an earlier RomBox version) would otherwise sit in WiimoteNew.ini forever
-// and keep firing. Cleared with an explicit empty assignment (`Key = `),
-// which is Dolphin's own "unbound" convention, rather than deleting the line
-// outright - a key that's simply *absent* isn't guaranteed to behave like an
-// explicitly-cleared one (e.g. DualSense/DualShock controllers expose a
-// built-in accelerometer/gyro that Dolphin can pick up as a fallback IR
-// source on its own when it has nothing else to go on).
 const WIIMOTE_ONLY_KEYS = [
   "Buttons/A", "Buttons/B", "Buttons/1", "Buttons/2", "Buttons/+", "Buttons/-", "Buttons/Home",
   "D-Pad/Up", "D-Pad/Down", "D-Pad/Left", "D-Pad/Right",
@@ -154,12 +143,6 @@ export class DolphinTranslator implements IEmulatorTranslator {
       { key: "player4" as const, gcPad: "GCPad4", wiimote: "Wiimote4" },
     ];
 
-    // Physical controllers are enumerated independently of player slots - a
-    // keyboard-bound player consumes no controller at all. Using the player
-    // slot index as the controller index (as this used to) meant a setup like
-    // "P1 on keyboard, P2 on gamepad" asked the probe for controller #1 when
-    // the user's only controller is #0, so P2 got a device string naming a
-    // controller that doesn't exist (SDL/1/Gamepad) and went completely dead.
     let gamepadOrdinal = 0;
 
     for (let i = 0; i < players.length; i++) {
@@ -172,26 +155,12 @@ export class DolphinTranslator implements IEmulatorTranslator {
       let device: string | undefined;
       let learnedBinds: unknown;
       if (kind === "gamepad") {
-        // profile.preferredControllerId is a single, profile-wide field (there's no
-        // per-player controller picker in the data model), so it can only stand in
-        // for one player's device - applying it to every player would point all of
-        // GCPad1-4 at the identical physical controller. It's only meaningful for
-        // the first gamepad-using player; the rest resolve their own device by
-        // their ordinal position among gamepad players.
         const preferredForPlayer = deviceIndex === 0 ? profile.preferredControllerId : undefined;
         const info = getPlatformGamepadDevice(ctx.platform, deviceIndex, preferredForPlayer);
-        // Keep this per-player, not shared on ctx: each player's probe result
-        // describes their own physical controller, and reusing player 1's learned
-        // button remap for player 2-4's (different) controller would mis-map buttons.
+
         learnedBinds = info.learnedBinds;
         if (deviceIndex === 0) ctx.learnedBinds = info.learnedBinds;
 
-        // Always the live probe result (or its generic index-based fallback) -
-        // never anything read back from a previous launch's ini file. A user
-        // iterating on their bindings relaunches the game repeatedly while
-        // changing controls; caching a "last known" device here would mean
-        // some of those relaunches silently keep using stale state instead of
-        // whatever's actually true right now.
         device = info.deviceString;
         if (ctx.learnedDevice && deviceIndex === 0) {
           device = ctx.learnedDevice;
@@ -222,16 +191,16 @@ export class DolphinTranslator implements IEmulatorTranslator {
 
       addIniPatch(patches, gcNew, p.gcPad, "Device", effectiveDevice);
 
-      writeBinding(gcNew, p.gcPad, "Buttons/A", profile[playerKey]?.face.primary);
-      writeBinding(gcNew, p.gcPad, "Buttons/B", profile[playerKey]?.face.secondary);
-      writeBinding(gcNew, p.gcPad, "Buttons/X", profile[playerKey]?.face.tertiary);
-      writeBinding(gcNew, p.gcPad, "Buttons/Y", profile[playerKey]?.face.quaternary);
-      writeBinding(gcNew, p.gcPad, "Buttons/Start", profile[playerKey]?.system.start);
+      writeBinding(gcNew, p.gcPad, "Buttons/A", profile[playerKey]?.face?.primary);
+      writeBinding(gcNew, p.gcPad, "Buttons/B", profile[playerKey]?.face?.secondary);
+      writeBinding(gcNew, p.gcPad, "Buttons/X", profile[playerKey]?.face?.tertiary);
+      writeBinding(gcNew, p.gcPad, "Buttons/Y", profile[playerKey]?.face?.quaternary);
+      writeBinding(gcNew, p.gcPad, "Buttons/Start", profile[playerKey]?.system?.start);
 
-      writeBinding(gcNew, p.gcPad, "Triggers/L", profile[playerKey]?.shoulders.bumperL);
-      writeBinding(gcNew, p.gcPad, "Triggers/R", profile[playerKey]?.shoulders.bumperR);
-      writeBinding(gcNew, p.gcPad, "Triggers/L-Analog", profile[playerKey]?.shoulders.triggerL);
-      writeBinding(gcNew, p.gcPad, "Triggers/R-Analog", profile[playerKey]?.shoulders.triggerR);
+      writeBinding(gcNew, p.gcPad, "Triggers/L", profile[playerKey]?.shoulders?.bumperL);
+      writeBinding(gcNew, p.gcPad, "Triggers/R", profile[playerKey]?.shoulders?.bumperR);
+      writeBinding(gcNew, p.gcPad, "Triggers/L-Analog", profile[playerKey]?.shoulders?.triggerL);
+      writeBinding(gcNew, p.gcPad, "Triggers/R-Analog", profile[playerKey]?.shoulders?.triggerR);
 
       writeBinding(gcNew, p.gcPad, "D-Pad/Up", getDirFromDpad(profile, playerKey, "up"));
       writeBinding(gcNew, p.gcPad, "D-Pad/Down", getDirFromDpad(profile, playerKey, "down"));
@@ -269,10 +238,7 @@ export class DolphinTranslator implements IEmulatorTranslator {
       if (which === "wii") {
         addIniPatch(patches, wiiNew, p.wiimote, "Device", effectiveDevice);
 
-        // Each player picks their own controller model (e.g. P1 on Classic
-        // Controller, P2 on Wii Remote + Nunchuk for Mario Kart Wii), so the
-        // Wiimote extension must be resolved per player, not once for the console.
-        const playerControllerId = getPlayerControllerId(ctx, playerKey);
+        const playerControllerId = getPlayerControllerId(ctx, playerKey) ?? getDefaultControllerId("wii");
 
         let extension = "Classic";
         let sideways = "False";
@@ -283,72 +249,70 @@ export class DolphinTranslator implements IEmulatorTranslator {
         addIniPatch(patches, wiiNew, p.wiimote, "Extension", extension);
         addIniPatch(patches, wiiNew, p.wiimote, "Options/Sideways Wiimote", sideways);
 
-        // --- Classic Controller ---
-        writeClassic("Classic/Buttons/A", profile[playerKey]?.face.primary);
-        writeClassic("Classic/Buttons/B", profile[playerKey]?.face.secondary);
-        writeClassic("Classic/Buttons/X", profile[playerKey]?.face.tertiary);
-        writeClassic("Classic/Buttons/Y", profile[playerKey]?.face.quaternary);
-
-        writeClassic("Classic/Buttons/+", profile[playerKey]?.system.start);
-        writeClassic("Classic/Buttons/-", profile[playerKey]?.system.select);
-        
+        const pb = profile[playerKey];
         const wiiSpecial = special?.type === "wii" ? special : undefined;
-        
-        if (wiiSpecial?.home) {
-          writeClassic("Classic/Buttons/Home", wiiSpecial.home);
+
+        const isWiimoteFamily = extension === "None" || extension === "Nunchuk";
+
+        if (!isWiimoteFamily) {
+          writeClassic("Classic/Buttons/A", pb?.face?.primary);
+          writeClassic("Classic/Buttons/B", pb?.face?.secondary);
+          writeClassic("Classic/Buttons/X", pb?.face?.tertiary);
+          writeClassic("Classic/Buttons/Y", pb?.face?.quaternary);
+
+          writeClassic("Classic/Buttons/+", pb?.system?.start);
+          writeClassic("Classic/Buttons/-", pb?.system?.select);
+
+          if (wiiSpecial?.home) {
+            writeClassic("Classic/Buttons/Home", wiiSpecial.home);
+          }
+
+          writeClassic("Classic/D-Pad/Up", getDirFromDpad(profile, playerKey, "up"));
+          writeClassic("Classic/D-Pad/Down", getDirFromDpad(profile, playerKey, "down"));
+          writeClassic("Classic/D-Pad/Left", getDirFromDpad(profile, playerKey, "left"));
+          writeClassic("Classic/D-Pad/Right", getDirFromDpad(profile, playerKey, "right"));
+
+          writeClassic("Classic/Left Stick/Up", getDirFromMove(profile, playerKey, "up"));
+          writeClassic("Classic/Left Stick/Down", getDirFromMove(profile, playerKey, "down"));
+          writeClassic("Classic/Left Stick/Left", getDirFromMove(profile, playerKey, "left"));
+          writeClassic("Classic/Left Stick/Right", getDirFromMove(profile, playerKey, "right"));
+
+          writeClassic("Classic/Right Stick/Up", getDirFromLook(profile, playerKey, "up"));
+          writeClassic("Classic/Right Stick/Down", getDirFromLook(profile, playerKey, "down"));
+          writeClassic("Classic/Right Stick/Left", getDirFromLook(profile, playerKey, "left"));
+          writeClassic("Classic/Right Stick/Right", getDirFromLook(profile, playerKey, "right"));
+
+          writeClassic("Classic/Triggers/L", pb?.shoulders?.bumperL);
+          writeClassic("Classic/Triggers/R", pb?.shoulders?.bumperR);
+          writeClassic("Classic/Buttons/ZL", pb?.shoulders?.triggerL);
+          writeClassic("Classic/Buttons/ZR", pb?.shoulders?.triggerR);
+        } else {
+          writeBinding(wiiNew, p.wiimote, "Buttons/A", wiiSpecial?.wiimoteA ?? pb?.face?.primary);
+          writeBinding(wiiNew, p.wiimote, "Buttons/B", wiiSpecial?.wiimoteB ?? pb?.face?.secondary);
+          writeBinding(wiiNew, p.wiimote, "Buttons/1", wiiSpecial?.wiimote1 ?? pb?.face?.tertiary);
+          writeBinding(wiiNew, p.wiimote, "Buttons/2", wiiSpecial?.wiimote2 ?? pb?.face?.quaternary);
+          writeBinding(wiiNew, p.wiimote, "Buttons/+", wiiSpecial?.wiimotePlus ?? pb?.system?.start);
+          writeBinding(wiiNew, p.wiimote, "Buttons/-", wiiSpecial?.wiimoteMinus ?? pb?.system?.select);
+          writeBinding(wiiNew, p.wiimote, "Buttons/Home", wiiSpecial?.wiimoteHome ?? wiiSpecial?.home);
+
+          const wmDpad = wiiSpecial?.wiimoteDpad;
+          writeBinding(wiiNew, p.wiimote, "D-Pad/Up", wmDpad?.up ?? getDirFromDpad(profile, playerKey, "up"));
+          writeBinding(wiiNew, p.wiimote, "D-Pad/Down", wmDpad?.down ?? getDirFromDpad(profile, playerKey, "down"));
+          writeBinding(wiiNew, p.wiimote, "D-Pad/Left", wmDpad?.left ?? getDirFromDpad(profile, playerKey, "left"));
+          writeBinding(wiiNew, p.wiimote, "D-Pad/Right", wmDpad?.right ?? getDirFromDpad(profile, playerKey, "right"));
+
+          if (extension === "Nunchuk") {
+            writeBinding(wiiNew, p.wiimote, "Nunchuk/Buttons/C", wiiSpecial?.nunchuckC);
+            writeBinding(wiiNew, p.wiimote, "Nunchuk/Buttons/Z", wiiSpecial?.nunchuckZ);
+
+            writeBinding(wiiNew, p.wiimote, "Nunchuk/Stick/Up", getDirFromMove(profile, playerKey, "up"));
+            writeBinding(wiiNew, p.wiimote, "Nunchuk/Stick/Down", getDirFromMove(profile, playerKey, "down"));
+            writeBinding(wiiNew, p.wiimote, "Nunchuk/Stick/Left", getDirFromMove(profile, playerKey, "left"));
+            writeBinding(wiiNew, p.wiimote, "Nunchuk/Stick/Right", getDirFromMove(profile, playerKey, "right"));
+          }
         }
 
-        writeClassic("Classic/D-Pad/Up", getDirFromDpad(profile, playerKey, "up"));
-        writeClassic("Classic/D-Pad/Down", getDirFromDpad(profile, playerKey, "down"));
-        writeClassic("Classic/D-Pad/Left", getDirFromDpad(profile, playerKey, "left"));
-        writeClassic("Classic/D-Pad/Right", getDirFromDpad(profile, playerKey, "right"));
-
-        writeClassic("Classic/Left Stick/Up", getDirFromMove(profile, playerKey, "up"));
-        writeClassic("Classic/Left Stick/Down", getDirFromMove(profile, playerKey, "down"));
-        writeClassic("Classic/Left Stick/Left", getDirFromMove(profile, playerKey, "left"));
-        writeClassic("Classic/Left Stick/Right", getDirFromMove(profile, playerKey, "right"));
-
-        writeClassic("Classic/Right Stick/Up", getDirFromLook(profile, playerKey, "up"));
-        writeClassic("Classic/Right Stick/Down", getDirFromLook(profile, playerKey, "down"));
-        writeClassic("Classic/Right Stick/Left", getDirFromLook(profile, playerKey, "left"));
-        writeClassic("Classic/Right Stick/Right", getDirFromLook(profile, playerKey, "right"));
-
-        writeClassic("Classic/Triggers/L", profile[playerKey]?.shoulders.bumperL);
-        writeClassic("Classic/Triggers/R", profile[playerKey]?.shoulders.bumperR);
-        writeClassic("Classic/Buttons/ZL", profile[playerKey]?.shoulders.triggerL);
-        writeClassic("Classic/Buttons/ZR", profile[playerKey]?.shoulders.triggerR);
-
-        // Wiimote-only inputs (IR pointer, Tilt, Shake, Wiimote A/B/1/2, Nunchuk) only
-        // apply when the player is actually holding the Wiimote as their primary
-        // input. In Classic Controller / GameCube Controller mode there's no real
-        // Wiimote being tilted or pointed - writing these anyway means whatever the
-        // player bound to e.g. IR Pointer (often defaulted to the right stick) fires
-        // continuously during normal gameplay, since that same stick is legitimately
-        // driving Classic/GameCube's own right-stick input at the same time.
-        const isWiimoteFamily =
-          !playerControllerId ||
-          playerControllerId === "wiimote" ||
-          playerControllerId === "wiimote_sideways" ||
-          playerControllerId === "wiimote_nunchuk";
-
         if (wiiSpecial && isWiimoteFamily) {
-          writeBinding(wiiNew, p.wiimote, "Buttons/A", wiiSpecial.wiimoteA);
-          writeBinding(wiiNew, p.wiimote, "Buttons/B", wiiSpecial.wiimoteB);
-          writeBinding(wiiNew, p.wiimote, "Buttons/1", wiiSpecial.wiimote1);
-          writeBinding(wiiNew, p.wiimote, "Buttons/2", wiiSpecial.wiimote2);
-          writeBinding(wiiNew, p.wiimote, "Buttons/+", wiiSpecial.wiimotePlus);
-          writeBinding(wiiNew, p.wiimote, "Buttons/-", wiiSpecial.wiimoteMinus);
-          writeBinding(wiiNew, p.wiimote, "Buttons/Home", wiiSpecial.wiimoteHome);
-
-          writeBinding(wiiNew, p.wiimote, "D-Pad/Up", wiiSpecial.wiimoteDpad?.up);
-          writeBinding(wiiNew, p.wiimote, "D-Pad/Down", wiiSpecial.wiimoteDpad?.down);
-          writeBinding(wiiNew, p.wiimote, "D-Pad/Left", wiiSpecial.wiimoteDpad?.left);
-          writeBinding(wiiNew, p.wiimote, "D-Pad/Right", wiiSpecial.wiimoteDpad?.right);
-
-          // nunchuck
-          writeBinding(wiiNew, p.wiimote, "Nunchuk/Buttons/C", wiiSpecial.nunchuckC);
-          writeBinding(wiiNew, p.wiimote, "Nunchuk/Buttons/Z", wiiSpecial.nunchuckZ);
-
           // motion / ir
           writeBinding(wiiNew, p.wiimote, "Shake/X", wiiSpecial.shake);
           writeBinding(wiiNew, p.wiimote, "Shake/Y", wiiSpecial.shake);
@@ -378,24 +342,13 @@ export class DolphinTranslator implements IEmulatorTranslator {
             writeBinding(wiiNew, p.wiimote, "IR/Right", wiiSpecial.ir.right);
           }
         } else if (!isWiimoteFamily) {
-          // Actively clear any Wiimote-only bindings left over from a previous
-          // config (an earlier RomBox version, or a prior switch away from
-          // Wiimote mode for this player) - ini-set only patches keys it's
-          // told about, so without this an old IR/Tilt binding stays in
-          // WiimoteNew.ini and keeps driving the pointer forever.
+          // clear leftover bindings
           for (const key of WIIMOTE_ONLY_KEYS) {
             addIniPatch(patches, wiiNew, p.wiimote, key, "");
           }
         }
       }
     }
-
-    // Per-game GameSettings/<id>.ini PadType0-3 overrides are written by
-    // DolphinConfigurator, from the exact same per-player values used for the
-    // global Dolphin.ini SIDeviceN/WiimoteSourceN - a partial override here
-    // (this used to write only PadType0) is enough to make Dolphin treat
-    // unspecified ports as forced-off for this game, so it must never drift
-    // from the global config's port enablement.
 
     return patches;
   }

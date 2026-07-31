@@ -3,7 +3,7 @@ import type { AnyConsoleLayout, DigitalBinding, DpadBinding, StickBinding } from
 import type { BindPlanConsole } from "../../controls/bindMachine";
 import { SECTION_ORDER, LEFT_STICK_SWITCH_ICONS, RIGHT_STICK_SWITCH_ICONS } from "../../controls/layout";
 import { getConsoleLayoutItems, getConsoleDpadIcons } from "../../controls/consoleLayouts";
-import { getPlayerControllerId } from "../../../shared/controls/controllerModels";
+import { getPlayerControllerId, getDefaultControllerId } from "../../../shared/controls/controllerModels";
 import GroupBindingCard from "./GroupBindingCard";
 import DigitalBindingCard from "./DigitalBindingCard";
 import {
@@ -40,7 +40,13 @@ export default function ConsoleControlsView(props: {
     isStickPressed,
   } = props;
 
-  const playerControllerId = getPlayerControllerId(layout, playerKey);
+  // Same fallback the model dropdown and both Dolphin configurator/translator
+  // apply. Without it an unset model (the normal state for players 2-4, whose
+  // picker already displays the default and so is never actually changed) shows
+  // the catch-all Wii item list - Classic sticks and shoulders included - while
+  // the emulator gets configured for the default bare Wii Remote, which has
+  // none of those inputs.
+  const playerControllerId = getPlayerControllerId(layout, playerKey) ?? getDefaultControllerId(layout.consoleId);
   const consoleItems = useMemo(
     () => getConsoleLayoutItems(layout.consoleId, playerControllerId),
     [layout.consoleId, playerControllerId]

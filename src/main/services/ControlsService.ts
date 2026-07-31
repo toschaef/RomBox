@@ -3,7 +3,7 @@ import { getDB } from "../data/db";
 import { JsonEditor } from "../utils/editors/json";
 import type { ControlsProfile, ConsoleLayout, ControllerProfileMeta, PlayerBindings } from "../../shared/types/controls";
 import type { ConsoleID } from "../../shared/types";
-import { createDefaultProfileShape, makeDefaultConsoleBindings } from "../../shared/controls/layoutDefaults";
+import { createDefaultProfileShape, makeDefaultConsoleBindings, applyConsoleSpecial } from "../../shared/controls/layoutDefaults";
 
 type RawProfileRow = {
   id: string;
@@ -50,6 +50,22 @@ function safeParseBindingsJson(text: string): LayoutPlayers {
 
 function bindingsJson(players: LayoutPlayers): string {
   return JsonEditor.stringify(players, 0, false);
+}
+
+function mergePlayerBindings(base: PlayerBindings | undefined, override: PlayerBindings): PlayerBindings {
+  if (!base) return override;
+
+  const out = { ...base } as Record<string, unknown>;
+  const isPlainObject = (v: unknown) => !!v && typeof v === "object" && !Array.isArray(v);
+
+  for (const [group, value] of Object.entries(override as Record<string, unknown>)) {
+    const existing = out[group];
+    out[group] = isPlainObject(value) && isPlainObject(existing)
+      ? { ...(existing as object), ...(value as object) }
+      : value;
+  }
+
+  return out as PlayerBindings;
 }
 
 const ALL_CONSOLE_IDS: ConsoleID[] = [
@@ -329,19 +345,27 @@ export class ControlsService {
     player4ControllerId?: string;
   }): ConsoleLayout {
     const db = getDB();
-    this.getProfile(args.profileId);
+    const profile = this.getProfile(args.profileId);
 
     const existing = db
-      .prepare(`SELECT id FROM console_layouts WHERE console_id = ? AND profile_id = ? LIMIT 1`)
-      .get(args.consoleId, args.profileId) as { id: string } | undefined;
+      .prepare(`SELECT id, bindings_json FROM console_layouts WHERE console_id = ? AND profile_id = ? LIMIT 1`)
+      .get(args.consoleId, args.profileId) as { id: string; bindings_json: string } | undefined;
 
     const ts = now();
 
+    const stored = existing ? safeParseBindingsJson(existing.bindings_json) : undefined;
+
+    const seed = (playerKey: "player2" | "player3" | "player4", incoming?: PlayerBindings) => {
+      if (!incoming) return undefined;
+      if (stored?.[playerKey]) return incoming;
+      return mergePlayerBindings(profile[playerKey], incoming);
+    };
+
     const players: LayoutPlayers = {
-      player1: args.player1,
-      player2: args.player2,
-      player3: args.player3,
-      player4: args.player4,
+      player1: stored?.player1 ? args.player1 : mergePlayerBindings(profile.player1, args.player1),
+      player2: seed("player2", args.player2),
+      player3: seed("player3", args.player3),
+      player4: seed("player4", args.player4),
     };
 
     if (!existing?.id) {
@@ -453,23 +477,26 @@ export class ControlsService {
   async getEffectiveConsoleLayout(consoleId: ConsoleID, profileId: string): Promise<ConsoleLayout> {
     const profile = this.getProfile(profileId);
     const layout = this.getConsoleLayout(consoleId, profileId);
-    
+
+    const withSpecial = (b?: PlayerBindings): PlayerBindings | undefined =>
+      b ? applyConsoleSpecial(consoleId, b) : undefined;
+
     if (!layout.isUserModified) {
       return {
         ...layout,
         player1: makeDefaultConsoleBindings(consoleId, profile),
-        player2: profile.player2,
-        player3: profile.player3,
-        player4: profile.player4,
+        player2: withSpecial(profile.player2),
+        player3: withSpecial(profile.player3),
+        player4: withSpecial(profile.player4),
       };
     }
 
     return {
       ...layout,
-      player1: layout.player1 ?? profile.player1,
-      player2: layout.player2 ?? profile.player2,
-      player3: layout.player3 ?? profile.player3,
-      player4: layout.player4 ?? profile.player4,
+      player1: applyConsoleSpecial(consoleId, layout.player1 ?? profile.player1),
+      player2: withSpecial(layout.player2 ?? profile.player2),
+      player3: withSpecial(layout.player3 ?? profile.player3),
+      player4: withSpecial(layout.player4 ?? profile.player4),
     };
   }
 }

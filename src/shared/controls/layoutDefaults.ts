@@ -1,6 +1,32 @@
 import type { ConsoleID } from "../types";
 import type { ControlsProfile, PlayerBindings } from "../types/controls";
 
+export function applyConsoleSpecial(consoleId: ConsoleID, p: PlayerBindings): PlayerBindings {
+  if (consoleId === "n64") {
+    if (p.special?.type === "n64") return p;
+    return { ...p, special: { type: "n64", c: p.look, z: p.shoulders?.triggerL } };
+  }
+
+  if (consoleId === "gc") {
+    if (p.special?.type === "gc") return p;
+    return { ...p, special: { type: "gc", z: { type: "key", code: "Digit6" } } };
+  }
+
+  if (consoleId === "wii") {
+    if (p.special?.type === "wii") return p;
+    return {
+      ...p,
+      special: {
+        type: "wii",
+        nunchuckC: { type: "key", code: "Equal" },
+        nunchuckZ: { type: "key", code: "Minus" },
+      },
+    };
+  }
+
+  return p;
+}
+
 export function makeDefaultConsoleBindings(consoleId: ConsoleID, profile: ControlsProfile): PlayerBindings {
   const p1 = profile.player1;
 
@@ -15,39 +41,7 @@ export function makeDefaultConsoleBindings(consoleId: ConsoleID, profile: Contro
     special: p1.special,
   };
 
-  if (consoleId === "n64") {
-    return {
-      ...common,
-      special: {
-        type: "n64",
-        c: p1.look,
-        z: p1.shoulders?.triggerL,
-      },
-    };
-  }
-
-  if (consoleId === "gc") {
-    return {
-      ...common,
-      special: {
-        type: "gc",
-        z: { type: "key", code: "Digit0" },
-      },
-    };
-  }
-
-  if (consoleId === "wii") {
-    return {
-      ...common,
-      special: {
-        type: "wii",
-        nunchuckC: { type: "key", code: "Key=" },
-        nunchuckZ: { type: "key", code: "Key-" },
-      },
-    };
-  }
-
-  return common;
+  return applyConsoleSpecial(consoleId, common);
 }
 
 export function createDefaultProfileShape(): Omit<
