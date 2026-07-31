@@ -167,7 +167,7 @@ export const ENGINES: Record<string, EngineDefinition> = {
     },
     binaries: {
       win32: "pcsx2-qt.exe",
-      darwin: "PCSX2-v2.6.2.app/Contents/MacOS/PCSX2",
+      darwin: `PCSX2-${PCSX2_VERSION}.app/Contents/MacOS/PCSX2`,
       linux: `pcsx2-${PCSX2_VERSION}-linux-appimage-x64-Qt.AppImage`,
     },
     getLaunchCommand: (game, binPath) => [
