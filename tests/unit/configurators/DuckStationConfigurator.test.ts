@@ -11,6 +11,7 @@ import path from "path";
 import fs from "fs";
 import { initDB } from "../../../src/main/data/db";
 import { DuckStationConfigurator } from "../../../src/main/utils/configurators/DuckStationConfigurator";
+import { ControlsService } from "../../../src/main/services/ControlsService";
 import { osHandler } from "../../../src/main/platform";
 import { DuckStation } from "../../../src/main/utils/schema/duckstation";
 
@@ -56,5 +57,67 @@ describe("DuckStationConfigurator", () => {
     expect(iniText).toContain("Cross = Keyboard/U");
     expect(iniText).toContain("Start = Keyboard/T");
     expect(iniText).toContain("Up = Keyboard/3");
+
+    // No player2 configured - port 2 must stay disabled.
+    const pad2Section = iniText.split(/\[Pad2\]/)[1] ?? "";
+    expect(pad2Section).toContain("Type = None");
+  });
+
+  it("enables [Pad2] Type=AnalogController when a second player is configured", async () => {
+    // Regression: DuckStation only instantiates a controller for a port whose
+    // [PadN] Type is not "None" - bindings written under a None-typed port are
+    // silently ignored. Pad2's Type was previously hardcoded to "None"
+    // unconditionally, so player 2's controls never worked in DuckStation
+    // regardless of what was bound to them.
+    const svc = new ControlsService();
+    const profile = svc.getDefaultProfile();
+    const p2Keyboard = {
+      ...profile.player1,
+      face: { ...profile.player1.face, primary: { type: "key" as const, code: "KeyZ" } },
+    };
+    svc.saveConsoleLayout({
+      consoleId: "ps1",
+      profileId: profile.id,
+      player1: profile.player1,
+      player2: p2Keyboard,
+    });
+
+    const configurator = new DuckStationConfigurator();
+    await configurator.configure();
+
+    const configDir = osHandler.getEmulatorBasePath("duckstation");
+    const settingsIni = DuckStation.iniPath(configDir);
+    const iniText = fs.readFileSync(settingsIni, "utf-8");
+
+    const pad2Section = iniText.split(/\[Pad2\]/)[1]?.split(/\n\[/)[0] ?? "";
+    expect(pad2Section).toContain("Type = AnalogController");
+    expect(pad2Section).toContain("Cross = Keyboard/Z");
+  });
+
+  it("enables multitap on port 1 and [Pad3]/[Pad4] when a 3rd/4th player is configured", async () => {
+    const svc = new ControlsService();
+    const profile = svc.getDefaultProfile();
+    svc.saveConsoleLayout({
+      consoleId: "ps1",
+      profileId: profile.id,
+      player1: profile.player1,
+      player3: profile.player1,
+      player4: profile.player1,
+    });
+
+    const configurator = new DuckStationConfigurator();
+    await configurator.configure();
+
+    const configDir = osHandler.getEmulatorBasePath("duckstation");
+    const settingsIni = DuckStation.iniPath(configDir);
+    const iniText = fs.readFileSync(settingsIni, "utf-8");
+
+    const controllerPortsSection = iniText.split(/\[ControllerPorts\]/)[1]?.split(/\n\[/)[0] ?? "";
+    expect(controllerPortsSection).toContain("MultitapMode = Port1Only");
+
+    const pad3Section = iniText.split(/\[Pad3\]/)[1]?.split(/\n\[/)[0] ?? "";
+    const pad4Section = iniText.split(/\[Pad4\]/)[1]?.split(/\n\[/)[0] ?? "";
+    expect(pad3Section).toContain("Type = AnalogController");
+    expect(pad4Section).toContain("Type = AnalogController");
   });
 });

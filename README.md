@@ -79,10 +79,6 @@ You can create, delete, and rename new profiles on the top bar with their associ
 
 In the settings menu, you can delete all of your game files, along with engines/save data. You can also toggle automatically installing engines (emulators), which is on by default.
 
-# Limitations
-
-Currently, controller inputs do not work on GameCube and Wii, and no inputs work on N64. TBH I will probably never get around to this. You can still use RomBox to play games on these consoles, but you will have to manually setup the controls in the associated emulator's menu.
-
 ## Known Issues:
 
 Install modal persists on install error
@@ -93,26 +89,18 @@ Azahar doesnt configure controller controls unless controller is connected on la
 
 Azahar has update popup on launch
 
-### Possibly Upcoming:
-
-general settings (fullscreen, resolution)
-
-local multiplayer
+### Future Features:
 
 save caching for 3ds, wii, n64
 
-controller support on gc/wii, N64
+ui improvement (specifically controls page)
 
-keyboard support on N64
-
-ui improvement
-
-more consoles
+more consoles (switch, psp, dreamcast, saturn, mame)
 
 emulator specific settings
 
 theme customization
 
-controller options per console
+more controller options per console
 
 ![Star History](src/renderer/assets/star-history.png)

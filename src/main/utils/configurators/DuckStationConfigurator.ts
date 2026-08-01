@@ -6,7 +6,6 @@ import { IniEditor } from "../editors/ini";
 import { ControlsService } from "../../services/ControlsService";
 import { DuckStationTranslator } from "../translators/DuckStationTranslator";
 import type { EmulatorPatch, TranslateContext } from "../translators/ITranslator";
-import type { PlayerBindings } from "../../../shared/types/controls";
 import { DuckStation } from "../schema/duckstation";
 import { SettingsService } from "../../services/SettingsService";
 import { getResolutionMultiplier } from "../../../shared/resolution";
@@ -50,6 +49,19 @@ export class DuckStationConfigurator extends BaseConfigurator {
         void err;
       }
     }
+
+    const svc = new ControlsService();
+    const profile = svc.getDefaultProfile();
+    const layout = await svc.getEffectiveConsoleLayout("ps1", profile.id);
+
+    // DuckStation reads controller type from [Pad1]/[Pad2]/[Pad3]/[Pad4], keyed
+    // "Type" - a port with Type=None is never instantiated, so any bindings
+    // written into that section are silently ignored. Pad3/Pad4 additionally
+    // require multitap to be enabled on port 1, since they map to that port's
+    // multitap slots B/C (see DuckStation's Controller::ConvertPadToPortAndSlot).
+    const hasPlayer2 = !!layout.player2;
+    const hasPlayer3 = !!layout.player3;
+    const hasPlayer4 = !!layout.player4;
 
     const iniConfig: Record<string, Record<string, string>> = {
       Main: {
@@ -163,12 +175,6 @@ export class DuckStationConfigurator extends BaseConfigurator {
         OutputVolume: "100",
         FastForwardVolume: "100",
       },
-      Controller1: {
-        Type: "AnalogController",
-      },
-      Controller2: {
-        Type: "None",
-      },
       MemoryCards: {
         Card1Type: "PerGameTitle",
         Card1Path: "",
@@ -177,7 +183,7 @@ export class DuckStationConfigurator extends BaseConfigurator {
         UsePlaylistTitle: "true",
       },
       ControllerPorts: {
-        MultitapMode: "Disabled",
+        MultitapMode: hasPlayer3 || hasPlayer4 ? "Port1Only" : "Disabled",
       },
       Hotkeys: {
         FastForward: "",
@@ -256,7 +262,13 @@ export class DuckStationConfigurator extends BaseConfigurator {
         Type: "AnalogController",
       },
       Pad2: {
-        Type: "None",
+        Type: hasPlayer2 ? "AnalogController" : "None",
+      },
+      Pad3: {
+        Type: hasPlayer3 ? "AnalogController" : "None",
+      },
+      Pad4: {
+        Type: hasPlayer4 ? "AnalogController" : "None",
       },
       AutoUpdater: {
         CheckAtStartup: "false",
@@ -267,12 +279,6 @@ export class DuckStationConfigurator extends BaseConfigurator {
     };
 
     IniEditor.updateIni(settingsIni, iniConfig);
-
-    const svc = new ControlsService();
-    const profile = svc.getDefaultProfile();
-
-    const layout = await svc.getEffectiveConsoleLayout("ps1", profile.id);
-    const bindings: PlayerBindings = layout.player1;
 
     const effectiveProfile = {
       ...profile,
