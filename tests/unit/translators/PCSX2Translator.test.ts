@@ -54,6 +54,49 @@ describe("PCSX2Translator", () => {
     }
   });
 
+  it("maps left/right stick up/down to the correct SDL axis half", () => {
+    // Regression: PCSX2's [PadN] LUp/LDown keys expect PCSX2's own "-"/"+"
+    // half-axis convention, where "-Axis" is the SDL-negative half. SDL
+    // reports a raw negative Y when the stick is pushed up, so LUp must map
+    // to "-LeftY" and LDown to "+LeftY" - matching how the right stick
+    // (RUp/RDown) and every other emulator's schema (DuckStation, Dolphin,
+    // MelonDS) already map up/down. The left stick's Y axis was previously
+    // swapped relative to all of these, inverting up/down for PS2 games.
+    const gamepadProfile: ControlsProfile = {
+      ...profile,
+      player1: {
+        ...profile.player1,
+        move: { type: "stick", stick: "left", deadzone: 0.25 },
+        look: { type: "stick", stick: "right", deadzone: 0.25 },
+      },
+    };
+
+    const translator = new PCSX2Translator();
+    const result = translator.translate(gamepadProfile, context);
+
+    const get = (key: string) => {
+      const p = result.find(p => p.kind === "ini-set" && p.key === key);
+      return p && p.kind === "ini-set" ? p.value : null;
+    };
+
+    expect(get("LUp")).toBe("SDL-0/-LeftY");
+    expect(get("LDown")).toBe("SDL-0/+LeftY");
+    expect(get("RUp")).toBe("SDL-0/-RightY");
+    expect(get("RDown")).toBe("SDL-0/+RightY");
+  });
+
+  it("binds the DualShock2 analog toggle to Guide", () => {
+    const translator = new PCSX2Translator();
+    const result = translator.translate(profile, context);
+
+    const analog = result.find(p => p.kind === "ini-set" && p.key === "Analog");
+    expect(analog).toBeDefined();
+    if (analog && analog.kind === "ini-set") {
+      expect(analog.section).toBe("Pad1");
+      expect(analog.value).toBe("SDL-0/Guide");
+    }
+  });
+
   it.skip("should derive dynamic SDL device index from learnedDevice, preferredControllerId, and padPort for PCSX2", () => {
     const gamepadProfile: ControlsProfile = {
       ...profile,

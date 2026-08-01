@@ -132,7 +132,17 @@ export const LibraryService = {
       }
 
       db.prepare('delete from games where id = ?').run(gameId);
-      if (game.filePath && fs.existsSync(game.filePath)) fs.unlinkSync(game.filePath);
+      if (game.filePath && fs.existsSync(game.filePath)) {
+        try {
+          fs.unlinkSync(game.filePath);
+        } catch (err) {
+          if ((err as NodeJS.ErrnoException).code === 'EISDIR') {
+            fs.rmSync(game.filePath, { recursive: true, force: true });
+          } else {
+            throw err;
+          }
+        }
+      }
 
       log.info('Game deleted successfully', { gameId, title: game.title });
       return { success: true };

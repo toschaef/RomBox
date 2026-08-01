@@ -5,6 +5,9 @@ import { ConsoleID } from "../../../shared/types";
 export type EmulatorPatch =
   | { kind: "file-write"; absPath?: string; contents: string }
   | { kind: "ini-set"; absPath?: string; section: string; key: string; value: string }
+  // Writes the key once per value. Emulators that read a setting as a list
+  // (e.g. PCSX2 bindings) use repeated keys to bind several inputs to one action.
+  | { kind: "ini-set-list"; absPath?: string; section: string; key: string; values: string[] }
   | { kind: "ini-delete"; absPath?: string; section: string; key: string }
   | { kind: "json-merge"; absPath?: string; path: string[]; value: unknown }
   | { kind: "json-set"; absPath?: string; path: string[]; value: unknown };

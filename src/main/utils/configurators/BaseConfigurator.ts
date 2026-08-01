@@ -46,7 +46,7 @@ export abstract class BaseConfigurator implements EmulatorConfigurator {
     const nonIniPatches: EmulatorPatch[] = [];
 
     for (const p of patches) {
-      if (p.kind === 'ini-set') {
+      if (p.kind === 'ini-set' || p.kind === 'ini-set-list') {
         if (!p.absPath) continue;
         const filePatches = iniPatchesByFile.get(p.absPath) ?? [];
         filePatches.push(p);
@@ -57,7 +57,7 @@ export abstract class BaseConfigurator implements EmulatorConfigurator {
     }
 
     for (const [absPath, filePatches] of iniPatchesByFile.entries()) {
-      const updates = this.patchesToIniUpdates(filePatches);
+      const updates = this.patchesToIniUpdatesWithLists(filePatches);
       IniEditor.updateIni(absPath, updates);
     }
 
@@ -111,6 +111,10 @@ export abstract class BaseConfigurator implements EmulatorConfigurator {
     }
   }
 
+  /**
+   * Single-valued view of the patches, for formats without a multi-key concept
+   * (TOML/BML). Ignores 'ini-set-list'.
+   */
   protected patchesToIniUpdates(patches: EmulatorPatch[]): Record<string, Record<string, string>> {
     const out: Record<string, Record<string, string>> = {};
     for (const p of patches) {
@@ -118,6 +122,20 @@ export abstract class BaseConfigurator implements EmulatorConfigurator {
       const section = (p.section ?? '').trim();
       out[section] ??= {};
       out[section][p.key] = p.value;
+    }
+    return out;
+  }
+
+  /** As above, but keeps 'ini-set-list' values as lists of repeated keys. */
+  private patchesToIniUpdatesWithLists(
+    patches: EmulatorPatch[]
+  ): Record<string, Record<string, string | string[]>> {
+    const out: Record<string, Record<string, string | string[]>> = {};
+    for (const p of patches) {
+      if (p.kind !== 'ini-set' && p.kind !== 'ini-set-list') continue;
+      const section = (p.section ?? '').trim();
+      out[section] ??= {};
+      out[section][p.key] = p.kind === 'ini-set-list' ? p.values : p.value;
     }
     return out;
   }

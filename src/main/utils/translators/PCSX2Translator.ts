@@ -96,6 +96,12 @@ export class PCSX2Translator implements IEmulatorTranslator {
 
       writeBinding("L3", profile[p.key]?.sticks?.l3);
       writeBinding("R3", profile[p.key]?.sticks?.r3);
+
+      // The DualShock2's ANALOG button. Guide (PS/Home) is what PCSX2's own
+      // automatic binding maps it to - the "Analog" entry carries
+      // GenericInputBinding::System (PadDualshock2.cpp) - so this just matches
+      // the emulator's default rather than leaving the button unbound.
+      addIniPatch(patches, iniPath, section, "Analog", `SDL-${deviceIndex}/Guide`);
     }
 
     return patches;

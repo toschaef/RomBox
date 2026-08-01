@@ -7,7 +7,7 @@ import { CONSOLES } from '../config/consoles'
 import { getConsoleIdFromExtension, getEngineIdFromConsoleId, BIOS_FILENAMES } from '../../shared/constants';
 import type { Game, ConsoleID } from '../../shared/types';
 import type { EngineID } from '../../shared/types/engines';
-import { detectConsoleFromHeader, detectConsoleFromBuffer } from '../utils/identifier';
+import { detectConsoleFromHeader, detectConsoleFromBuffer, detectPS1orPS2FromISO9660, detectPS1orPS2FromBuffer, parseCueSectorGeometry, parseCueSectorGeometryFromFile, PLAIN_ISO_GEOMETRY } from '../utils/identifier';
 import { scanZipEntries, readZipEntryHeader } from '../utils/fsUtils';
 import { BiosService } from './BiosService';
 import { Logger } from '../utils/logger';
@@ -79,6 +79,36 @@ function isPS1GameDirectory(dirPath: string): { found: boolean; cueFile?: string
   return { found: false };
 }
 
+// PCSX2 has been observed to fail opening otherwise-valid .cue sheets
+// ("Unable to identify the ISO image type") while opening the referenced
+// .bin/.iso directly works fine. PS2 discs never have multiple audio tracks
+// (unlike PS1), so when a cue/bin pair resolves to exactly one data file,
+// hand the emulator that file directly instead of the .cue to sidestep it.
+function resolveDiscEntrypoint(dir: string, cueFilePath: string, consoleId: ConsoleID): string {
+  if (consoleId !== 'ps2') return cueFilePath;
+
+  const dataFiles = fs.readdirSync(dir).filter(f => {
+    const lower = f.toLowerCase();
+    return lower.endsWith('.bin') || lower.endsWith('.iso');
+  });
+
+  return dataFiles.length === 1 ? path.join(dir, dataFiles[0]) : cueFilePath;
+}
+
+async function identifyCueBinConsole(dirPath: string, cueFile: string): Promise<'ps1' | 'ps2'> {
+  try {
+    const binFile = fs.readdirSync(dirPath).find(f => f.toLowerCase().endsWith('.bin'));
+    if (binFile) {
+      const geometry = await parseCueSectorGeometryFromFile(path.join(dirPath, cueFile));
+      const detected = await detectPS1orPS2FromISO9660(path.join(dirPath, binFile), geometry);
+      if (detected) return detected;
+    }
+  } catch (err) {
+    void err;
+  }
+  return 'ps1';
+}
+
 const identifyConsole = async (
   filename: string,
   fileSize: number,
@@ -89,12 +119,18 @@ const identifyConsole = async (
   const id = getConsoleIdFromExtension(ext);
 
   if (headerBuffer) {
-    const detected = detectConsoleFromBuffer(headerBuffer, fileSize);
+    const detected = detectConsoleFromBuffer(headerBuffer);
     if (detected) return detected;
   }
 
   if (filePathForHeader && (ext === '.iso' || !id)) {
     const detected = await detectConsoleFromHeader(filePathForHeader);
+    if (detected) return detected;
+  } else if (!filePathForHeader && headerBuffer && (ext === '.iso' || ext === '.bin')) {
+    // No file path to open directly (e.g. a zip entry) - fall back to walking
+    // the in-memory buffer for the SYSTEM.CNF BOOT/BOOT2 marker instead of
+    // just guessing from file size below.
+    const detected = await detectPS1orPS2FromBuffer(headerBuffer, PLAIN_ISO_GEOMETRY);
     if (detected) return detected;
   }
 
@@ -125,9 +161,28 @@ const getArchiveEntries = async (filePath: string): Promise<NormalizedEntry[]> =
   return [];
 };
 
-const identifyMultiFileGame = async (entries: NormalizedEntry[]): Promise<ConsoleID | undefined> => {
+const identifyMultiFileGame = async (
+  entries: NormalizedEntry[],
+  archivePath: string,
+  archiveExt: string
+): Promise<ConsoleID | undefined> => {
   const binEntries = entries.filter(e => e.name.toLowerCase().endsWith('.bin'));
   if (binEntries.length === 0) return undefined;
+
+  if (archiveExt === '.zip') {
+    const cueEntry = entries.find(e => e.name.toLowerCase().endsWith('.cue'));
+    if (cueEntry) {
+      try {
+        const cueBuffer = await readZipEntryHeader(archivePath, cueEntry.name);
+        const geometry = parseCueSectorGeometry(cueBuffer.toString('utf-8'));
+        const binBuffer = await readZipEntryHeader(archivePath, binEntries[0].name, 300 * 1024);
+        const detected = await detectPS1orPS2FromBuffer(binBuffer, geometry);
+        if (detected) return detected;
+      } catch (err) {
+        void err;
+      }
+    }
+  }
 
   const totalBinSize = binEntries.reduce((sum, e) => sum + e.size, 0);
 
@@ -170,10 +225,11 @@ export const ScannerService = {
 
         const ps1Check = isPS1GameDirectory(inputPath);
         if (ps1Check.found && ps1Check.cueFile) {
+          const consoleId = await identifyCueBinConsole(inputPath, ps1Check.cueFile);
           return [{
             type: "game",
-            consoleId: "ps1",
-            engineId: getEngineIdFromConsoleId("ps1"),
+            consoleId,
+            engineId: getEngineIdFromConsoleId(consoleId),
             filePath: inputPath,
           }];
         }
@@ -234,7 +290,7 @@ export const ScannerService = {
 
         if (cueEntry && binEntries.length > 0) {
           log.info('Detected multi-file game (cue/bin) in archive', { cueEntry: cueEntry.name });
-          const consoleId = await identifyMultiFileGame(entries) as ConsoleID;
+          const consoleId = await identifyMultiFileGame(entries, filePath, ext) as ConsoleID;
           if (consoleId) {
             const engineId = getEngineIdFromConsoleId(consoleId);
             return [{
@@ -291,7 +347,9 @@ export const ScannerService = {
             let headerBuffer: Buffer | undefined;
             if (['.bin', '.iso', '.img', '.chd'].includes(entryExt) && ext === '.zip') {
               try {
-                headerBuffer = await readZipEntryHeader(filePath, entry.name);
+                // Read enough of the entry to cover the ISO9660 PVD (sector 16),
+                // root directory, and SYSTEM.CNF contents, not just the first 33KB.
+                headerBuffer = await readZipEntryHeader(filePath, entry.name, 300 * 1024);
               } catch (hErr) {
                 void hErr;
               }
@@ -389,12 +447,14 @@ export const ScannerService = {
           throw new Error('Could not find .cue file in extracted archive');
         }
 
-        log.info('Extracted multi-file game', { destDir, cueFilePath });
+        const entrypoint = resolveDiscEntrypoint(path.dirname(cueFilePath), cueFilePath, scanResult.consoleId);
+
+        log.info('Extracted multi-file game', { destDir, cueFilePath, entrypoint });
 
         return {
           id: crypto.randomUUID(),
           title,
-          filePath: cueFilePath,
+          filePath: entrypoint,
           consoleId: scanResult.consoleId,
           engineId: getEngineIdFromConsoleId(scanResult.consoleId),
         };
@@ -432,10 +492,17 @@ export const ScannerService = {
         throw new Error("Could not import game directory.");
       }
 
+      const cueFile = fs.readdirSync(destDir).find(f => f.toLowerCase().endsWith('.cue'));
+      if (!cueFile) {
+        throw new Error('Could not find .cue file in copied game directory');
+      }
+
+      const entrypoint = resolveDiscEntrypoint(destDir, path.join(destDir, cueFile), scanResult.consoleId);
+
       return {
         id: crypto.randomUUID(),
         title,
-        filePath: destDir,
+        filePath: entrypoint,
         consoleId: scanResult.consoleId,
         engineId: getEngineIdFromConsoleId(scanResult.consoleId),
       };

@@ -1,6 +1,6 @@
 # Temp
 emulators/
-**/*.local.md
+**/*.local.*
 
 # Logs
 logs

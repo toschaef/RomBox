@@ -53,6 +53,47 @@ otherKey = keepMe
       expect(content).toContain("otherKey = keepMe");
     });
 
+    it("should write an array value as repeated keys (multi-key)", () => {
+      IniEditor.updateIni(testFile, {
+        "SectionA": { bind: ["valA", "valB"] }
+      });
+
+      const content = fs.readFileSync(testFile, "utf-8");
+      expect(content).toContain("bind = valA");
+      expect(content).toContain("bind = valB");
+    });
+
+    it("should replace all pre-existing lines for a key when writing a list", () => {
+      const initial = `
+[SectionA]
+bind = oldA
+bind = oldB
+otherKey = keepMe
+      `.trim();
+      fs.writeFileSync(testFile, initial);
+
+      IniEditor.updateIni(testFile, {
+        "SectionA": { bind: ["valA", "valB"] }
+      });
+
+      const content = fs.readFileSync(testFile, "utf-8");
+      expect(content).not.toContain("oldA");
+      expect(content).not.toContain("oldB");
+      expect(content).toContain("bind = valA");
+      expect(content).toContain("bind = valB");
+      expect(content).toContain("otherKey = keepMe");
+    });
+
+    it("should collapse duplicate pre-existing keys when writing a single value", () => {
+      fs.writeFileSync(testFile, "[SectionA]\nkey = a\nkey = b");
+
+      IniEditor.updateIni(testFile, { "SectionA": { key: "c" } });
+
+      const content = fs.readFileSync(testFile, "utf-8");
+      expect(content.match(/^key = /gm)).toHaveLength(1);
+      expect(content).toContain("key = c");
+    });
+
     it("should support compact format spacing", () => {
       IniEditor.updateIni(testFile, {
         "": { key: "val" }

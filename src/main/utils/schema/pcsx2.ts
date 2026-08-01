@@ -78,9 +78,8 @@ export function pcsx2ExprForGamepadToken(tok: GamepadToken, deviceIndex = 0): st
     case "GP_DPAD_RIGHT": return `${prefix}DPadRight`;
     case "GP_LS_LEFT": return `${prefix}-LeftX`;
     case "GP_LS_RIGHT": return `${prefix}+LeftX`;
-    // Y axis is swapped to compensate for getDirFromMove
-    case "GP_LS_UP": return `${prefix}+LeftY`;
-    case "GP_LS_DOWN": return `${prefix}-LeftY`;
+    case "GP_LS_UP": return `${prefix}-LeftY`;
+    case "GP_LS_DOWN": return `${prefix}+LeftY`;
     case "GP_RS_LEFT": return `${prefix}-RightX`;
     case "GP_RS_RIGHT": return `${prefix}+RightX`;
     case "GP_RS_UP": return `${prefix}-RightY`;

@@ -6,7 +6,6 @@ import { IniEditor } from "../editors/ini";
 import { ControlsService } from "../../services/ControlsService";
 import { PCSX2Translator } from "../translators/PCSX2Translator";
 import type { EmulatorPatch, TranslateContext } from "../translators/ITranslator";
-import type { PlayerBindings } from "../../../shared/types/controls";
 import { PCSX2 } from "../schema/pcsx2";
 import { SettingsService } from "../../services/SettingsService";
 import { getResolutionMultiplier } from "../../../shared/resolution";
@@ -44,6 +43,19 @@ export class PCSX2Configurator extends BaseConfigurator {
     const resolution = settingsSvc.get("launch.resolution");
     const resScale = String(getResolutionMultiplier(resolution, "pcsx2"));
 
+    const svc = new ControlsService();
+    const profile = svc.getDefaultProfile();
+    const layout = await svc.getEffectiveConsoleLayout("ps2", profile.id);
+
+    // PCSX2 only instantiates a controller for a port whose [PadN] Type is not
+    // "None" - bindings written under a None-typed port are silently ignored
+    // (see Pad::LoadConfig). Pad3/Pad4 additionally require multitap on port 1
+    // (ini key MultitapPort1 in the [Pad] section), since they map to that
+    // port's multitap slots (see Pad::GetConfigSection / Pad::LoadConfig).
+    const hasPlayer2 = !!layout.player2;
+    const hasPlayer3 = !!layout.player3;
+    const hasPlayer4 = !!layout.player4;
+
     const iniConfig: Record<string, Record<string, string>> = {
       UI: {
         StartFullscreen: fs_flag,
@@ -68,11 +80,20 @@ export class PCSX2Configurator extends BaseConfigurator {
       InputSources: {
         SDL: "true",
       },
+      Pad: {
+        MultitapPort1: hasPlayer3 || hasPlayer4 ? "true" : "false",
+      },
       Pad1: {
         Type: "DualShock2",
       },
       Pad2: {
-        Type: "None",
+        Type: hasPlayer2 ? "DualShock2" : "None",
+      },
+      Pad3: {
+        Type: hasPlayer3 ? "DualShock2" : "None",
+      },
+      Pad4: {
+        Type: hasPlayer4 ? "DualShock2" : "None",
       },
     };
 
@@ -83,12 +104,6 @@ export class PCSX2Configurator extends BaseConfigurator {
     }
 
     IniEditor.updateIni(pcsx2Ini, iniConfig);
-
-    const svc = new ControlsService();
-    const profile = svc.getDefaultProfile();
-
-    const layout = await svc.getEffectiveConsoleLayout("ps2", profile.id);
-    const bindings: PlayerBindings = layout.player1;
 
     const effectiveProfile = {
       ...profile,

@@ -1,7 +1,12 @@
 import fs from "fs";
 import path from "path";
 
-type IniUpdates = Record<string, Record<string, string>>;
+// A string[] value writes the key once per entry ("multi-key"), which is how
+// INI files express a list. Emulators that read bindings as a list - e.g.
+// PCSX2 via CSimpleIni GetAllValues - need repeated lines to bind more than
+// one input to the same action.
+type IniValue = string | string[];
+type IniUpdates = Record<string, Record<string, IniValue>>;
 type IniDeletes = Record<string, string[]>;
 
 const ROOT = "";
@@ -18,6 +23,10 @@ type IniWriteFormat = "compact" | "spaced";
 
 function formatLine(key: string, val: string, fmt: IniWriteFormat) {
   return fmt === "compact" ? `${key}=${val}` : `${key} = ${val}`;
+}
+
+function formatLines(key: string, val: IniValue, fmt: IniWriteFormat): string[] {
+  return (Array.isArray(val) ? val : [val]).map((v) => formatLine(key, v, fmt));
 }
 
 export const IniEditor = {
@@ -46,19 +55,29 @@ export const IniEditor = {
         const key = kvMatch[1].trim();
 
         const sectionUpdates = updates[currentSection];
+        const rootUpdates = updates[ROOT];
+
+        let updateSection: string | null = null;
+        let val: IniValue | undefined;
+
         if (sectionUpdates && sectionUpdates[key] !== undefined) {
-          const val = sectionUpdates[key];
-          out.push(formatLine(key, val, format));
-          processed.add(`${currentSection}.${key}`);
-        } else {
-          const rootUpdates = updates[ROOT];
-          if (currentSection === ROOT && rootUpdates && rootUpdates[key] !== undefined) {
-            const val = rootUpdates[key];
-            out.push(formatLine(key, val, format));
-            processed.add(`${ROOT}.${key}`);
-          } else {
-            out.push(line);
+          updateSection = currentSection;
+          val = sectionUpdates[key];
+        } else if (currentSection === ROOT && rootUpdates && rootUpdates[key] !== undefined) {
+          updateSection = ROOT;
+          val = rootUpdates[key];
+        }
+
+        if (updateSection !== null && val !== undefined) {
+          const id = `${updateSection}.${key}`;
+          // A multi-key list replaces every pre-existing line for this key, so
+          // emit the whole list once and drop the remaining duplicates.
+          if (!processed.has(id)) {
+            out.push(...formatLines(key, val, format));
+            processed.add(id);
           }
+        } else {
+          out.push(line);
         }
       } else {
         out.push(line);
@@ -91,7 +110,7 @@ export const IniEditor = {
         if (processed.has(id)) continue;
 
         if (section === ROOT) {
-          out.push(formatLine(k, v, format));
+          out.push(...formatLines(k, v, format));
           processed.add(id);
           continue;
         }
@@ -105,7 +124,7 @@ export const IniEditor = {
           end = out.length;
         }
 
-        out.splice(end, 0, formatLine(k, v, format));
+        out.splice(end, 0, ...formatLines(k, v, format));
         processed.add(id);
       }
     }
