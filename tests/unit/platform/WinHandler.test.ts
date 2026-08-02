@@ -196,11 +196,9 @@ describe("WinHandler", () => {
       );
     });
 
-    it("should return correct path for ares", () => {
-      const game = { engineId: "ares" } as Game;
-      expect(handler.getSavePath(game)).toBe(
-        path.join("C:\\Users\\TestUser", "AppData", "Local", "ares", "Saves")
-      );
+    it("should return the ROM directory for ares, which saves next to the ROM", () => {
+      const game = { engineId: "ares", filePath: path.join("C:\\roms", "n64", "Mario Kart 64.z64") } as Game;
+      expect(handler.getSavePath(game)).toBe(path.join("C:\\roms", "n64"));
     });
 
     it("should return correct path for duckstation", () => {

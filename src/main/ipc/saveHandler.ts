@@ -141,5 +141,33 @@ export default function registerSaveHandlers() {
       return { success: false, message: (err as Error).message };
     }
   });
+
+  ipcMain.handle("save:import", async (_evt, payload: { gameId: string; sourcePath?: string }) => {
+    try {
+      const { gameId, sourcePath } = payload ?? ({} as { gameId: string; sourcePath?: string });
+      if (!isValidGameId(gameId)) {
+        return { success: false, message: "Invalid gameId" };
+      }
+
+      const result = LibraryService.getGame(gameId);
+      if (!result.success || !result.game) {
+        return { success: false, message: "Game not found" };
+      }
+
+      const game = result.game as Game;
+      const importResult = await SaveService.importSave(game, sourcePath);
+      return {
+        success: importResult.success,
+        gameId,
+        importedFiles: importResult.importedFiles,
+        replacedTo: importResult.replacedTo,
+        issues: importResult.issues,
+        message: importResult.error,
+      };
+    } catch (err) {
+      console.error("Failed to import save:", (err as Error).message);
+      return { success: false, message: (err as Error).message };
+    }
+  });
 }
 

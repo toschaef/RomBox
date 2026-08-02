@@ -96,4 +96,48 @@ describe("IPC Save Handler Integration Tests", () => {
     const statusRes3 = (await ipcMain._invoke("save:status", { gameId: mockGame.id })) as { status: { hasCachedSave: boolean } };
     expect(statusRes3.status.hasCachedSave).toBe(false);
   });
+
+  it("should import a verified save via IPC", async () => {
+    LibraryService.createGame(mockGame);
+
+    const sourcePath = path.join(tempDir, "someone-elses.srm");
+    fs.writeFileSync(sourcePath, Buffer.alloc(32 * 1024));
+
+    const importRes = (await ipcMain._invoke("save:import", { gameId: mockGame.id, sourcePath })) as {
+      success: boolean; importedFiles: string[];
+    };
+
+    expect(importRes.success).toBe(true);
+    // Renamed to the ROM it was imported onto.
+    expect(importRes.importedFiles).toEqual(["game.srm"]);
+
+    const statusRes = (await ipcMain._invoke("save:status", { gameId: mockGame.id })) as {
+      status: { hasCachedSave: boolean };
+    };
+    expect(statusRes.status.hasCachedSave).toBe(true);
+  });
+
+  it("should report why an invalid save was refused via IPC", async () => {
+    LibraryService.createGame(mockGame);
+
+    const sourcePath = path.join(tempDir, "corrupt.srm");
+    fs.writeFileSync(sourcePath, Buffer.alloc(1234));
+
+    const importRes = (await ipcMain._invoke("save:import", { gameId: mockGame.id, sourcePath })) as {
+      success: boolean; message: string; issues: { file: string; reason: string }[];
+    };
+
+    expect(importRes.success).toBe(false);
+    expect(importRes.issues).toHaveLength(1);
+    expect(importRes.message).toContain("not a valid save chip size");
+  });
+
+  it("should reject an import for a game that is not in the library", async () => {
+    const importRes = (await ipcMain._invoke("save:import", { gameId: "nonexistent" })) as {
+      success: boolean; message: string;
+    };
+
+    expect(importRes.success).toBe(false);
+    expect(importRes.message).toBe("Game not found");
+  });
 });

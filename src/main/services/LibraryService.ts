@@ -3,6 +3,7 @@ import path from "path";
 import { getDB } from "../data/db";
 import type { Game } from "../../shared/types";
 import { ScannerService } from "./ScannerService";
+import { SaveService } from "./SaveService";
 import { Logger } from "../utils/logger";
 import { app } from "electron";
 
@@ -131,6 +132,15 @@ export const LibraryService = {
         return { success: false, message: "Game not found" };
       }
 
+      try {
+        const backup = SaveService.backupSave(game);
+        if (backup.backedUpFiles.length > 0) {
+          log.info('Saves cached before deletion', { gameId, count: backup.backedUpFiles.length });
+        }
+      } catch (err) {
+        log.warn('Save backup before deletion failed', err);
+      }
+
       db.prepare('delete from games where id = ?').run(gameId);
       if (game.filePath && fs.existsSync(game.filePath)) {
         try {
@@ -155,6 +165,20 @@ export const LibraryService = {
 
   clearLibrary: () => {
     log.info('Clearing entire library');
+
+    try {
+      const games = (LibraryService.getGames().games ?? []) as Game[];
+      for (const game of games) {
+        try {
+          SaveService.backupSave(game);
+        } catch (err) {
+          log.warn('Save backup before clearing library failed', { gameId: game.id, error: (err as Error)?.message });
+        }
+      }
+    } catch (err) {
+      log.warn('Could not enumerate games before clearing library', err);
+    }
+
     getDB().prepare('DELETE FROM games').run();
     const romsDir = path.join(app.getPath('userData'), 'roms');
     if (fs.existsSync(romsDir)) {

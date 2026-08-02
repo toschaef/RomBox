@@ -52,3 +52,17 @@ export type SaveExportResponse = IpcResponse & {
   gameId?: string;
   exportedTo?: string;
 };
+
+/** why one file in an import was refused */
+export interface SaveImportIssue {
+  file: string;
+  reason: string;
+}
+
+export type SaveImportResponse = IpcResponse & {
+  gameId?: string;
+  importedFiles?: string[];
+  /** folder holding copies of whatever the import overwrote */
+  replacedTo?: string;
+  issues?: SaveImportIssue[];
+};

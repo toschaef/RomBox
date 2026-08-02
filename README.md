@@ -35,7 +35,13 @@ RomBox will accept raw files, directories, or archives. Directories and archives
 
 Games can be launched, renamed and deleted in the Library window, and are installed by dragging the file(s) onto the application. To launch a game, click on the cover, or default card if RomBox fails to fetch the cover.
 
-Rombox automatically caches game's save files, so state should persist on reinstallation. Right now this is unsupported on 3DS. You can manually delete a game's save data in the submenu on the bottom right of the cover.
+Rombox automatically caches game's save files, so state should persist on reinstallation. Every supported console is covered, including the ones whose emulators don't store saves as one file per ROM: GameCube memory cards (raw images and GCI folders), the Wii NAND, the 3DS SD card, and PS1/PS2 memory cards are cached as a whole. Save states are cached too. Saves are backed up when a game exits and again before a game is deleted, and restored on launch — a save the emulator wrote more recently than the backup is never overwritten.
+
+You can manually delete a game's save data in the submenu on the bottom right of the cover. Memory cards and NANDs that several games share are kept, since deleting them would take other games' progress with them.
+
+**Importing saves.** The same submenu has an Import Save option, which takes either a single save file or a RomBox save archive. Every file is verified before anything is written — a PS1 memory card has to pass the checksums on all sixteen of its directory frames, a GameCube save's header has to declare the same block count as its length, a PS2 card has to carry Sony's header and be a real card size, and a cartridge save has to be a size a save chip actually comes in. Files that cannot be proven valid are refused with the reason, and nothing is written unless the whole import verifies.
+
+Imported saves are renamed to the game they were imported onto, so a save from someone else's library is picked up correctly. Anything an import replaces is copied to `saves/_replaced/` first, so it can be put back by hand. A save exported from RomBox can always be imported again.
 
 | Console | Expected File Extensions | Emulator Supported |
 | --- | --- | --- |
@@ -90,8 +96,6 @@ Azahar doesnt configure controller controls unless controller is connected on la
 Azahar has update popup on launch
 
 ### Future Features:
-
-save caching for 3ds, wii, n64
 
 ui improvement (specifically controls page)
 

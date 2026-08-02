@@ -5,6 +5,7 @@ import type {
   SaveDeleteResponse,
   SaveListResponse,
   SaveExportResponse,
+  SaveImportResponse,
 } from "../../shared/types/saves";
 
 export const saveClient = {
@@ -25,4 +26,7 @@ export const saveClient = {
 
   export: (gameId: string) =>
     window.electron.invoke("save:export", { gameId }) as Promise<SaveExportResponse>,
+
+  import: (gameId: string) =>
+    window.electron.invoke("save:import", { gameId }) as Promise<SaveImportResponse>,
 };

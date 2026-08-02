@@ -136,7 +136,7 @@ export class WinHandler implements PlatformHandler {
   }
 
   getSavePath(game: Game): string {
-    const { appData, localAppData, docs } = this.getBaseDirs();
+    const { appData, docs } = this.getBaseDirs();
 
     switch (game.engineId) {
       case "mesen":
@@ -151,7 +151,7 @@ export class WinHandler implements PlatformHandler {
       case "azahar":
         return path.join(appData, "Azahar", "sdmc");
       case "ares":
-        return path.join(localAppData, "ares", "Saves");
+        return path.dirname(game.filePath);
       case "duckstation":
         return path.join(docs, "DuckStation", "memcards");
       case "pcsx2":

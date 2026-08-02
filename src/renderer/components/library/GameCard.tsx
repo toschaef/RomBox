@@ -261,6 +261,34 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
     }
   };
 
+  const handleImportSave = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(false);
+
+    try {
+      console.log(`[GameCard] Importing save for "${game.title}"...`);
+      const result = await saveClient.import(game.id);
+
+      if (result.success) {
+        const fileCount = result.importedFiles?.length ?? 0;
+        console.log(`[GameCard] Imported ${fileCount} file(s)`, result.replacedTo ?? '');
+        notify(NOTIFICATION_MESSAGES.SAVE_IMPORTED(game.title, fileCount), { type: 'success', duration: durations.short });
+      } else if (result.message === 'Import cancelled') {
+        console.log('[GameCard] Import cancelled by user');
+      } else if (result.issues?.length) {
+        // The save failed verification: show why, so the user can fix it.
+        console.warn('[GameCard] Save rejected:', result.issues);
+        notify(NOTIFICATION_MESSAGES.SAVE_IMPORT_REJECTED(result.message ?? ''), { type: 'error', duration: durations.long });
+      } else {
+        console.warn(`[GameCard] Import failed: ${result.message}`);
+        notify(NOTIFICATION_MESSAGES.SAVE_IMPORT_FAILED(game.title), { type: 'error', duration: durations.medium });
+      }
+    } catch (err) {
+      console.error('[GameCard] Import error:', err);
+      notify(NOTIFICATION_MESSAGES.SAVE_IMPORT_FAILED(game.title), { type: 'error', duration: durations.medium });
+    }
+  };
+
   const toggleMenu = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowMenu(!showMenu);
@@ -318,6 +346,16 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
             "
           >
             Export Save
+          </button>
+          <button
+            onClick={handleImportSave}
+            className="
+              w-full text-left px-3 py-2 text-xs font-semibold
+              text-fg-secondary hover:text-fg-primary hover:bg-bg-muted
+              transition-colors
+            "
+          >
+            Import Save
           </button>
           <div className="h-px bg-border-subtle mx-1"></div>
           <button

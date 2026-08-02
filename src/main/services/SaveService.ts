@@ -3,9 +3,11 @@ import path from "path";
 import { app, dialog } from "electron";
 
 import type { Game } from "../../shared/types";
-import type { EngineID } from "../../shared/types/engines";
-import type { SaveMetadata, SaveStatus } from "../../shared/types/saves";
+import type { SaveImportIssue, SaveMetadata, SaveStatus } from "../../shared/types/saves";
 import { getEngineIdFromConsoleId } from "../../shared/constants";
+import { getSaveRoots, getConsoleCacheDir, type SaveRoot } from "../config/saveLayouts";
+import { SAVE_FORMATS } from "../config/saveFormats";
+import { planImport, type ImportPlan, type ImportPlanResult } from "../utils/saves/importPlanner";
 import { osHandler } from "../platform";
 import { Logger } from "../utils/logger";
 
@@ -15,6 +17,20 @@ const log = Logger.create('SaveService');
 
 const USERDATA = app.getPath("userData");
 const SAVE_CACHE_PATH = path.join(USERDATA, "saves");
+const IMPORT_SNAPSHOT_PATH = path.join(SAVE_CACHE_PATH, "_replaced");
+const SNAPSHOTS_KEPT_PER_CONSOLE = 5;
+
+/** cache subdirectories that are not console caches */
+const CACHE_INTERNAL_PREFIX = "_";
+
+interface SaveFile {
+  root: SaveRoot;
+  /** path relative to the root's directory, preserving subdirectories */
+  relPath: string;
+  absPath: string;
+  /** the file is named after this game (always true for shared containers we cannot attribute) */
+  matched: boolean;
+}
 
 function ensureDir(p: string) {
   if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
@@ -24,132 +40,302 @@ function getEmulatorSaveDir(game: Game): string {
   return osHandler.getSavePath(game);
 }
 
-function getSaveExtensions(engineId: EngineID): string[] {
-  switch (engineId) {
-    case "mesen":
-      return [".sav", ".mss", ".sram", ".srm"];
-    case "melonds":
-      return [".sav", ".dsv"];
-    case "dolphin":
-      return [".gci", ".raw"];
-    case "azahar":
-      return [".sav"];
-    case "ares":
-      return [".sav", ".srm"];
-    case "duckstation":
-      return [".mcd", ".mcr"];
-    case "pcsx2":
-      return [".ps2", ".mcd"];
-    default:
-      return [".sav"];
-  }
-}
-
 function getRomBasename(game: Game): string {
   return path.basename(game.filePath, path.extname(game.filePath));
 }
 
 function getCacheDir(consoleId: string): string {
-  return path.join(SAVE_CACHE_PATH, consoleId);
+  return getConsoleCacheDir(SAVE_CACHE_PATH, consoleId);
 }
 
-function findEmulatorSaves(game: Game): string[] {
-  const engineId = getEngineIdFromConsoleId(game.consoleId);
-  const saveDir = getEmulatorSaveDir(game);
-  const extensions = getSaveExtensions(engineId);
-  const romBasename = getRomBasename(game);
+/** Lists files under dir as root-relative paths, honouring the root's filters. */
+function walkRoot(dir: string, root: SaveRoot): string[] {
+  const results: string[] = [];
 
-  log.debug('Finding saves', { gameTitle: game.title, engineId, saveDir, romBasename, extensions });
+  const visit = (current: string, prefix: string) => {
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(current, { withFileTypes: true });
+    } catch (err) {
+      log.debug('Failed to read save directory', { dir: current, error: (err as Error)?.message });
+      return;
+    }
 
-  if (!fs.existsSync(saveDir)) {
-    log.debug('Save directory does not exist', { saveDir });
-    return [];
-  }
+    for (const entry of entries) {
+      const relPath = prefix ? path.join(prefix, entry.name) : entry.name;
 
-  const saves: string[] = [];
-
-  try {
-    const files = fs.readdirSync(saveDir, { withFileTypes: true });
-
-    for (const file of files) {
-      if (!file.isFile()) continue;
-
-      const fileBasename = path.basename(file.name, path.extname(file.name));
-      const fileExt = path.extname(file.name).toLowerCase();
-
-      const isPlayStation = engineId === "duckstation" || engineId === "pcsx2";
-      const gameTitle = game.title.replace(/[^a-zA-Z0-9\s]/g, "").trim();
-
-      let matches = false;
-      if (isPlayStation) {
-        matches = extensions.includes(fileExt) && (
-          fileBasename.toLowerCase().includes(romBasename.toLowerCase()) ||
-          fileBasename.toLowerCase().includes(gameTitle.toLowerCase()) ||
-          fileBasename.toLowerCase().startsWith("shared_card") ||
-          fileBasename.toLowerCase().startsWith("mcd")
-        );
-      } else {
-        matches = fileBasename.toLowerCase().startsWith(romBasename.toLowerCase()) &&
-          extensions.includes(fileExt);
+      if (entry.isDirectory()) {
+        if (!root.recursive) continue;
+        if (root.excludeDirs?.includes(entry.name)) continue;
+        visit(path.join(current, entry.name), relPath);
+        continue;
       }
 
-      if (matches) {
-        saves.push(path.join(saveDir, file.name));
+      if (!entry.isFile()) continue;
+      if (entry.name === ".DS_Store") continue;
+
+      if (root.extensions) {
+        const ext = path.extname(entry.name).toLowerCase();
+        if (!root.extensions.includes(ext)) continue;
+      }
+
+      results.push(relPath);
+    }
+  };
+
+  if (!fs.existsSync(dir)) return results;
+  visit(dir, "");
+  return results;
+}
+
+/**
+ * Directories in a save tree that hold no files anywhere beneath them.
+ * Copying files alone recreates every directory that has content, but an
+ * emulator may still expect an empty one to exist (Azahar leaves `replay_`
+ * behind in a 3DS title's save directory), so they are tracked separately.
+ * Only the deepest path of each empty branch is kept - creating it recreates
+ * its parents too.
+ */
+function walkEmptyDirs(dir: string, root: SaveRoot): string[] {
+  if (!root.recursive || !fs.existsSync(dir)) return [];
+
+  const empty: string[] = [];
+
+  /** returns whether the subtree contains at least one file */
+  const visit = (current: string, prefix: string): boolean => {
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(current, { withFileTypes: true });
+    } catch {
+      return false;
+    }
+
+    let hasFile = false;
+
+    for (const entry of entries) {
+      const relPath = prefix ? path.join(prefix, entry.name) : entry.name;
+
+      if (entry.isDirectory()) {
+        if (root.excludeDirs?.includes(entry.name)) continue;
+        if (visit(path.join(current, entry.name), relPath)) hasFile = true;
+        else empty.push(relPath);
+        continue;
+      }
+
+      // Any file counts, even one this root filters out: a directory holding
+      // files RomBox does not manage is not ours to recreate.
+      if (entry.isFile() && entry.name !== ".DS_Store") hasFile = true;
+    }
+
+    return hasFile;
+  };
+
+  visit(dir, "");
+
+  return empty.filter(candidate =>
+    !empty.some(other => other !== candidate && other.startsWith(candidate + path.sep))
+  );
+}
+
+/**
+ * Whether a save file belongs to a specific game. Emulators that name saves
+ * after the ROM ("Super Mario Kart (USA).srm", "Super Punch-Out!!_11.mss")
+ * match on the first path segment; the game title is accepted too because
+ * some emulators name saves from their own game database instead.
+ */
+function fileBelongsToGame(relPath: string, game: Game): boolean {
+  const topSegment = relPath.split(path.sep)[0];
+  const name = path.basename(topSegment, path.extname(topSegment)).toLowerCase();
+  const romBasename = getRomBasename(game).toLowerCase();
+  const title = game.title.replace(/[^a-zA-Z0-9\s]/g, "").trim().toLowerCase();
+
+  if (name.startsWith(romBasename)) return true;
+  if (title.length > 0 && name.includes(title)) return true;
+  return false;
+}
+
+/** Collects save files for a game from either the emulator's storage or the cache. */
+function collectSaveFiles(game: Game, side: "emulator" | "cache"): SaveFile[] {
+  const roots = getSaveRoots(game, SAVE_CACHE_PATH);
+  const files: SaveFile[] = [];
+
+  for (const root of roots) {
+    const dir = side === "emulator" ? root.dir : root.cacheDir;
+
+    for (const relPath of walkRoot(dir, root)) {
+      const matched = fileBelongsToGame(relPath, game);
+
+      // A per-game root holds every game's saves side by side, so only the
+      // ones named after this game may be touched. Shared containers cannot
+      // be split per game and are handled as a unit.
+      if (root.scope === "per-game" && !matched) continue;
+
+      files.push({ root, relPath, absPath: path.join(dir, relPath), matched });
+    }
+  }
+
+  return files;
+}
+
+/** Empty directories to mirror alongside the files, as root-relative paths. */
+function collectEmptyDirs(game: Game, side: "emulator" | "cache"): { root: SaveRoot; relPath: string }[] {
+  const roots = getSaveRoots(game, SAVE_CACHE_PATH);
+  const dirs: { root: SaveRoot; relPath: string }[] = [];
+
+  for (const root of roots) {
+    const dir = side === "emulator" ? root.dir : root.cacheDir;
+
+    for (const relPath of walkEmptyDirs(dir, root)) {
+      if (root.scope === "per-game" && !fileBelongsToGame(relPath, game)) continue;
+      dirs.push({ root, relPath });
+    }
+  }
+
+  return dirs;
+}
+
+/** Copies only when the destination is missing or differs, so unchanged NAND trees are cheap. */
+function copyIfChanged(srcPath: string, destPath: string): boolean {
+  try {
+    const srcStats = fs.statSync(srcPath);
+    if (fs.existsSync(destPath)) {
+      const destStats = fs.statSync(destPath);
+      if (destStats.size === srcStats.size && Math.floor(destStats.mtimeMs) === Math.floor(srcStats.mtimeMs)) {
+        return false;
       }
     }
 
-    log.debug('Saves found', { count: saves.length, files: saves.map(s => path.basename(s)) });
+    ensureDir(path.dirname(destPath));
+    fs.copyFileSync(srcPath, destPath);
+    fs.utimesSync(destPath, srcStats.atime, srcStats.mtime);
+    return true;
   } catch (err) {
-    log.error('Failed to read save directory', err);
+    log.error('Failed to copy save file', { srcPath, destPath, error: (err as Error)?.message ?? err });
+    return false;
   }
-
-  return saves;
 }
 
-function findCachedSaves(game: Game): string[] {
-  const cacheDir = getCacheDir(game.consoleId);
-  const engineId = getEngineIdFromConsoleId(game.consoleId);
-  const extensions = getSaveExtensions(engineId);
-  const romBasename = getRomBasename(game);
+function newestMtime(paths: string[]): number {
+  let newest = 0;
+  for (const p of paths) {
+    try {
+      const { mtimeMs } = fs.statSync(p);
+      if (mtimeMs > newest) newest = mtimeMs;
+    } catch {
+      // file vanished between listing and stat; ignore
+    }
+  }
+  return newest;
+}
 
-  if (!fs.existsSync(cacheDir)) return [];
+function totalSize(paths: string[]): number {
+  let total = 0;
+  for (const p of paths) {
+    try {
+      total += fs.statSync(p).size;
+    } catch {
+      // ignore
+    }
+  }
+  return total;
+}
 
-  const saves: string[] = [];
+/** File extensions offered in the import dialog for this game's console. */
+function importableExtensions(roots: SaveRoot[]): string[] {
+  const extensions = new Set<string>(["zip"]);
 
-  try {
-    const files = fs.readdirSync(cacheDir, { withFileTypes: true });
-
-    for (const file of files) {
-      if (!file.isFile()) continue;
-
-      const fileBasename = path.basename(file.name, path.extname(file.name));
-      const fileExt = path.extname(file.name).toLowerCase();
-
-      const isPlayStation = engineId === "duckstation" || engineId === "pcsx2";
-      const gameTitle = game.title.replace(/[^a-zA-Z0-9\s]/g, "").trim();
-
-      let matches = false;
-      if (isPlayStation) {
-        matches = extensions.includes(fileExt) && (
-          fileBasename.toLowerCase().includes(romBasename.toLowerCase()) ||
-          fileBasename.toLowerCase().includes(gameTitle.toLowerCase()) ||
-          fileBasename.toLowerCase().startsWith("shared_card") ||
-          fileBasename.toLowerCase().startsWith("mcd")
-        );
-      } else {
-        matches = fileBasename.toLowerCase().startsWith(romBasename.toLowerCase()) &&
-          extensions.includes(fileExt);
-      }
-
-      if (matches) {
-        saves.push(path.join(cacheDir, file.name));
+  for (const root of roots) {
+    for (const formatId of root.importFormats ?? []) {
+      for (const extension of SAVE_FORMATS[formatId].extensions) {
+        extensions.add(extension.replace(".", ""));
       }
     }
-  } catch (err) {
-    log.error('Failed to read cache directory', err);
   }
 
-  return saves;
+  return [...extensions];
+}
+
+/** Turns rejections into one sentence a notification can carry. */
+function describeRejections(rejections: SaveImportIssue[]): string {
+  const [first] = rejections;
+  const detail = `${path.basename(first.file)}: ${first.reason}`;
+  return rejections.length === 1
+    ? detail
+    : `${detail} (and ${rejections.length - 1} more file${rejections.length === 2 ? "" : "s"})`;
+}
+
+/**
+ * Copies everything the plan is about to overwrite into a timestamped folder
+ * and returns it, so an unwanted import can be reversed by hand. Older
+ * snapshots for the console are pruned.
+ */
+function snapshotReplacedFiles(game: Game, plan: ImportPlan): string | undefined {
+  const snapshotDir = path.join(
+    IMPORT_SNAPSHOT_PATH,
+    game.consoleId,
+    new Date().toISOString().replace(/[:.]/g, "-"),
+  );
+
+  let replaced = 0;
+
+  for (const entry of plan.entries) {
+    for (const [side, dir] of [["cache", entry.root.cacheDir], ["emulator", entry.root.dir]] as const) {
+      const existing = path.join(dir, entry.relPath);
+      if (!fs.existsSync(existing)) continue;
+
+      const destPath = path.join(snapshotDir, side, entry.root.id, entry.relPath);
+      ensureDir(path.dirname(destPath));
+      fs.copyFileSync(existing, destPath);
+      replaced++;
+    }
+  }
+
+  if (replaced === 0) return undefined;
+
+  pruneSnapshots(game.consoleId);
+  return snapshotDir;
+}
+
+function pruneSnapshots(consoleId: string) {
+  const consoleDir = path.join(IMPORT_SNAPSHOT_PATH, consoleId);
+
+  try {
+    const snapshots = fs.readdirSync(consoleDir, { withFileTypes: true })
+      .filter(entry => entry.isDirectory())
+      .map(entry => entry.name)
+      .sort();
+
+    for (const stale of snapshots.slice(0, -SNAPSHOTS_KEPT_PER_CONSOLE)) {
+      fs.rmSync(path.join(consoleDir, stale), { recursive: true, force: true });
+    }
+  } catch (err) {
+    log.debug('Could not prune import snapshots', { consoleId, error: (err as Error)?.message });
+  }
+}
+
+/**
+ * Writes a verified plan to both the cache and the emulator's own storage, so
+ * the import takes effect on the next launch and survives a reinstall.
+ */
+function installPlan(plan: ImportPlan): string[] {
+  const imported: string[] = [];
+
+  for (const { root, relPath } of plan.directories) {
+    ensureDir(path.join(root.cacheDir, relPath));
+    ensureDir(path.join(root.dir, relPath));
+  }
+
+  for (const entry of plan.entries) {
+    for (const dir of [entry.root.cacheDir, entry.root.dir]) {
+      const destPath = path.join(dir, entry.relPath);
+      ensureDir(path.dirname(destPath));
+      fs.writeFileSync(destPath, entry.buffer);
+    }
+
+    imported.push(entry.relPath);
+  }
+
+  return imported;
 }
 
 export const SaveService = {
@@ -157,28 +343,49 @@ export const SaveService = {
     const engineId = getEngineIdFromConsoleId(game.consoleId);
     const cacheDir = getCacheDir(game.consoleId);
     const emulatorSaveDir = getEmulatorSaveDir(game);
-    const cachedSaves = findCachedSaves(game);
+    const cachedSaves = collectSaveFiles(game, "cache");
 
-    const cachedFiles: SaveMetadata[] = cachedSaves.map(savePath => {
-      const stats = fs.statSync(savePath);
-      return {
-        gameId: game.id,
-        gameName: game.title,
-        gameFileName: path.basename(game.filePath),
-        consoleId: game.consoleId,
-        engineId,
-        fileName: path.basename(savePath),
-        cachedAt: stats.mtimeMs,
-        sizeBytes: stats.size,
-      };
-    });
-
-    return {
+    const base = {
       gameId: game.id,
       gameName: game.title,
       gameFileName: path.basename(game.filePath),
       consoleId: game.consoleId,
       engineId,
+    };
+
+    const cachedFiles: SaveMetadata[] = [];
+    const sharedByRoot = new Map<string, SaveFile[]>();
+
+    for (const file of cachedSaves) {
+      // Shared containers (Wii NAND, 3DS SD card) can hold thousands of
+      // files; report them as one entry per container instead.
+      if (file.root.scope === "shared" && !file.matched) {
+        const bucket = sharedByRoot.get(file.root.id) ?? [];
+        bucket.push(file);
+        sharedByRoot.set(file.root.id, bucket);
+        continue;
+      }
+
+      try {
+        const stats = fs.statSync(file.absPath);
+        cachedFiles.push({ ...base, fileName: file.relPath, cachedAt: stats.mtimeMs, sizeBytes: stats.size });
+      } catch {
+        // ignore
+      }
+    }
+
+    for (const [rootId, files] of sharedByRoot) {
+      const paths = files.map(f => f.absPath);
+      cachedFiles.push({
+        ...base,
+        fileName: `${rootId} (${files.length} file${files.length === 1 ? "" : "s"})`,
+        cachedAt: newestMtime(paths),
+        sizeBytes: totalSize(paths),
+      });
+    }
+
+    return {
+      ...base,
       hasCachedSave: cachedFiles.length > 0,
       cachedFiles,
       emulatorSaveDir,
@@ -190,10 +397,7 @@ export const SaveService = {
     const saveLog = log.child({ gameId: game.id, title: game.title });
     saveLog.info('Backing up saves');
 
-    const cacheDir = getCacheDir(game.consoleId);
-    ensureDir(cacheDir);
-
-    const emulatorSaves = findEmulatorSaves(game);
+    const emulatorSaves = collectSaveFiles(game, "emulator");
 
     if (emulatorSaves.length === 0) {
       saveLog.warn('No saves to backup');
@@ -202,19 +406,22 @@ export const SaveService = {
 
     const backedUpFiles: string[] = [];
 
-    for (const savePath of emulatorSaves) {
-      const fileName = path.basename(savePath);
-      const destPath = path.join(cacheDir, fileName);
-
-      try {
-        fs.copyFileSync(savePath, destPath);
-        backedUpFiles.push(fileName);
-      } catch (err) {
-        saveLog.error('Failed to backup save file', { savePath, error: (err as Error)?.message ?? err });
+    for (const file of emulatorSaves) {
+      const destPath = path.join(file.root.cacheDir, file.relPath);
+      if (copyIfChanged(file.absPath, destPath)) {
+        backedUpFiles.push(file.relPath);
       }
     }
 
-    saveLog.info('Backup complete', { count: backedUpFiles.length, files: backedUpFiles });
+    for (const { root, relPath } of collectEmptyDirs(game, "emulator")) {
+      ensureDir(path.join(root.cacheDir, relPath));
+    }
+
+    saveLog.info('Backup complete', {
+      count: backedUpFiles.length,
+      scanned: emulatorSaves.length,
+      files: backedUpFiles.slice(0, 20),
+    });
     return { success: true, backedUpFiles };
   },
 
@@ -222,11 +429,8 @@ export const SaveService = {
     const saveLog = log.child({ gameId: game.id, title: game.title });
     saveLog.info('Restoring saves');
 
-    const emulatorSaveDir = getEmulatorSaveDir(game);
-    ensureDir(emulatorSaveDir);
-
-    const cachedSaves = findCachedSaves(game);
-    saveLog.debug('Cached saves found', { count: cachedSaves.length, files: cachedSaves.map(s => path.basename(s)) });
+    const cachedSaves = collectSaveFiles(game, "cache");
+    saveLog.debug('Cached saves found', { count: cachedSaves.length });
 
     if (cachedSaves.length === 0) {
       saveLog.debug('No cached saves to restore');
@@ -236,55 +440,147 @@ export const SaveService = {
     const restoredFiles: string[] = [];
     const skippedFiles: string[] = [];
 
-    for (const savePath of cachedSaves) {
-      const fileName = path.basename(savePath);
-      const destPath = path.join(emulatorSaveDir, fileName);
+    for (const file of cachedSaves) {
+      const destPath = path.join(file.root.dir, file.relPath);
 
       try {
-        const cachedStats = fs.statSync(savePath);
+        const cachedStats = fs.statSync(file.absPath);
 
         if (fs.existsSync(destPath)) {
           const destStats = fs.statSync(destPath);
 
+          // Never overwrite save data the emulator wrote after the backup.
           if (destStats.mtimeMs > cachedStats.mtimeMs) {
-            saveLog.warn('Skipping restore: destination is newer than cache', {
-              fileName,
-              cachedMtime: new Date(cachedStats.mtimeMs).toISOString(),
-              destMtime: new Date(destStats.mtimeMs).toISOString(),
-            });
-            skippedFiles.push(fileName);
+            skippedFiles.push(file.relPath);
             continue;
           }
         }
 
-        fs.copyFileSync(savePath, destPath);
-        restoredFiles.push(fileName);
+        ensureDir(path.dirname(destPath));
+        if (copyIfChanged(file.absPath, destPath)) {
+          restoredFiles.push(file.relPath);
+        }
       } catch (err) {
-        saveLog.error('Failed to restore save file', { savePath, error: (err as Error)?.message ?? err });
+        saveLog.error('Failed to restore save file', { savePath: file.absPath, error: (err as Error)?.message ?? err });
       }
     }
 
-    saveLog.info('Restore complete', { count: restoredFiles.length, files: restoredFiles, skipped: skippedFiles });
+    for (const { root, relPath } of collectEmptyDirs(game, "cache")) {
+      ensureDir(path.join(root.dir, relPath));
+    }
+
+    saveLog.info('Restore complete', {
+      count: restoredFiles.length,
+      files: restoredFiles.slice(0, 20),
+      skipped: skippedFiles.length,
+    });
     return { success: true, restoredFiles };
   },
 
   deleteCachedSave(game: Game): { success: boolean; deletedFiles: string[]; error?: string } {
     log.info('Deleting cached saves', { gameId: game.id, title: game.title });
 
-    const cachedSaves = findCachedSaves(game);
+    const cachedSaves = collectSaveFiles(game, "cache");
     const deletedFiles: string[] = [];
+    let keptShared = 0;
 
-    for (const savePath of cachedSaves) {
+    for (const file of cachedSaves) {
+      // A shared memory card or NAND holds other games' progress too, so it
+      // is never deleted on behalf of a single game.
+      if (!file.matched) {
+        keptShared++;
+        continue;
+      }
+
       try {
-        fs.unlinkSync(savePath);
-        deletedFiles.push(path.basename(savePath));
+        fs.unlinkSync(file.absPath);
+        deletedFiles.push(file.relPath);
       } catch (err) {
-        log.warn('Failed to delete save file', { savePath, error: (err as Error)?.message ?? err });
+        log.warn('Failed to delete save file', { savePath: file.absPath, error: (err as Error)?.message ?? err });
       }
     }
 
-    log.info('Cached saves deleted', { count: deletedFiles.length, files: deletedFiles });
+    log.info('Cached saves deleted', { count: deletedFiles.length, files: deletedFiles, keptShared });
     return { success: true, deletedFiles };
+  },
+
+  /**
+   * Installs save data from a file the user picked. Every file is verified
+   * against the formats its destination accepts before anything is written,
+   * and whatever it replaces is kept under `saves/_replaced/` so an import
+   * can always be undone by hand.
+   */
+  async importSave(game: Game, sourcePath?: string): Promise<{
+    success: boolean;
+    importedFiles?: string[];
+    replacedTo?: string;
+    error?: string;
+    issues?: SaveImportIssue[];
+  }> {
+    const importLog = log.child({ gameId: game.id, title: game.title });
+    const roots = getSaveRoots(game, SAVE_CACHE_PATH);
+    let chosenPath = sourcePath;
+
+    if (!chosenPath) {
+      const result = await dialog.showOpenDialog({
+        title: `Import Save Data for ${game.title}`,
+        properties: ["openFile"],
+        filters: [
+          { name: "Save Files", extensions: importableExtensions(roots) },
+          { name: "All Files", extensions: ["*"] },
+        ],
+      });
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return { success: false, error: "Import cancelled" };
+      }
+
+      chosenPath = result.filePaths[0];
+    }
+
+    importLog.info('Validating save for import', { sourcePath: chosenPath });
+
+    const planResult: ImportPlanResult = (() => {
+      try {
+        return planImport(game, chosenPath, roots);
+      } catch (err) {
+        importLog.error('Save validation failed', err);
+        return {
+          status: "rejected",
+          rejections: [{
+            file: path.basename(chosenPath),
+            reason: (err as Error)?.message ?? "the file could not be read",
+          }],
+        };
+      }
+    })();
+
+    if (planResult.status === "rejected") {
+      const { rejections } = planResult;
+      importLog.warn('Save rejected', { rejections: rejections.slice(0, 10) });
+      return {
+        success: false,
+        error: describeRejections(rejections),
+        issues: rejections,
+      };
+    }
+
+    const { plan } = planResult;
+    importLog.info('Save verified', {
+      files: plan.entries.length,
+      formats: [...new Set(plan.entries.map(e => e.verifiedAs))],
+    });
+
+    try {
+      const replacedTo = snapshotReplacedFiles(game, plan);
+      const importedFiles = installPlan(plan);
+
+      importLog.info('Import complete', { count: importedFiles.length, replacedTo });
+      return { success: true, importedFiles, replacedTo };
+    } catch (err) {
+      importLog.error('Import failed while writing', err);
+      return { success: false, error: (err as Error)?.message ?? "Could not write the save data" };
+    }
   },
 
   listAllSaves(): SaveStatus[] {
@@ -292,44 +588,65 @@ export const SaveService = {
 
     const saves: SaveStatus[] = [];
 
+    const walkCache = (dir: string, prefix: string, out: string[]) => {
+      let entries: fs.Dirent[];
+      try {
+        entries = fs.readdirSync(dir, { withFileTypes: true });
+      } catch {
+        return;
+      }
+
+      for (const entry of entries) {
+        const relPath = prefix ? path.join(prefix, entry.name) : entry.name;
+        if (entry.isDirectory()) {
+          walkCache(path.join(dir, entry.name), relPath, out);
+        } else if (entry.isFile() && entry.name !== ".DS_Store") {
+          out.push(relPath);
+        }
+      }
+    };
+
     try {
       const consoleDirs = fs.readdirSync(SAVE_CACHE_PATH, { withFileTypes: true });
 
       for (const consoleDir of consoleDirs) {
         if (!consoleDir.isDirectory()) continue;
-        if (consoleDir.name === ".DS_Store") continue;
+        if (consoleDir.name.startsWith(CACHE_INTERNAL_PREFIX)) continue;
 
         const consoleId = consoleDir.name as Game["consoleId"];
-        const consoleCacheDir = getCacheDir(consoleId);
         const engineId = getEngineIdFromConsoleId(consoleId);
-        const extensions = getSaveExtensions(engineId);
+        if (!engineId) continue;
 
-        const files = fs.readdirSync(consoleCacheDir, { withFileTypes: true });
+        const consoleCacheDir = getCacheDir(consoleId);
+        const relPaths: string[] = [];
+        walkCache(consoleCacheDir, "", relPaths);
 
-        for (const file of files) {
-          if (!file.isFile()) continue;
-          
-          const fileExt = path.extname(file.name).toLowerCase();
-          if (!extensions.includes(fileExt)) continue;
+        for (const relPath of relPaths) {
+          const filePath = path.join(consoleCacheDir, relPath);
+          let stats: fs.Stats;
+          try {
+            stats = fs.statSync(filePath);
+          } catch {
+            continue;
+          }
 
-          const filePath = path.join(consoleCacheDir, file.name);
-          const stats = fs.statSync(filePath);
-          const romBasename = path.basename(file.name, fileExt);
+          const fileName = path.basename(relPath);
+          const romBasename = path.basename(fileName, path.extname(fileName));
 
           saves.push({
             gameId: romBasename,
             gameName: romBasename,
-            gameFileName: file.name,
+            gameFileName: fileName,
             consoleId,
             engineId,
             hasCachedSave: true,
             cachedFiles: [{
               gameId: romBasename,
               gameName: romBasename,
-              gameFileName: file.name,
+              gameFileName: fileName,
               consoleId,
               engineId,
-              fileName: file.name,
+              fileName: relPath,
               cachedAt: stats.mtimeMs,
               sizeBytes: stats.size,
             }],
@@ -346,23 +663,35 @@ export const SaveService = {
   },
 
   async exportSave(game: Game): Promise<{ success: boolean; exportedTo?: string; error?: string }> {
-    const cachedSaves = findCachedSaves(game);
+    // Back up first so an export always reflects the latest session, even if
+    // the emulator was closed in a way that skipped the automatic backup.
+    try {
+      SaveService.backupSave(game);
+    } catch (err) {
+      log.warn('Pre-export backup failed', err);
+    }
+
+    const cachedSaves = collectSaveFiles(game, "cache");
 
     if (cachedSaves.length === 0) {
       log.warn('No cached saves found for this game');
       return { success: false, error: "No cached saves found for this game" };
     }
 
-    const firstSave = cachedSaves[0];
-    const defaultName = cachedSaves.length === 1
-      ? path.basename(firstSave)
+    // Only a per-game save stands on its own as a bare file. A file from a
+    // shared container is identified by where it sits in the tree, so it is
+    // always zipped - otherwise the export could not be imported back.
+    const singleFile =
+      cachedSaves.length === 1 && cachedSaves[0].root.scope === "per-game" ? cachedSaves[0] : null;
+    const defaultName = singleFile
+      ? path.basename(singleFile.absPath)
       : `${game.title.replace(/[^a-zA-Z0-9]/g, "_")}_saves.zip`;
 
     const result = await dialog.showSaveDialog({
       title: "Export Save File",
       defaultPath: path.join(app.getPath("downloads"), defaultName),
-      filters: cachedSaves.length === 1
-        ? [{ name: "Save Files", extensions: [path.extname(firstSave).slice(1) || "sav"] }]
+      filters: singleFile
+        ? [{ name: "Save Files", extensions: [path.extname(singleFile.absPath).slice(1) || "sav"] }]
         : [{ name: "ZIP Archive", extensions: ["zip"] }],
     });
 
@@ -371,15 +700,24 @@ export const SaveService = {
     }
 
     try {
-      if (cachedSaves.length === 1) {
-        fs.copyFileSync(firstSave, result.filePath);
+      if (singleFile) {
+        fs.copyFileSync(singleFile.absPath, result.filePath);
       } else {
         const zip = new AdmZip();
 
-        for (const savePath of cachedSaves) {
-          if (fs.existsSync(savePath)) {
-            zip.addLocalFile(savePath);
-          }
+        for (const file of cachedSaves) {
+          if (!fs.existsSync(file.absPath)) continue;
+          // Keep each root's structure so an exported NAND or GCI folder can
+          // be dropped back into the emulator as-is.
+          const entryDir = path.dirname(path.join(file.root.id, file.relPath));
+          zip.addLocalFile(file.absPath, entryDir === "." ? "" : entryDir.split(path.sep).join("/"));
+        }
+
+        // Directory entries, so an exported tree unzips to the same shape the
+        // emulator had - empty directories included.
+        for (const { root, relPath } of collectEmptyDirs(game, "cache")) {
+          const entry = path.join(root.id, relPath).split(path.sep).join("/");
+          zip.addFile(`${entry}/`, Buffer.alloc(0));
         }
 
         zip.writeZip(result.filePath);

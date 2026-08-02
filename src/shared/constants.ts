@@ -185,6 +185,10 @@ export const NOTIFICATION_MESSAGES = {
   DELETE_FAILED: (gameTitle: string) => `Error deleting ${gameTitle}`,
   SAVE_EXPORTED: (gameTitle: string) => `${gameTitle} save data exported`,
   SAVE_EXPORT_FAILED: (gameTitle: string) => `Error exporting ${gameTitle} save data`,
+  SAVE_IMPORTED: (gameTitle: string, fileCount: number) =>
+    `${fileCount} save file${fileCount === 1 ? '' : 's'} imported for ${gameTitle}`,
+  SAVE_IMPORT_REJECTED: (reason: string) => `Save not imported - ${reason}`,
+  SAVE_IMPORT_FAILED: (gameTitle: string) => `Error importing ${gameTitle} save data`,
   RENAME_FAILED: (gameTitle: string) => `Error renaming ${gameTitle}`,
 
   // bios
