@@ -83,7 +83,8 @@ const config: ForgeConfig = {
           owner: 'toschaef',
           name: 'rombox'
         },
-        prerelease: true
+        prerelease: true,
+        draft: false
       }
     }
   ]

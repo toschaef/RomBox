@@ -14,35 +14,8 @@ permissions:
   contents: write
 
 jobs:
-  check:
-    name: Verify Tag is on main
-    runs-on: ubuntu-latest
-    outputs:
-      on_main: ${{ steps.check-tag.outputs.on_main }}
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Verify Tag
-        id: check-tag
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "on_main=true" >> $GITHUB_OUTPUT
-          else
-            git fetch origin main
-            if git merge-base --is-ancestor HEAD origin/main; then
-              echo "on_main=true" >> $GITHUB_OUTPUT
-            else
-              echo "on_main=false" >> $GITHUB_OUTPUT
-            fi
-          fi
-
   publish:
     name: Build & Publish (${{ matrix.os }})
-    needs: check
-    if: needs.check.outputs.on_main == 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
