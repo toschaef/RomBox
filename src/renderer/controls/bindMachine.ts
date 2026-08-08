@@ -1,4 +1,4 @@
-import type { DigitalBinding, DpadBinding, StickBinding, ControlsProfile, AnyConsoleLayout } from "../../shared/types/controls";
+import type { DigitalBinding, DpadBinding, StickBinding, ControlsProfile, AnyConsoleLayout, PlayerBindings } from "../../shared/types/controls";
 import { AXIS_THRESHOLD, type InputEvent } from "../../shared/controls/inputTypes";
 import { setConsoleDigital, specialTypeForConsole } from "./consolePath";
 
@@ -17,19 +17,29 @@ export interface BindingAccessor<T> {
 
 // profile accessor
 
+// players are created lazily, so callers get a guaranteed object back rather
+// than asserting non-null at every use
+function ensurePlayer(
+  target: { [K in PlayerKey]?: PlayerBindings },
+  playerKey: PlayerKey
+): PlayerBindings {
+  return (target[playerKey] ??= {} as PlayerBindings);
+}
+
 export const profileAccessor: BindingAccessor<ControlsProfile> = {
   setDigital(profile, playerKey, path, value) {
     const p = structuredClone(profile);
     const [group, key] = path.split(".") as ["face" | "shoulders" | "system" | "sticks", string];
-    if (!p[playerKey]) p[playerKey] = {} as any;
-    if (group === "sticks" && !p[playerKey]!.sticks) {
-      p[playerKey]!.sticks = { type: "sticks" };
+    const player = ensurePlayer(p, playerKey);
+
+    if (group === "sticks" && !player.sticks) {
+      player.sticks = { type: "sticks" };
     }
-    if (!p[playerKey]![group]) {
-      p[playerKey]![group] = { type: group } as any;
-    }
-    // @ts-expect-error dynamic keying
-    p[playerKey]![group][key] = value;
+    // the group and key come from a dotted path string, so this write is
+    // dynamic by nature
+    const groups = player as unknown as Record<string, Record<string, unknown>>;
+    if (!groups[group]) groups[group] = { type: group };
+    groups[group][key] = value;
     return p;
   },
 
@@ -45,18 +55,18 @@ export const profileAccessor: BindingAccessor<ControlsProfile> = {
 
   setDpad(profile, playerKey, group, next) {
     const p = structuredClone(profile);
-    if (!p[playerKey]) p[playerKey] = {} as any;
-    if (group === "move") p[playerKey]!.move = next;
-    else if (group === "dpad") p[playerKey]!.dpad = next;
-    else p[playerKey]!.look = next;
+    const player = ensurePlayer(p, playerKey);
+    if (group === "move") player.move = next;
+    else if (group === "dpad") player.dpad = next;
+    else player.look = next;
     return p;
   },
 
   setStick(profile, playerKey, group, next) {
     const p = structuredClone(profile);
-    if (!p[playerKey]) p[playerKey] = {} as any;
-    if (group === "move") p[playerKey]!.move = next;
-    else p[playerKey]!.look = next;
+    const player = ensurePlayer(p, playerKey);
+    if (group === "move") player.move = next;
+    else player.look = next;
     return p;
   },
 };
@@ -65,7 +75,7 @@ export const profileAccessor: BindingAccessor<ControlsProfile> = {
 
 function setConsoleNestedBinding(layout: AnyConsoleLayout, playerKey: PlayerKey, group: string, value: DpadBinding | StickBinding): AnyConsoleLayout {
   const next = structuredClone(layout);
-  if (!next[playerKey]) next[playerKey] = {} as any;
+  ensurePlayer(next, playerKey);
   let parent = next[playerKey] as unknown as Record<string, unknown>;
   const parts = group.split(".");
   for (let i = 0; i < parts.length - 1; i++) {

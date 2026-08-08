@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { getDB } from "../data/db";
+import { gamesRepository } from "../data/repositories/GamesRepository";
 import type { Game } from "../../shared/types";
 import { ScannerService } from "./ScannerService";
 import { SaveService } from "./SaveService";
@@ -9,26 +9,11 @@ import { app } from "electron";
 
 const log = Logger.create('LibraryService');
 
-interface GameDbRow {
-  id: string;
-  title: string;
-  filePath: string;
-  consoleId: string;
-  engineId: string;
-  playtime_seconds?: number;
-  last_played_at?: number;
-}
-
 export const LibraryService = {
   createGame: (gameData: Game) => {
     log.info('Creating game', { id: gameData.id, title: gameData.title, consoleId: gameData.consoleId });
     try {
-      const db = getDB();
-      const stmt = db.prepare(`
-        insert into games (id, title, filePath, consoleId, engineId) 
-        values (@id, @title, @filePath, @consoleId, @engineId)
-      `);
-      stmt.run(gameData);
+      gamesRepository.insert(gameData);
       log.info('Game created successfully', { id: gameData.id });
       return { success: true, game: gameData };
     } catch (err) {
@@ -77,12 +62,7 @@ export const LibraryService = {
   getGames: () => {
     log.debug('Getting all games');
     try {
-      const rows = getDB().prepare("select * from games").all() as GameDbRow[];
-      const games = rows.map(row => ({
-        ...row,
-        playtimeSeconds: row.playtime_seconds ?? 0,
-        lastPlayedAt: row.last_played_at ?? null,
-      }));
+      const games = gamesRepository.findAll();
       log.debug('Games retrieved', { count: games.length });
       return { success: true, games };
     } catch (err) { 
@@ -94,16 +74,9 @@ export const LibraryService = {
 
   getGame: (id: string) => {
     try {
-      const row = getDB().prepare("select * from games where id = @id").get({ id }) as GameDbRow | undefined;
-      if (!row) return { success: false, message: "Game not found" };
-      return {
-        success: true,
-        game: { 
-          ...row, 
-          playtimeSeconds: row.playtime_seconds ?? 0,
-          lastPlayedAt: row.last_played_at ?? null,
-        }
-      };
+      const game = gamesRepository.findById(id);
+      if (!game) return { success: false, message: "Game not found" };
+      return { success: true, game };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       return { success: false, message: msg };
@@ -112,10 +85,9 @@ export const LibraryService = {
 
   updateGame: (game: Game) => {
     try {
-      const stmt = getDB().prepare(`
-        update games set title = @title, consoleId = @consoleId where id = @id
-      `);
-      return { success: stmt.run({ id: game.id, title: game.title, consoleId: game.consoleId }).changes > 0 };
+      return {
+        success: gamesRepository.updateTitleAndConsole(game.id, game.title, game.consoleId),
+      };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       return { success: false, message: msg };
@@ -125,8 +97,7 @@ export const LibraryService = {
   deleteGame: (gameId: string) => {
     log.info('Deleting game', { gameId });
     try {
-      const db = getDB();
-      const game = db.prepare('SELECT * FROM games WHERE id = ?').get(gameId) as Game | undefined;
+      const game = gamesRepository.findById(gameId);
       if (!game) {
         log.warn('Game not found for deletion', { gameId });
         return { success: false, message: "Game not found" };
@@ -141,7 +112,7 @@ export const LibraryService = {
         log.warn('Save backup before deletion failed', err);
       }
 
-      db.prepare('delete from games where id = ?').run(gameId);
+      gamesRepository.delete(gameId);
       if (game.filePath && fs.existsSync(game.filePath)) {
         try {
           fs.unlinkSync(game.filePath);
@@ -179,7 +150,7 @@ export const LibraryService = {
       log.warn('Could not enumerate games before clearing library', err);
     }
 
-    getDB().prepare('DELETE FROM games').run();
+    gamesRepository.deleteAll();
     const romsDir = path.join(app.getPath('userData'), 'roms');
     if (fs.existsSync(romsDir)) {
       fs.rmSync(romsDir, { recursive: true, force: true });
@@ -192,12 +163,7 @@ export const LibraryService = {
   addPlaytime: (gameId: string, seconds: number) => {
     log.debug('Adding playtime', { gameId, seconds });
     try {
-      const db = getDB();
-      const stmt = db.prepare(`
-        UPDATE games SET playtime_seconds = playtime_seconds + ? WHERE id = ?
-      `);
-      const result = stmt.run(Math.floor(seconds), gameId);
-      return { success: result.changes > 0 };
+      return { success: gamesRepository.addPlaytime(gameId, seconds) };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       log.error('Failed to update playtime', err);
@@ -208,12 +174,7 @@ export const LibraryService = {
   updateLastPlayed: (gameId: string) => {
     log.debug('Updating last played time', { gameId });
     try {
-      const db = getDB();
-      const stmt = db.prepare(`
-        UPDATE games SET last_played_at = ? WHERE id = ?
-      `);
-      const result = stmt.run(Date.now(), gameId);
-      return { success: result.changes > 0 };
+      return { success: gamesRepository.setLastPlayed(gameId) };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       log.error('Failed to update last played time', err);

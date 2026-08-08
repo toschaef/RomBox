@@ -1,146 +1,92 @@
-import fs from 'fs';
-import { BrowserWindow } from 'electron';
-import { EngineService } from './EngineService';
-import { BiosService } from './BiosService'
-import { LibraryService } from './LibraryService';
-import { SaveService } from './SaveService';
 import { ENGINES } from '../config/engines';
-import { osHandler } from '../platform';
-import { getConfigurator } from '../utils/configurators';
-import { SettingsService } from './SettingsService';
+import { getConfigurator } from '../emulators';
+import { SaveService } from './SaveService';
+import { settingsService } from './SettingsService';
+import { LibraryService } from './LibraryService';
+import { runPreflight } from './launch/LaunchPreflight';
+import { startSession } from './launch/GameSession';
 import { Logger } from '../utils/logger';
 import type { Game } from '../../shared/types';
 
 const log = Logger.create('LaunchService');
 
+export type LaunchResponse = {
+  success: boolean;
+  code?: string;
+  message?: string;
+  /** set when the emulator started but its controls could not be written */
+  configWarning?: string;
+};
+
 export const LaunchService = {
-  launch: async (game: Game) => {
+  launch: async (game: Game): Promise<LaunchResponse> => {
     const gameLog = log.child({ gameId: game.id, title: game.title });
     gameLog.info('Requesting launch');
 
-    // validation
-    gameLog.info('Checking engine path', { engineId: game.engineId });
-    const enginePath = await EngineService.getEnginePath(game.engineId);
-    if (!enginePath) {
-      if (EngineService.isEngineInstalling(game.engineId)) {
-        gameLog.warn('Engine is currently installing', { engineId: game.engineId });
-        return { success: false, code: 'ENGINE_INSTALLING', message: `Emulator for ${game.consoleId} is currently installing. Please wait.` };
-      }
-      gameLog.warn('Engine not installed', { consoleId: game.consoleId });
-      return { success: false, code: 'MISSING_ENGINE', message: `Emulator for ${game.consoleId} not installed.` };
-    }
-    gameLog.info('Engine found', { enginePath });
-
-    // bios
-    gameLog.info('Checking BIOS status');
-    const bios0 = BiosService.getGameBiosStatus(game);
-    gameLog.debug('BIOS status', bios0);
-
-    if (bios0.needsBios && bios0.biosState === "missing") {
-      gameLog.info('BIOS missing, checking cache');
-      BiosService.ensureBiosInstalledFromCache(game.consoleId);
-
-      const bios1 = BiosService.getGameBiosStatus(game);
-      gameLog.debug('BIOS status after cache check', bios1);
-
-      if (bios1.biosState === "missing") {
-        return {
-          success: false,
-          code: "MISSING_BIOS",
-          message: bios1.missingRequiredFiles.join(", "),
-        };
-      }
+    const preflight = await runPreflight(game);
+    if (preflight.status === "blocked") {
+      return { success: false, code: preflight.code, message: preflight.message };
     }
 
-    if (bios0.needsBios && bios0.biosState === "warning") {
-      // todo: optional bios message
-    }
+    restoreSaves(game, gameLog);
+    const configWarning = await applyConfiguration(game, gameLog);
 
-    // restore saves
-    gameLog.info('Restoring cached saves');
+    const settings = settingsService;
+    const engine = ENGINES[game.engineId];
+    const command = engine.getLaunchCommand
+      ? engine.getLaunchCommand(game, preflight.enginePath, {
+          fullscreen: settings.get('launch.fullscreen'),
+        })
+      : [preflight.enginePath, game.filePath];
+
     try {
-      const restoreResult = SaveService.restoreSave(game);
-      if (restoreResult.restoredFiles.length > 0) {
-        gameLog.info('Saves restored', { count: restoreResult.restoredFiles.length, files: restoreResult.restoredFiles });
-      } else {
-        gameLog.debug('No cached saves to restore');
-      }
-    } catch (err) {
-      gameLog.warn('Save restore failed', err);
-    }
-
-    // configuration
-    gameLog.info('Applying emulator configuration');
-    const configurator = getConfigurator(game);
-    if (configurator) {
-      try {
-        await configurator.configure();
-        gameLog.info('Configuration applied');
-      } catch (err) {
-        gameLog.warn('Configuration warning', err);
-      }
-    }
-
-    const settingsSvc = new SettingsService();
-    const fullscreen = settingsSvc.get("launch.fullscreen");
-
-    const engineConfig = ENGINES[game.engineId];
-    const fullCommand = engineConfig.getLaunchCommand
-      ? engineConfig.getLaunchCommand(game, enginePath, { fullscreen })
-      : [enginePath, game.filePath];
-
-    const binary = fullCommand[0];
-    const args = fullCommand.slice(1);
-
-    // file existence check
-    if (!fs.existsSync(game.filePath)) {
-      gameLog.warn('Game file missing', { filePath: game.filePath });
-      return { success: false, code: 'MISSING_FILE', message: `Game file not found: ${game.filePath}` };
-    }
-
-    // execution
-    gameLog.info('Launching emulator', { binary, args });
-    LibraryService.updateLastPlayed(game.id);
-    try {
-      const startTime = Date.now();
-      const child = osHandler.launchProcess(binary, args);
-
-      // child.stdout?.on('data', (d) => console.log(`[Emulator]: ${d}`));
-      // child.stderr?.on('data', (d) => console.error(`[Emulator Err]: ${d}`));
-
-      child.on('error', (err) => console.error("[LaunchService] Failed to spawn:", err));
-      child.on('close', (code) => {
-        if (code !== 0) gameLog.warn('Emulator exited with non-zero code', { code });
-
-        // save playtime
-        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-        if (elapsedSeconds > 0) {
-          LibraryService.addPlaytime(game.id, elapsedSeconds);
-          gameLog.info('Playtime recorded', { elapsedSeconds });
-        }
-
-        // backup saves
-        try {
-          const backupResult = SaveService.backupSave(game);
-          if (backupResult.backedUpFiles.length > 0) {
-            gameLog.info('Save files backed up', { count: backupResult.backedUpFiles.length });
-          }
-        } catch (err) {
-          gameLog.error('Save backup failed', err);
-        }
-
-        for (const win of BrowserWindow.getAllWindows()) {
-          win.webContents.send('game-exited', { gameId: game.id, code });
-        }
-      });
-
-      child.unref();
-
-      return { success: true };
-
+      startSession(game, command[0], command.slice(1));
     } catch (err) {
       gameLog.error('Launch failed', err);
-      return { success: false, message: err.message };
+      return { success: false, message: (err as Error)?.message };
     }
-  }
+
+    // only counts as played once the process actually started.
+    LibraryService.updateLastPlayed(game.id);
+
+    return { success: true, configWarning };
+  },
 };
+
+function restoreSaves(game: Game, gameLog: ReturnType<typeof log.child>) {
+  gameLog.info('Restoring cached saves');
+  try {
+    const result = SaveService.restoreSave(game);
+    if (result.restoredFiles.length > 0) {
+      gameLog.info('Saves restored', {
+        count: result.restoredFiles.length,
+        files: result.restoredFiles,
+      });
+    } else {
+      gameLog.debug('No cached saves to restore');
+    }
+  } catch (err) {
+    gameLog.warn('Save restore failed', err);
+  }
+}
+
+// writes the emulator's config
+async function applyConfiguration(
+  game: Game,
+  gameLog: ReturnType<typeof log.child>
+): Promise<string | undefined> {
+  gameLog.info('Applying emulator configuration');
+
+  const configurator = getConfigurator(game);
+  if (!configurator) return undefined;
+
+  try {
+    await configurator.configure();
+    gameLog.info('Configuration applied');
+    return undefined;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    gameLog.warn('Configuration failed; launching with existing controls', err);
+    return message;
+  }
+}

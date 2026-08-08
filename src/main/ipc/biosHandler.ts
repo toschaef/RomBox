@@ -1,10 +1,7 @@
 import { ipcMain } from "electron";
 import { BiosService } from "../services/BiosService";
 import type { ConsoleID } from "../../shared/types";
-
-function isConsoleId(x: unknown): x is ConsoleID {
-  return typeof x === "string" && x.length > 0;
-}
+import { isConsoleId } from "./validation";
 
 export default function registerBiosHandlers() {
   ipcMain.handle("bios:install", async (_evt, payload: { consoleId: ConsoleID; filePath: string }) => {

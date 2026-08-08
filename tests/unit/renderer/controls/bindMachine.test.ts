@@ -1,4 +1,4 @@
-import { applyBindEvent, bindLabel, profileAccessor, consoleAccessor, type BindPlan, type BindState } from "../../../../src/renderer/controls/bindMachine";
+import { applyBindEvent, bindLabel, profileAccessor, consoleAccessor, type BindState } from "../../../../src/renderer/controls/bindMachine";
 import type { ControlsProfile, AnyConsoleLayout, DpadBinding } from "../../../../src/shared/types/controls";
 import { createDefaultProfileShape } from "../../../../src/shared/controls/layoutDefaults";
 
@@ -91,7 +91,7 @@ describe("bindMachine", () => {
 
       expect(result).toBeDefined();
       expect(result?.state).toEqual({ active: false });
-      const newLayout = result!.data as ControlsProfile;
+      const newLayout = result?.data as ControlsProfile;
       expect(newLayout.player1.face.primary).toEqual({ type: "key", code: "KeyX" });
     });
 
@@ -169,7 +169,7 @@ describe("bindMachine", () => {
       // Step 0: Up
       const res1 = applyBindEvent(consoleAccessor, mockLayout, state1, { kind: "key", code: "ArrowUp", at: 200 });
       expect(res1?.state).toEqual({ ...state1, step: 1 });
-      const newLayout = res1!.data as any;
+      const newLayout = res1?.data as AnyConsoleLayout;
       expect(newLayout.player1.move?.type).toBe("dpad");
       expect((newLayout.player1.move as DpadBinding).up).toEqual({ type: "key", code: "ArrowUp" });
 
@@ -192,7 +192,8 @@ describe("bindMachine", () => {
       if (!res1) throw new Error("Expected res1 to be defined");
       const res2 = applyBindEvent(consoleAccessor, res1.data, res1.state, { kind: "gp_axis", stick: "right", axis: "y", value: 1.0, at: 300 });
 
-      const player1 = res2!.data.player1 as unknown as { special: { type: string; c: unknown } };
+      if (!res2) throw new Error("Expected res2 to be defined");
+      const player1 = res2.data.player1 as unknown as { special: { type: string; c: unknown } };
       expect(player1.special.type).toBe("n64");
       expect(player1.special.c).toEqual({ type: "stick", stick: "right", deadzone: 0.15 });
     });

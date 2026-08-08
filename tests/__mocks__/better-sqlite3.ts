@@ -10,8 +10,23 @@ class MockDatabase {
 
   constructor(path: string) { void path; }
 
+  userVersion = 0;
+
   pragma(str: string) {
     this.pragmaCalls.push(str);
+
+    // mirror real better-sqlite3: a bare `user_version` reads the value as a
+    // row list, `user_version = N` writes it. Migrations depend on this.
+    const assignment = /^\s*user_version\s*=\s*(\d+)\s*$/.exec(str);
+    if (assignment) {
+      this.userVersion = Number(assignment[1]);
+      return undefined;
+    }
+    if (/^\s*user_version\s*$/.test(str)) {
+      return [{ user_version: this.userVersion }];
+    }
+
+    return undefined;
   }
 
   exec(sql: string) {

@@ -1,5 +1,5 @@
 import type { AnyConsoleLayout, ControlsProfile, PlayerBindings, PlayerKey } from "../../shared/types/controls";
-import { getPlayerControllerId } from "../../shared/controls/controllerModels";
+import { getPlayerControllerId, withPlayerControllerId } from "../../shared/controls/controllerModels";
 
 export const PLAYER_KEYS: PlayerKey[] = ["player1", "player2", "player3", "player4"];
 
@@ -39,10 +39,7 @@ export function reorderProfilePlayers(profile: ControlsProfile, order: PlayerKey
 }
 
 function setControllerIdField(layout: AnyConsoleLayout, slotKey: PlayerKey, value: string | undefined): AnyConsoleLayout {
-  if (slotKey === "player1") return { ...layout, controllerId: value };
-  if (slotKey === "player2") return { ...layout, player2ControllerId: value };
-  if (slotKey === "player3") return { ...layout, player3ControllerId: value };
-  return { ...layout, player4ControllerId: value };
+  return withPlayerControllerId(layout, slotKey, value);
 }
 
 export function reorderConsoleLayoutPlayers(layout: AnyConsoleLayout, order: PlayerKey[], profile?: ControlsProfile): AnyConsoleLayout {

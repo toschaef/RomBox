@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import type { ConsoleID } from "../../../shared/types";
 import type { EngineID, EngineInfo, EngineStatus } from "../../../shared/types/engines";
 import { engineClient } from "../../clients/engineClient";
-import { getConsoleNameFromId, ENGINE_MAP, NOTIFICATION_MESSAGES } from "../../../shared/constants";
+import { NOTIFICATION_MESSAGES } from "../../../shared/constants";
+import { getConsoleNameFromId } from "../../../shared/emulators/derived";
 import PageLayout from "../layout/PageLayout";
 import { useOutletContext } from "react-router-dom";
 import type { LayoutContextType } from "../layout";
@@ -43,16 +44,6 @@ type EmulatorRow = {
   biosMissingWarning: string[];
 
   lastError?: string;
-};
-
-const PRIMARY_CONSOLE_FOR_EMULATOR: Record<EngineID, ConsoleID> = {
-  dolphin: "gc",
-  azahar: "3ds",
-  melonds: "ds",
-  ares: "n64",
-  mesen: "snes",
-  duckstation: "ps1",
-  pcsx2: "ps2",
 };
 
 export default function Engines() {
@@ -137,7 +128,6 @@ export default function Engines() {
         return a.engineId.localeCompare(b.engineId);
       })
       .map((e) => {
-        const primaryConsole = PRIMARY_CONSOLE_FOR_EMULATOR[e.engineId];
         const displayName = e.name ?? e.engineId;
 
         const req = e.biosMissingRequired.map((x) => `${x.consoleId}:${x.filename}`);

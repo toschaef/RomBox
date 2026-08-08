@@ -7,28 +7,32 @@ export type ControllerModel = {
 };
 
 type PlayerControllerIds = {
-  controllerId?: string;
-  player2ControllerId?: string;
-  player3ControllerId?: string;
-  player4ControllerId?: string;
+  controllerIds?: Array<string | undefined>;
 };
 
-export function getPlayerControllerId(source: PlayerControllerIds, playerKey: PlayerKey): string | undefined {
-  if (playerKey === "player1") return source.controllerId;
-  if (playerKey === "player2") return source.player2ControllerId;
-  if (playerKey === "player3") return source.player3ControllerId;
-  return source.player4ControllerId;
+export const PLAYER_KEYS: PlayerKey[] = ["player1", "player2", "player3", "player4"];
+
+/** 0-based slot index for a player key. */
+export function playerIndex(playerKey: PlayerKey): number {
+  const index = PLAYER_KEYS.indexOf(playerKey);
+  return index === -1 ? 0 : index;
+}
+
+export function getPlayerControllerId(
+  source: PlayerControllerIds,
+  playerKey: PlayerKey
+): string | undefined {
+  return source.controllerIds?.[playerIndex(playerKey)];
 }
 
 export function withPlayerControllerId<T extends PlayerControllerIds>(
   source: T,
   playerKey: PlayerKey,
-  controllerId: string
+  controllerId: string | undefined
 ): T {
-  if (playerKey === "player1") return { ...source, controllerId };
-  if (playerKey === "player2") return { ...source, player2ControllerId: controllerId };
-  if (playerKey === "player3") return { ...source, player3ControllerId: controllerId };
-  return { ...source, player4ControllerId: controllerId };
+  const controllerIds = [...(source.controllerIds ?? [])];
+  controllerIds[playerIndex(playerKey)] = controllerId;
+  return { ...source, controllerIds };
 }
 
 export const CONTROLLER_MODELS: Record<ConsoleID, ControllerModel[]> = {

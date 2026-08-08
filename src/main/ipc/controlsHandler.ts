@@ -1,9 +1,21 @@
 import { ipcMain } from "electron";
-import { ControlsService } from "../services/ControlsService";
+import { assertConsoleId } from "./validation";
+import { controlsService } from "../services/ControlsService";
 import type { ControlsProfile, PlayerBindings } from "../../shared/types/controls";
 import { ConsoleID } from "../../shared/types";
 
-const svc = new ControlsService();
+const svc = controlsService;
+
+function asBindings(value: unknown): PlayerBindings {
+  if (!value || typeof value !== "object") {
+    throw new Error("Console layout requires player1 bindings");
+  }
+  return value as PlayerBindings;
+}
+
+function asOptionalBindings(value: unknown): PlayerBindings | undefined {
+  return value === undefined || value === null ? undefined : asBindings(value);
+}
 
 export default function registerControlsHandlers() {
   ipcMain.handle("controls:getProfiles", () => svc.getProfiles());
@@ -37,23 +49,20 @@ export default function registerControlsHandlers() {
       player2?: unknown;
       player3?: unknown;
       player4?: unknown;
-      controllerId?: string;
-      player2ControllerId?: string;
-      player3ControllerId?: string;
-      player4ControllerId?: string;
+      controllerIds?: Array<string | undefined>;
     }) =>
-      svc.saveConsoleLayout({
+    {
+      assertConsoleId(payload.consoleId);
+      return svc.saveConsoleLayout({
         consoleId: payload.consoleId,
         profileId: payload.profileId,
-        player1: payload.player1 as PlayerBindings,
-        player2: payload.player2 as PlayerBindings | undefined,
-        player3: payload.player3 as PlayerBindings | undefined,
-        player4: payload.player4 as PlayerBindings | undefined,
-        controllerId: payload.controllerId,
-        player2ControllerId: payload.player2ControllerId,
-        player3ControllerId: payload.player3ControllerId,
-        player4ControllerId: payload.player4ControllerId,
-      })
+        player1: asBindings(payload.player1),
+        player2: asOptionalBindings(payload.player2),
+        player3: asOptionalBindings(payload.player3),
+        player4: asOptionalBindings(payload.player4),
+        controllerIds: payload.controllerIds,
+      });
+    }
   );
 
   ipcMain.handle("controls:resetConsoleLayout", (_e, payload: { consoleId: ConsoleID; profileId: string }) =>

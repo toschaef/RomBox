@@ -3,6 +3,7 @@ import type { Configuration } from 'webpack';
 import { rules } from './webpack.rules';
 import { plugins } from './webpack.plugins';
 
+// do not add native modules (better-sqlite3) to `externals`
 export const mainConfig: Configuration = {
   entry: './src/main/main.ts',
   module: {
@@ -11,8 +12,5 @@ export const mainConfig: Configuration = {
   plugins,
   resolve: {
     extensions: ['.js', '.ts', '.jsx', '.tsx', '.css', '.json'],
-  },
-  externals: {
-    'better-sqlite3': 'commonjs better-sqlite3',
   },
 };

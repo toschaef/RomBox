@@ -1,4 +1,4 @@
-import type { ControlsProfile, AnyConsoleLayout, ControllerProfileMeta } from "../../shared/types/controls";
+import type { ControlsProfile, AnyConsoleLayout, ControllerProfileMeta, ConsoleLayoutMeta } from "../../shared/types/controls";
 import type { ConsoleID } from "../../shared/types";
 
 export const controlsClient = {
@@ -32,14 +32,7 @@ export const controlsClient = {
 
   getConsoleLayouts: (profileId: string) =>
     window.electron.invoke("controls:getConsoleLayouts", profileId) as Promise<
-      Array<{
-        id: string;
-        console_id: ConsoleID;
-        profile_id: string;
-        created_at: number;
-        updated_at: number;
-        is_user_modified: number;
-      }>
+      ConsoleLayoutMeta[]
     >,
 
   getConsoleLayout: (payload: { consoleId: ConsoleID; profileId: string }) =>
@@ -48,10 +41,7 @@ export const controlsClient = {
   saveConsoleLayout: (payload: {
     consoleId: ConsoleID;
     profileId: string;
-    controllerId?: string;
-    player2ControllerId?: string;
-    player3ControllerId?: string;
-    player4ControllerId?: string;
+    controllerIds?: Array<string | undefined>;
     player1: unknown;
     player2?: unknown;
     player3?: unknown;

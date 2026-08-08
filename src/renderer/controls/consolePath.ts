@@ -1,4 +1,4 @@
-import type { AnyConsoleLayout, DigitalBinding, SpecialBinding } from "../../shared/types/controls";
+import type { AnyConsoleLayout, DigitalBinding, SpecialBinding, PlayerBindings } from "../../shared/types/controls";
 import type { ConsoleID } from "../../shared/types";
 
 // Every translator gates its special-binding handling on this discriminant
@@ -29,7 +29,7 @@ export function getConsoleDigital(layout: AnyConsoleLayout, playerKey: "player1"
 
 export function setConsoleDigital(layout: AnyConsoleLayout, playerKey: "player1" | "player2" | "player3" | "player4", path: string, value: DigitalBinding): AnyConsoleLayout {
   const next = structuredClone(layout);
-  if (!next[playerKey]) next[playerKey] = {} as any;
+  if (!next[playerKey]) next[playerKey] = {} as PlayerBindings;
   let parent = next[playerKey] as unknown as Record<string, unknown>;
   const parts = path.split(".");
 

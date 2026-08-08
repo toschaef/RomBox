@@ -1,4 +1,4 @@
-import { getDB } from "../data/db";
+import { settingsRepository } from "../data/repositories/SettingsRepository";
 import {
   SETTINGS_DEFAULTS,
   type SettingKey,
@@ -26,28 +26,17 @@ function validate<K extends SettingKey>(key: K, value: unknown): value is Settin
 
 export class SettingsService {
   ensureDefaults() {
-    const db = getDB();
-    const stmt = db.prepare(`INSERT OR IGNORE INTO settings(key, value) VALUES (?, ?)`);
-    const tx = db.transaction(() => {
-      for (const [key, def] of Object.entries(SETTINGS_DEFAULTS)) {
-        stmt.run(key, JSON.stringify(def));
-      }
-    });
-    tx();
+    settingsRepository.insertDefaults(SETTINGS_DEFAULTS);
   }
 
   get<K extends SettingKey>(key: K): SettingsShape[K] {
     this.ensureDefaults();
-    const db = getDB();
 
-    const row = db.prepare(`SELECT value FROM settings WHERE key = ?`).get(key) as
-      | { value: string }
-      | undefined;
-
-    if (!row) return SETTINGS_DEFAULTS[key];
+    const raw = settingsRepository.getRaw(key);
+    if (raw === null) return SETTINGS_DEFAULTS[key];
 
     try {
-      const parsed = JSON.parse(row.value);
+      const parsed = JSON.parse(raw);
       if (validate(key, parsed)) return parsed;
       return SETTINGS_DEFAULTS[key];
     } catch {
@@ -57,7 +46,6 @@ export class SettingsService {
 
   set<K extends SettingKey>(key: K, value: SettingsShape[K]) {
     log.debug('Setting value', { key, value });
-    const db = getDB();
     this.ensureDefaults();
 
     if (!validate(key, value)) {
@@ -65,9 +53,7 @@ export class SettingsService {
       throw new Error(`Invalid value for setting "${key}"`);
     }
 
-    db
-      .prepare(`INSERT OR REPLACE INTO settings(key, value) VALUES (?, ?)`)
-      .run(key, JSON.stringify(value));
+    settingsRepository.set(key, value);
 
     return { success: true };
   }
@@ -86,20 +72,17 @@ export class SettingsService {
     log.debug('Setting multiple values', { keys: Object.keys(values) });
     this.ensureDefaults();
 
-    const db = getDB();
-    const stmt = db.prepare(`INSERT OR REPLACE INTO settings(key, value) VALUES (?, ?)`);
-    const tx = db.transaction(() => {
-      for (const [k, v] of Object.entries(values)) {
-        const key = k as SettingKey;
-        if (v === undefined) continue;
-        if (!validate(key, v)) {
-          log.warn('Invalid value in setMany', { key, value: v });
-          throw new Error(`Invalid value for setting "${key}"`);
-        }
-        stmt.run(key, JSON.stringify(v));
+    const entries: Array<[string, unknown]> = [];
+    for (const [k, v] of Object.entries(values)) {
+      const key = k as SettingKey;
+      if (v === undefined) continue;
+      if (!validate(key, v)) {
+        log.warn('Invalid value in setMany', { key, value: v });
+        throw new Error(`Invalid value for setting "${key}"`);
       }
-    });
-    tx();
+      entries.push([key, v]);
+    }
+    settingsRepository.setMany(entries);
 
     return { success: true };
   }
@@ -107,23 +90,17 @@ export class SettingsService {
   reset(key?: SettingKey) {
     log.info('Resetting settings', { key: key ?? 'all' });
     this.ensureDefaults();
-    const db = getDB();
 
     if (key) {
-      db.prepare(`INSERT OR REPLACE INTO settings(key, value) VALUES (?, ?)`)
-        .run(key, JSON.stringify(SETTINGS_DEFAULTS[key]));
+      settingsRepository.set(key, SETTINGS_DEFAULTS[key]);
       return { success: true };
     }
 
-    const stmt = db.prepare(`INSERT OR REPLACE INTO settings(key, value) VALUES (?, ?)`);
-    const tx = db.transaction(() => {
-      for (const [k, v] of Object.entries(SETTINGS_DEFAULTS)) {
-        stmt.run(k, JSON.stringify(v));
-      }
-    });
-    tx();
+    settingsRepository.setMany(Object.entries(SETTINGS_DEFAULTS));
     log.info('All settings reset to defaults');
 
     return { success: true };
   }
 }
+
+export const settingsService = new SettingsService();

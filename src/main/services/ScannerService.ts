@@ -4,7 +4,7 @@ import fs from 'fs';
 import { app } from 'electron';
 import { Extractor } from '../utils/extractor';
 import { CONSOLES } from '../config/consoles'
-import { getConsoleIdFromExtension, getEngineIdFromConsoleId, BIOS_FILENAMES } from '../../shared/constants';
+import { getConsoleIdFromExtension, getEngineIdFromConsoleId, BIOS_FILENAMES } from '../../shared/emulators/derived';
 import type { Game, ConsoleID } from '../../shared/types';
 import type { EngineID } from '../../shared/types/engines';
 import { detectConsoleFromHeader, detectConsoleFromBuffer, detectPS1orPS2FromISO9660, detectPS1orPS2FromBuffer, parseCueSectorGeometry, parseCueSectorGeometryFromFile, PLAIN_ISO_GEOMETRY } from '../utils/identifier';

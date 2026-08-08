@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { ControlsProfile, DigitalBinding, DpadBinding, StickBinding, PlayerBindings } from "../../../shared/types/controls";
+import type { ControlsProfile, DigitalBinding, DpadBinding, StickBinding } from "../../../shared/types/controls";
 import type { BindPlan } from "../../controls/bindMachine";
 import { SECTION_ORDER, STANDARD_LAYOUT, DIR_ICONS, LEFT_STICK_SWITCH_ICONS, RIGHT_STICK_SWITCH_ICONS } from "../../controls/layout";
 import GroupBindingCard from "./GroupBindingCard";

@@ -1,13 +1,23 @@
 import type { Platform } from "../../../shared/types";
-import { APPLE_KEYCODE_BY_CODE, MESEN_KEYCODE_MAP_128 } from "../schema/mesen";
-import { resolveQuartzKeyboardKeyIndex, resolveRawinputKeyboardKeyIndex } from "../schema/ares";
-import { quartzKeyFromDomCode } from "../schema/dolphin";
-import { duckstationKeyFromDomCode } from "../schema/duckstation";
+import { APPLE_KEYCODE_BY_CODE, MESEN_KEYCODE_MAP_128 } from "../../emulators/mesen/schema";
+import { resolveQuartzKeyboardKeyIndex, resolveRawinputKeyboardKeyIndex } from "../../emulators/ares/schema";
+import { quartzKeyFromDomCode } from "../../emulators/dolphin/schema";
+import { duckstationKeyFromDomCode } from "../../emulators/duckstation/schema";
 import { osHandler } from "../../platform";
 
 export type EngineId = "mesen" | "ares" | "dolphin" | "duckstation" | string;
 
 export class KeycodeMapper {
+    private static readonly RESOLVERS: Record<
+    string,
+    (domCode: string, platform: Platform) => number | string | null
+  > = {
+    mesen: (domCode, platform) => KeycodeMapper.toMesenKeycode(domCode, platform),
+    ares: (domCode, platform) => KeycodeMapper.toAresKeycode(domCode, platform),
+    dolphin: (domCode, platform) => KeycodeMapper.toDolphinKeycode(domCode, platform),
+    duckstation: (domCode, platform) => KeycodeMapper.toDuckStationKeycode(domCode, platform),
+  };
+
   /**
    * resolves a dom key code to the engine and platform specific keycode/key string
    */
@@ -16,19 +26,8 @@ export class KeycodeMapper {
     domCode: string,
     platform: Platform = osHandler.getPlatform()
   ): number | string | null {
-    const normEngine = engine.toLowerCase();
-    switch (normEngine) {
-      case "mesen":
-        return this.toMesenKeycode(domCode, platform);
-      case "ares":
-        return this.toAresKeycode(domCode, platform);
-      case "dolphin":
-        return this.toDolphinKeycode(domCode, platform);
-      case "duckstation":
-        return this.toDuckStationKeycode(domCode, platform);
-      default:
-        return null;
-    }
+    const resolve = KeycodeMapper.RESOLVERS[engine.toLowerCase()];
+    return resolve ? resolve(domCode, platform) : null;
   }
 
   static resolve(
@@ -125,43 +124,6 @@ export class KeycodeMapper {
 }
 
 const MESEN_WIN32_VK_MAP: Record<string, number> = Object.assign(Object.create(null), {
-  Space: 32,
-  Enter: 13,
-  NumpadEnter: 13,
-  Escape: 27,
-  Tab: 9,
-  Backspace: 8,
-  ArrowLeft: 37,
-  ArrowUp: 38,
-  ArrowRight: 39,
-  ArrowDown: 40,
-  ShiftLeft: 160,
-  ShiftRight: 161,
-  ControlLeft: 162,
-  ControlRight: 163,
-  AltLeft: 164,
-  AltRight: 165,
-  MetaLeft: 91,
-  MetaRight: 92,
-  Semicolon: 186,
-  Equal: 187,
-  Comma: 188,
-  Minus: 189,
-  Period: 190,
-  Slash: 191,
-  Backquote: 192,
-  BracketLeft: 219,
-  Backslash: 220,
-  BracketRight: 221,
-  Quote: 222,
-  NumpadMultiply: 106,
-  NumpadAdd: 107,
-  NumpadSubtract: 109,
-  NumpadDecimal: 110,
-  NumpadDivide: 111,
-});
-
-const ARES_WIN32_VK_MAP: Record<string, number> = Object.assign(Object.create(null), {
   Space: 32,
   Enter: 13,
   NumpadEnter: 13,

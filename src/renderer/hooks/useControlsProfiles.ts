@@ -102,7 +102,7 @@ export function useControlsProfiles() {
       await controlsClient.deleteProfile(id);
       const list = await refreshProfiles();
       if (activeProfileId === id) {
-        const def = list.find((x) => x.is_default === 1) ?? list[0];
+        const def = list.find((x) => x.isDefault) ?? list[0];
         if (def) await changeProfile(def.id);
         else await loadDefault();
       }

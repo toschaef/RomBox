@@ -1,5 +1,6 @@
 import type { Game } from '../../../shared/types';
-import { getConsoleNameFromId, getEngineIdFromConsoleId, getEmulatorNameFromEngineId, NOTIFICATION_MESSAGES } from '../../../shared/constants';
+import { NOTIFICATION_MESSAGES } from '../../../shared/constants';
+import { getConsoleNameFromId, getEngineIdFromConsoleId, getEmulatorNameFromEngineId } from '../../../shared/emulators/derived';
 import { engineClient } from '../../clients/engineClient';
 import { useNotifications } from '../../hooks/useNotifications';
 

@@ -7,6 +7,14 @@ import { Extractor } from "../utils/extractor";
 import { Logger } from "../utils/logger";
 import type { Platform, Game } from "../../shared/types";
 import type { EngineID } from "../../shared/types/engines";
+import {
+  allBasePaths,
+  resolveBasePath,
+  resolveBiosPath,
+  resolveConfigPath,
+  resolveSavePath,
+} from "../emulators/paths";
+import type { PlatformRoots } from "../emulators/types";
 
 const log = Logger.create("WinHandler");
 
@@ -49,24 +57,10 @@ export class WinHandler implements PlatformHandler {
   }
 
   async clearPlatformData(): Promise<void> {
-    const { appData, localAppData, docs } = this.getBaseDirs();
-
-    const pathsToDelete = [
-      path.join(docs, "Mesen2"),
-      path.join(appData, "Mesen2"),
-      path.join(localAppData, "ares"),
-      path.join(appData, "Dolphin Emulator"),
-      path.join(docs, "Dolphin Emulator"),
-      path.join(appData, "Azahar"),
-      path.join(localAppData, "melonDS"),
-      path.join(docs, "PCSX2"),
-      path.join(docs, "DuckStation"),
-    ];
-
-    for (const p of pathsToDelete) {
-      if (fs.existsSync(p)) {
-        log.info(`Cleaning config: ${p}`);
-        await fs.promises.rm(p, { recursive: true, force: true });
+    for (const dir of allBasePaths("win32", this.getRoots())) {
+      if (fs.existsSync(dir)) {
+        log.info(`Cleaning config: ${dir}`);
+        await fs.promises.rm(dir, { recursive: true, force: true });
       }
     }
   }
@@ -81,107 +75,31 @@ export class WinHandler implements PlatformHandler {
     });
   }
 
-  getConfigDir(engineId: EngineID): string {
-    return this.getEmulatorConfigPath(engineId);
+  getRoots(): PlatformRoots {
+    const { appData, localAppData, docs, home } = this.getBaseDirs();
+    return {
+      home,
+      appSupport: appData,
+      preferences: appData,
+      localAppData,
+      documents: docs,
+    };
   }
 
   getEmulatorConfigPath(engineId: EngineID): string {
-    const { appData, localAppData, docs } = this.getBaseDirs();
-
-    switch (engineId) {
-      case "dolphin":
-        return path.join(appData, "Dolphin Emulator", "Config");
-      case "mesen":
-        return path.join(docs, "Mesen2");
-      case "ares":
-        return path.join(localAppData, "ares");
-      case "melonds":
-        return path.join(localAppData, "melonDS");
-      case "azahar":
-        return path.join(appData, "Azahar", "config");
-      case "pcsx2":
-        return path.join(docs, "PCSX2", "inis");
-      case "duckstation":
-        return path.join(docs, "DuckStation");
-      default:
-        throw new Error(`[Win] Emulator config path not found for: ${engineId}`);
-    }
+    return resolveConfigPath(engineId, "win32", this.getRoots());
   }
 
   getEmulatorBasePath(engineId: EngineID): string {
-    const { appData, localAppData, docs } = this.getBaseDirs();
-
-    switch (engineId) {
-      case "dolphin":
-        return path.join(appData, "Dolphin Emulator");
-      case "mesen":
-        return path.join(docs, "Mesen2");
-      case "ares":
-        return path.join(localAppData, "ares");
-      case "melonds":
-        return path.join(localAppData, "melonDS");
-      case "azahar":
-        return path.join(appData, "Azahar");
-      case "pcsx2":
-        return path.join(docs, "PCSX2");
-      case "duckstation":
-        return path.join(docs, "DuckStation");
-      default:
-        throw new Error(`[Win] Emulator base path not found for: ${engineId}`);
-    }
-  }
-
-  getSaveDir(game: Game): string {
-    return this.getSavePath(game);
+    return resolveBasePath(engineId, "win32", this.getRoots());
   }
 
   getSavePath(game: Game): string {
-    const { appData, docs } = this.getBaseDirs();
-
-    switch (game.engineId) {
-      case "mesen":
-        return path.join(docs, "Mesen2", "Saves");
-      case "melonds":
-        return path.dirname(game.filePath);
-      case "dolphin":
-        if (game.consoleId === "wii") {
-          return path.join(appData, "Dolphin Emulator", "Wii");
-        }
-        return path.join(appData, "Dolphin Emulator", "GC");
-      case "azahar":
-        return path.join(appData, "Azahar", "sdmc");
-      case "ares":
-        return path.dirname(game.filePath);
-      case "duckstation":
-        return path.join(docs, "DuckStation", "memcards");
-      case "pcsx2":
-        return path.join(docs, "PCSX2", "memcards");
-      default:
-        throw new Error(`[SaveService] Unknown engine: ${game.engineId}`);
-    }
+    return resolveSavePath(game, "win32", this.getRoots());
   }
 
-  getBiosDir(engineId: EngineID): string {
-    const { appData, localAppData, docs } = this.getBaseDirs();
-
-    switch (engineId) {
-      case "dolphin":
-        return path.join(appData, "Dolphin Emulator", "Sys");
-      case "mesen":
-        return path.join(appData, "Mesen2", "Firmware");
-      case "ares":
-        return path.join(localAppData, "ares", "Firmware");
-      case "melonds":
-        return path.join(localAppData, "melonDS");
-      case "azahar":
-        return path.join(appData, "Azahar", "sysdata");
-      case "pcsx2":
-        return path.join(docs, "PCSX2", "bios");
-      case "duckstation":
-        return path.join(docs, "DuckStation", "bios");
-      default:
-        throw new Error(`[Win] BIOS dir not found for: ${engineId}`);
-    }
+  getBiosPath(engineId: EngineID): string | null {
+    return resolveBiosPath(engineId, "win32", this.getRoots());
   }
 
   getPlatformId(): "windows" {

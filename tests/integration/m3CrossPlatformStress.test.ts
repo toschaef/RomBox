@@ -46,12 +46,12 @@ describe("Milestone 3 Empirical Stress Test Harness - Cross-Platform Integration
 
   platforms.forEach((plat) => {
     describe(`Deep Assertion Harness for Platform: ${plat}`, () => {
-      let DuckStationConfigurator: any;
-      let MesenConfigurator: any;
-      let AresConfigurator: any;
-      let DolphinConfigurator: any;
-      let EngineService: any;
-      let osHandler: any;
+      let DuckStationConfigurator: typeof import("../../src/main/emulators/duckstation/configurator").DuckStationConfigurator;
+      let MesenConfigurator: typeof import("../../src/main/emulators/mesen/configurator").MesenConfigurator;
+      let AresConfigurator: typeof import("../../src/main/emulators/ares/configurator").AresConfigurator;
+      let DolphinConfigurator: typeof import("../../src/main/emulators/dolphin/configurator").DolphinConfigurator;
+      let EngineService: typeof import("../../src/main/services/EngineService").EngineService;
+      let osHandler: typeof import("../../src/main/platform").osHandler;
 
       beforeEach(() => {
         Object.defineProperty(process, "platform", {
@@ -83,13 +83,13 @@ describe("Milestone 3 Empirical Stress Test Harness - Cross-Platform Integration
         osHandler = platformModule.osHandler;
 
         // eslint-disable-next-line @typescript-eslint/no-var-requires
-        DuckStationConfigurator = require("../../src/main/utils/configurators/DuckStationConfigurator").DuckStationConfigurator;
+        DuckStationConfigurator = require("../../src/main/emulators/duckstation/configurator").DuckStationConfigurator;
         // eslint-disable-next-line @typescript-eslint/no-var-requires
-        MesenConfigurator = require("../../src/main/utils/configurators/MesenConfigurator").MesenConfigurator;
+        MesenConfigurator = require("../../src/main/emulators/mesen/configurator").MesenConfigurator;
         // eslint-disable-next-line @typescript-eslint/no-var-requires
-        AresConfigurator = require("../../src/main/utils/configurators/AresConfigurator").AresConfigurator;
+        AresConfigurator = require("../../src/main/emulators/ares/configurator").AresConfigurator;
         // eslint-disable-next-line @typescript-eslint/no-var-requires
-        DolphinConfigurator = require("../../src/main/utils/configurators/DolphinConfigurator").DolphinConfigurator;
+        DolphinConfigurator = require("../../src/main/emulators/dolphin/configurator").DolphinConfigurator;
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         EngineService = require("../../src/main/services/EngineService").EngineService;
       });
@@ -255,9 +255,9 @@ describe("Milestone 3 Empirical Stress Test Harness - Cross-Platform Integration
         dbModule.initDB();
 
         // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const DuckStationConfigurator = require("../../src/main/utils/configurators/DuckStationConfigurator").DuckStationConfigurator;
+        const DuckStationConfigurator = require("../../src/main/emulators/duckstation/configurator").DuckStationConfigurator;
         // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const MesenConfigurator = require("../../src/main/utils/configurators/MesenConfigurator").MesenConfigurator;
+        const MesenConfigurator = require("../../src/main/emulators/mesen/configurator").MesenConfigurator;
 
         const duckConfig = new DuckStationConfigurator();
         await expect(duckConfig.configure()).resolves.not.toThrow();

@@ -1,13 +1,12 @@
 jest.mock("os", () => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const path = require("path");
   return {
     ...jest.requireActual("os"),
-    homedir: () => path.resolve(__dirname, "../temp-userdata"),
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    homedir: () => require("../helpers/tempDirs").suiteUserDataDir(),
   };
 });
 
-import path from "path";
+import { suiteUserDataDir } from "../helpers/tempDirs";
 import fs from "fs";
 import { ipcMain as electronIpcMain } from "electron";
 const ipcMain = electronIpcMain as unknown as typeof import("../__mocks__/electron").ipcMain;
@@ -16,7 +15,7 @@ import registerControlsHandlers from "../../src/main/ipc/controlsHandler";
 import type { PlayerBindings } from "../../src/shared/types/controls";
 
 describe("IPC Controls Handler Integration Tests", () => {
-  const tempDir = path.resolve(__dirname, "../temp-userdata");
+  const tempDir = suiteUserDataDir();
 
   beforeAll(() => {
     registerControlsHandlers();
@@ -114,9 +113,9 @@ describe("IPC Controls Handler Integration Tests", () => {
     expect(savedLayout.player1.face.primary).toEqual({ type: "key", code: "KeyZ" });
 
     // 4. Get all console layouts for profile
-    const layouts = (await ipcMain._invoke("controls:getConsoleLayouts", defaultProfile.id)) as { console_id: string }[];
+    const layouts = (await ipcMain._invoke("controls:getConsoleLayouts", defaultProfile.id)) as { consoleId: string }[];
     expect(layouts.length).toBeGreaterThan(0);
-    expect(layouts.some(l => l.console_id === "nes")).toBe(true);
+    expect(layouts.some(l => l.consoleId === "nes")).toBe(true);
 
     // 5. Reset console layout
     const resetLayout = (await ipcMain._invoke("controls:resetConsoleLayout", {

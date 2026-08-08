@@ -1,32 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
-import type { Game, ConsoleID } from '../../shared/types';
+import type { Game } from '../../shared/types';
+import { CONSOLE_CATALOG } from '../../shared/emulators/catalog';
 import { Logger } from '../utils/logger';
 import { Downloader } from '../utils/downloader';
 
 const log = Logger.create('CoverService');
-
-const LIBRETRO_REPOS: Record<ConsoleID, string> = {
-  nes: 'Nintendo_-_Nintendo_Entertainment_System',
-  snes: 'Nintendo_-_Super_Nintendo_Entertainment_System',
-  gb: 'Nintendo_-_Game_Boy',
-  gba: 'Nintendo_-_Game_Boy_Advance',
-  gg: 'Sega_-_Game_Gear',
-  sms: 'Sega_-_Master_System_-_Mark_III',
-  pce: 'NEC_-_PC_Engine_-_TurboGrafx_16',
-  n64: 'Nintendo_-_Nintendo_64',
-  ds: 'Nintendo_-_Nintendo_DS',
-  '3ds': 'Nintendo_-_Nintendo_3DS',
-  gc: 'Nintendo_-_GameCube',
-  wii: 'Nintendo_-_Wii',
-  ps1: 'Sony_-_PlayStation',
-  ps2: 'Sony_-_PlayStation_2',
-};
-
-const EXTRA_REPOS: Partial<Record<ConsoleID, string>> = {
-  gb: 'Nintendo_-_Game_Boy_Color',
-};
 
 const FAILED_CACHE_FILE = path.join(app.getPath('userData'), 'failed-covers.json');
 let failedCovers: Set<string> = new Set();
@@ -65,21 +45,16 @@ function normalizeTitle(title: string): string {
 }
 
 function getReposForGame(game: Game): string[] {
-  const primary = LIBRETRO_REPOS[game.consoleId];
-  if (!primary) return [];
+  const repos = CONSOLE_CATALOG[game.consoleId]?.coverRepos ?? [];
+  if (repos.length === 0) return [];
 
-  const repos = [primary];
-
-  if (game.consoleId === 'gb') {
-    const ext = path.extname(game.filePath).toLowerCase();
-    const secondary = EXTRA_REPOS.gb;
-    if (secondary) {
-      if (ext === '.gbc') {
-        return [secondary, primary];
-      } else {
-        return [primary, secondary];
-      }
-    }
+  // game Boy and Game Boy Color are one console to RomBox but two thumbnail
+  // repositories; the file extension says which to try first.
+  if (game.consoleId === 'gb' && repos.length > 1) {
+    const [gameBoy, gameBoyColor] = repos;
+    return path.extname(game.filePath).toLowerCase() === '.gbc'
+      ? [gameBoyColor, gameBoy]
+      : [gameBoy, gameBoyColor];
   }
 
   return repos;

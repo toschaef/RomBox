@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import type { ConsoleID } from '../../shared/types';
-import { SIGNATURES } from '../../shared/constants';
+import { SIGNATURES } from '../../shared/emulators/derived';
 
 const HEADER_READ_SIZE = 0x8100;
 const SECTOR_SIZE = 2048;

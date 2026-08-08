@@ -1,12 +1,12 @@
 jest.mock("os", () => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const path = require("path");
   return {
     ...jest.requireActual("os"),
-    homedir: () => path.resolve(__dirname, "../temp-userdata"),
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    homedir: () => require("../helpers/tempDirs").suiteUserDataDir(),
   };
 });
 
+import { suiteUserDataDir } from "../helpers/tempDirs";
 import path from "path";
 import fs from "fs";
 import { ipcMain as electronIpcMain } from "electron";
@@ -18,7 +18,7 @@ import { osHandler } from "../../src/main/platform";
 import type { Game } from "../../src/shared/types";
 
 describe("IPC Save Handler Integration Tests", () => {
-  const tempDir = path.resolve(__dirname, "../temp-userdata");
+  const tempDir = suiteUserDataDir();
   const mockGame: Game = {
     id: "save-game",
     title: "Save Test Game",

@@ -4,7 +4,7 @@ import { app, dialog } from "electron";
 
 import type { Game } from "../../shared/types";
 import type { SaveImportIssue, SaveMetadata, SaveStatus } from "../../shared/types/saves";
-import { getEngineIdFromConsoleId } from "../../shared/constants";
+import { getEngineIdFromConsoleId } from "../../shared/emulators/derived";
 import { getSaveRoots, getConsoleCacheDir, type SaveRoot } from "../config/saveLayouts";
 import { SAVE_FORMATS } from "../config/saveFormats";
 import { planImport, type ImportPlan, type ImportPlanResult } from "../utils/saves/importPlanner";
@@ -88,14 +88,6 @@ function walkRoot(dir: string, root: SaveRoot): string[] {
   return results;
 }
 
-/**
- * Directories in a save tree that hold no files anywhere beneath them.
- * Copying files alone recreates every directory that has content, but an
- * emulator may still expect an empty one to exist (Azahar leaves `replay_`
- * behind in a 3DS title's save directory), so they are tracked separately.
- * Only the deepest path of each empty branch is kept - creating it recreates
- * its parents too.
- */
 function walkEmptyDirs(dir: string, root: SaveRoot): string[] {
   if (!root.recursive || !fs.existsSync(dir)) return [];
 
@@ -122,8 +114,6 @@ function walkEmptyDirs(dir: string, root: SaveRoot): string[] {
         continue;
       }
 
-      // Any file counts, even one this root filters out: a directory holding
-      // files RomBox does not manage is not ours to recreate.
       if (entry.isFile() && entry.name !== ".DS_Store") hasFile = true;
     }
 
@@ -138,10 +128,7 @@ function walkEmptyDirs(dir: string, root: SaveRoot): string[] {
 }
 
 /**
- * Whether a save file belongs to a specific game. Emulators that name saves
- * after the ROM ("Super Mario Kart (USA).srm", "Super Punch-Out!!_11.mss")
- * match on the first path segment; the game title is accepted too because
- * some emulators name saves from their own game database instead.
+ * Whether a save file belongs to a specific game
  */
 function fileBelongsToGame(relPath: string, game: Game): boolean {
   const topSegment = relPath.split(path.sep)[0];
@@ -165,9 +152,6 @@ function collectSaveFiles(game: Game, side: "emulator" | "cache"): SaveFile[] {
     for (const relPath of walkRoot(dir, root)) {
       const matched = fileBelongsToGame(relPath, game);
 
-      // A per-game root holds every game's saves side by side, so only the
-      // ones named after this game may be touched. Shared containers cannot
-      // be split per game and are handled as a unit.
       if (root.scope === "per-game" && !matched) continue;
 
       files.push({ root, relPath, absPath: path.join(dir, relPath), matched });
@@ -266,8 +250,7 @@ function describeRejections(rejections: SaveImportIssue[]): string {
 
 /**
  * Copies everything the plan is about to overwrite into a timestamped folder
- * and returns it, so an unwanted import can be reversed by hand. Older
- * snapshots for the console are pruned.
+ * and returns it
  */
 function snapshotReplacedFiles(game: Game, plan: ImportPlan): string | undefined {
   const snapshotDir = path.join(
@@ -313,10 +296,6 @@ function pruneSnapshots(consoleId: string) {
   }
 }
 
-/**
- * Writes a verified plan to both the cache and the emulator's own storage, so
- * the import takes effect on the next launch and survives a reinstall.
- */
 function installPlan(plan: ImportPlan): string[] {
   const imported: string[] = [];
 
@@ -357,8 +336,6 @@ export const SaveService = {
     const sharedByRoot = new Map<string, SaveFile[]>();
 
     for (const file of cachedSaves) {
-      // Shared containers (Wii NAND, 3DS SD card) can hold thousands of
-      // files; report them as one entry per container instead.
       if (file.root.scope === "shared" && !file.matched) {
         const bucket = sharedByRoot.get(file.root.id) ?? [];
         bucket.push(file);
@@ -449,7 +426,6 @@ export const SaveService = {
         if (fs.existsSync(destPath)) {
           const destStats = fs.statSync(destPath);
 
-          // Never overwrite save data the emulator wrote after the backup.
           if (destStats.mtimeMs > cachedStats.mtimeMs) {
             skippedFiles.push(file.relPath);
             continue;
@@ -485,8 +461,6 @@ export const SaveService = {
     let keptShared = 0;
 
     for (const file of cachedSaves) {
-      // A shared memory card or NAND holds other games' progress too, so it
-      // is never deleted on behalf of a single game.
       if (!file.matched) {
         keptShared++;
         continue;
@@ -504,12 +478,6 @@ export const SaveService = {
     return { success: true, deletedFiles };
   },
 
-  /**
-   * Installs save data from a file the user picked. Every file is verified
-   * against the formats its destination accepts before anything is written,
-   * and whatever it replaces is kept under `saves/_replaced/` so an import
-   * can always be undone by hand.
-   */
   async importSave(game: Game, sourcePath?: string): Promise<{
     success: boolean;
     importedFiles?: string[];
@@ -663,8 +631,6 @@ export const SaveService = {
   },
 
   async exportSave(game: Game): Promise<{ success: boolean; exportedTo?: string; error?: string }> {
-    // Back up first so an export always reflects the latest session, even if
-    // the emulator was closed in a way that skipped the automatic backup.
     try {
       SaveService.backupSave(game);
     } catch (err) {
@@ -678,9 +644,6 @@ export const SaveService = {
       return { success: false, error: "No cached saves found for this game" };
     }
 
-    // Only a per-game save stands on its own as a bare file. A file from a
-    // shared container is identified by where it sits in the tree, so it is
-    // always zipped - otherwise the export could not be imported back.
     const singleFile =
       cachedSaves.length === 1 && cachedSaves[0].root.scope === "per-game" ? cachedSaves[0] : null;
     const defaultName = singleFile
@@ -707,14 +670,11 @@ export const SaveService = {
 
         for (const file of cachedSaves) {
           if (!fs.existsSync(file.absPath)) continue;
-          // Keep each root's structure so an exported NAND or GCI folder can
-          // be dropped back into the emulator as-is.
+
           const entryDir = path.dirname(path.join(file.root.id, file.relPath));
           zip.addLocalFile(file.absPath, entryDir === "." ? "" : entryDir.split(path.sep).join("/"));
         }
 
-        // Directory entries, so an exported tree unzips to the same shape the
-        // emulator had - empty directories included.
         for (const { root, relPath } of collectEmptyDirs(game, "cache")) {
           const entry = path.join(root.id, relPath).split(path.sep).join("/");
           zip.addFile(`${entry}/`, Buffer.alloc(0));

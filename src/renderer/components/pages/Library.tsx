@@ -11,7 +11,7 @@ import UpdateGameModal from '../inputs/UpdateGameModal';
 import PageLayout from '../layout/PageLayout';
 import type { LayoutContextType } from '../layout';
 import { gameClient } from '../../clients/gameClient';
-import { CONSOLEID_ENGLISH_MAP } from '../../../shared/constants';
+import { CONSOLEID_ENGLISH_MAP } from '../../../shared/emulators/derived';
 import ImportButton from '../library/ImportButton';
 
 const ENGINE_DISPLAY_NAMES: Record<EngineID, string> = {

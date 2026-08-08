@@ -1,7 +1,7 @@
 import { useState } from "react";
 import ProfileModals from "./ProfileModals";
 
-type ProfileMeta = { id: string; name: string; is_default: number };
+type ProfileMeta = { id: string; name: string; isDefault: boolean };
 
 export default function ControlsHeader(props: {
   profiles: ProfileMeta[];

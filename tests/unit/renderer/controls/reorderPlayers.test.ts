@@ -37,10 +37,7 @@ function makeLayout(): AnyConsoleLayout {
     createdAt: 0,
     updatedAt: 0,
     isUserModified: true,
-    controllerId: "gamepad-1",
-    player2ControllerId: "gamepad-2",
-    player3ControllerId: undefined,
-    player4ControllerId: undefined,
+    controllerIds: ["gamepad-1", "gamepad-2", undefined, undefined],
     player1: bindings("P1"),
     player2: bindings("P2"),
     player3: bindings("P3"),
@@ -97,8 +94,8 @@ describe("reorderConsoleLayoutPlayers", () => {
 
     expect(next.player1?.face.primary).toEqual({ type: "key", code: "P2" });
     expect(next.player2?.face.primary).toEqual({ type: "key", code: "P1" });
-    expect(next.controllerId).toBe("gamepad-2");
-    expect(next.player2ControllerId).toBe("gamepad-1");
+    expect(next.controllerIds?.[0]).toBe("gamepad-2");
+    expect(next.controllerIds?.[1]).toBe("gamepad-1");
   });
 
   it("clears the destination controller id when the incoming player never had one", () => {
@@ -106,7 +103,7 @@ describe("reorderConsoleLayoutPlayers", () => {
     const order = movePlayerSlot(3, 1); // drag empty P4 onto P2 (which has a controller id)
     const next = reorderConsoleLayoutPlayers(layout, order);
 
-    expect(next.player2ControllerId).toBeUndefined();
+    expect(next.controllerIds?.[1]).toBeUndefined();
   });
 
   it("falls back to the standard profile's bindings when the dragged-in player was never individually customized for this console", () => {
