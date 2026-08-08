@@ -1,8 +1,8 @@
 import { ipcMain } from "electron";
-import { SettingsService } from "../services/SettingsService";
+import { settingsService } from "../services/SettingsService";
 import type { SettingKey, SettingsShape } from "../../shared/settings";
 
-const svc = new SettingsService();
+const svc = settingsService;
 
 type SetSettingPayload = {
   [K in SettingKey]: { key: K; value: SettingsShape[K] };

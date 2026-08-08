@@ -50,10 +50,7 @@ export function useControlsLayoutTarget(args: {
         const saved = await controlsClient.saveConsoleLayout({
           consoleId: next.consoleId,
           profileId,
-          controllerId: next.controllerId,
-          player2ControllerId: next.player2ControllerId,
-          player3ControllerId: next.player3ControllerId,
-          player4ControllerId: next.player4ControllerId,
+          controllerIds: next.controllerIds,
           player1: next.player1,
           player2: next.player2,
           player3: next.player3,

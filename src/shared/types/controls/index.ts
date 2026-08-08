@@ -46,9 +46,20 @@ export type SpecialBinding =
 export type ControllerProfileMeta = {
   id: string;
   name: string;
-  created_at: number;
-  updated_at: number;
-  is_default: number;
+  createdAt: number;
+  updatedAt: number;
+  isDefault: boolean;
+};
+
+/** A console layout without its bindings, for listing what a profile overrides. */
+export type ConsoleLayoutMeta = {
+  id: string;
+  consoleId: ConsoleID;
+  profileId: string;
+  createdAt: number;
+  updatedAt: number;
+  isUserModified: boolean;
+  controllerId?: string;
 };
 
 export type DigitalBinding =
@@ -145,10 +156,8 @@ export type ConsoleLayoutBase = {
   createdAt: number;
   updatedAt: number;
   isUserModified: boolean;
-  controllerId?: string;
-  player2ControllerId?: string;
-  player3ControllerId?: string;
-  player4ControllerId?: string;
+  // controller model per player, indexed by slot (0 = player 1)
+  controllerIds?: Array<string | undefined>;
 };
 
 export type ConsoleLayout<C extends ConsoleID = ConsoleID> = ConsoleLayoutBase & {

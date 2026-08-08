@@ -1,0 +1,1349 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`emulator path matrix (characterization) darwin resolves config and base paths for ares 1`] = `
+{
+  "base": "<HOME>/Library/Application Support/ares",
+  "config": "<HOME>/Library/Application Support/ares",
+}
+`;
+
+exports[`emulator path matrix (characterization) darwin resolves config and base paths for azahar 1`] = `
+{
+  "base": "<HOME>/Library/Application Support/Azahar",
+  "config": "<HOME>/Library/Application Support/Azahar/config",
+}
+`;
+
+exports[`emulator path matrix (characterization) darwin resolves config and base paths for dolphin 1`] = `
+{
+  "base": "<HOME>/Library/Application Support/Dolphin",
+  "config": "<HOME>/Library/Application Support/Dolphin/Config",
+}
+`;
+
+exports[`emulator path matrix (characterization) darwin resolves config and base paths for duckstation 1`] = `
+{
+  "base": "<HOME>/Library/Application Support/DuckStation",
+  "config": "<HOME>/Library/Application Support/DuckStation",
+}
+`;
+
+exports[`emulator path matrix (characterization) darwin resolves config and base paths for melonds 1`] = `
+{
+  "base": "<HOME>/Library/Preferences/melonDS",
+  "config": "<HOME>/Library/Preferences/melonDS",
+}
+`;
+
+exports[`emulator path matrix (characterization) darwin resolves config and base paths for mesen 1`] = `
+{
+  "base": "<HOME>/Library/Application Support/Mesen2",
+  "config": "<HOME>/Library/Application Support/Mesen2",
+}
+`;
+
+exports[`emulator path matrix (characterization) darwin resolves config and base paths for pcsx2 1`] = `
+{
+  "base": "<HOME>/Library/Application Support/PCSX2",
+  "config": "<HOME>/Library/Application Support/PCSX2/inis",
+}
+`;
+
+exports[`emulator path matrix (characterization) darwin resolves save paths and roots for ares 1`] = `
+[
+  {
+    "consoleId": "n64",
+    "savePath": "/roms/n64",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/n64",
+        "dir": "/roms/n64",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".sav",
+          ".srm",
+          ".sram",
+          ".eeprom",
+          ".flash",
+          ".ram",
+          ".pak",
+          ".rtc",
+        ],
+        "id": "rom-adjacent",
+        "importFileName": "custom",
+        "importFormats": [
+          "n64-eeprom",
+          "n64-sram",
+          "n64-flash",
+          "n64-controller-pak",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+      {
+        "cacheDir": "<CACHE>/n64/ares-saves",
+        "dir": "<HOME>/Library/Application Support/ares/Saves",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".sav",
+          ".srm",
+          ".sram",
+          ".eeprom",
+          ".flash",
+          ".ram",
+          ".pak",
+          ".rtc",
+        ],
+        "id": "ares-saves",
+        "importFileName": undefined,
+        "importFormats": [
+          "n64-eeprom",
+          "n64-sram",
+          "n64-flash",
+          "n64-controller-pak",
+        ],
+        "importPatterns": undefined,
+        "recursive": true,
+        "scope": "per-game",
+      },
+    ],
+  },
+]
+`;
+
+exports[`emulator path matrix (characterization) darwin resolves save paths and roots for azahar 1`] = `
+[
+  {
+    "consoleId": "3ds",
+    "savePath": "<HOME>/Library/Application Support/Azahar/sdmc",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/3ds/sdmc",
+        "dir": "<HOME>/Library/Application Support/Azahar/sdmc",
+        "excludeDirs": [
+          "DCIM",
+        ],
+        "extensions": undefined,
+        "id": "sdmc",
+        "importFileName": undefined,
+        "importFormats": undefined,
+        "importPatterns": [
+          "^Nintendo 3DS\\/[0-9a-f]{32}\\/[0-9a-f]{32}\\/(title|extdata)\\/.+",
+          "^Nintendo 3DS\\/Private\\/.+",
+        ],
+        "recursive": true,
+        "scope": "shared",
+      },
+      {
+        "cacheDir": "<CACHE>/3ds/nand-data",
+        "dir": "<HOME>/Library/Application Support/Azahar/nand/data",
+        "excludeDirs": undefined,
+        "extensions": undefined,
+        "id": "nand-data",
+        "importFileName": undefined,
+        "importFormats": undefined,
+        "importPatterns": [
+          "^[0-9a-f]{32}\\/(sysdata|extdata)\\/.+",
+        ],
+        "recursive": true,
+        "scope": "shared",
+      },
+    ],
+  },
+]
+`;
+
+exports[`emulator path matrix (characterization) darwin resolves save paths and roots for dolphin 1`] = `
+[
+  {
+    "consoleId": "gc",
+    "savePath": "<HOME>/Library/Application Support/Dolphin/GC",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/gc",
+        "dir": "<HOME>/Library/Application Support/Dolphin/GC",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".gci",
+          ".raw",
+        ],
+        "id": "gc-memcards",
+        "importFileName": "custom",
+        "importFormats": [
+          "gc-gci",
+          "gc-memcard-raw",
+          "gc-sram",
+        ],
+        "importPatterns": [
+          "^(USA|EUR|JAP)\\/Card [AB]\\/[^/]+\\.gci$",
+          "^MemoryCard[AB]\\.(USA|EUR|JAP)\\.raw$",
+          "^SRAM\\.raw$",
+        ],
+        "recursive": true,
+        "scope": "shared",
+      },
+      {
+        "cacheDir": "<CACHE>/_shared/dolphin-savestates",
+        "dir": "<HOME>/Library/Application Support/Dolphin/StateSaves",
+        "excludeDirs": undefined,
+        "extensions": undefined,
+        "id": "savestates",
+        "importFileName": undefined,
+        "importFormats": undefined,
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "shared",
+      },
+    ],
+  },
+  {
+    "consoleId": "wii",
+    "savePath": "<HOME>/Library/Application Support/Dolphin/Wii",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/wii",
+        "dir": "<HOME>/Library/Application Support/Dolphin/Wii",
+        "excludeDirs": [
+          "import",
+          "tmp",
+          "cache",
+        ],
+        "extensions": undefined,
+        "id": "wii-nand",
+        "importFileName": undefined,
+        "importFormats": undefined,
+        "importPatterns": [
+          "^title\\/[0-9a-f]{8}\\/[0-9a-f]{8}\\/(data|content)\\/.+",
+          "^(shared1|shared2|sys|ticket|meta|wfs)\\/.+",
+          "^fst\\.bin$",
+        ],
+        "recursive": true,
+        "scope": "shared",
+      },
+      {
+        "cacheDir": "<CACHE>/_shared/dolphin-savestates",
+        "dir": "<HOME>/Library/Application Support/Dolphin/StateSaves",
+        "excludeDirs": undefined,
+        "extensions": undefined,
+        "id": "savestates",
+        "importFileName": undefined,
+        "importFormats": undefined,
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "shared",
+      },
+    ],
+  },
+]
+`;
+
+exports[`emulator path matrix (characterization) darwin resolves save paths and roots for duckstation 1`] = `
+[
+  {
+    "consoleId": "ps1",
+    "savePath": "<HOME>/Library/Application Support/DuckStation/memcards",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/ps1",
+        "dir": "<HOME>/Library/Application Support/DuckStation/memcards",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".mcd",
+          ".mcr",
+          ".ps",
+          ".srm",
+        ],
+        "id": "memcards",
+        "importFileName": "custom",
+        "importFormats": [
+          "ps1-memcard",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "shared",
+      },
+      {
+        "cacheDir": "<CACHE>/ps1/savestates",
+        "dir": "<HOME>/Library/Application Support/DuckStation/savestates",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".sav",
+        ],
+        "id": "savestates",
+        "importFileName": "custom",
+        "importFormats": [
+          "duckstation-savestate",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "shared",
+      },
+    ],
+  },
+]
+`;
+
+exports[`emulator path matrix (characterization) darwin resolves save paths and roots for melonds 1`] = `
+[
+  {
+    "consoleId": "ds",
+    "savePath": "/roms/ds",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/ds",
+        "dir": "/roms/ds",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".sav",
+          ".dsv",
+          ".mln",
+          ".rtc",
+        ],
+        "id": "rom-adjacent",
+        "importFileName": "custom",
+        "importFormats": [
+          "ds-battery",
+          "ds-dsv",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+    ],
+  },
+]
+`;
+
+exports[`emulator path matrix (characterization) darwin resolves save paths and roots for mesen 1`] = `
+[
+  {
+    "consoleId": "nes",
+    "savePath": "<HOME>/Library/Application Support/Mesen2/Saves",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/nes",
+        "dir": "<HOME>/Library/Application Support/Mesen2/Saves",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".sav",
+          ".srm",
+          ".sram",
+          ".rtc",
+          ".eep",
+          ".flash",
+        ],
+        "id": "saves",
+        "importFileName": "custom",
+        "importFormats": [
+          "battery-raw",
+          "rtc-companion",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+      {
+        "cacheDir": "<CACHE>/nes/savestates",
+        "dir": "<HOME>/Library/Application Support/Mesen2/SaveStates",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".mss",
+        ],
+        "id": "savestates",
+        "importFileName": "custom",
+        "importFormats": [
+          "mesen-savestate",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+    ],
+  },
+  {
+    "consoleId": "snes",
+    "savePath": "<HOME>/Library/Application Support/Mesen2/Saves",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/snes",
+        "dir": "<HOME>/Library/Application Support/Mesen2/Saves",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".sav",
+          ".srm",
+          ".sram",
+          ".rtc",
+          ".eep",
+          ".flash",
+        ],
+        "id": "saves",
+        "importFileName": "custom",
+        "importFormats": [
+          "battery-raw",
+          "rtc-companion",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+      {
+        "cacheDir": "<CACHE>/snes/savestates",
+        "dir": "<HOME>/Library/Application Support/Mesen2/SaveStates",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".mss",
+        ],
+        "id": "savestates",
+        "importFileName": "custom",
+        "importFormats": [
+          "mesen-savestate",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+    ],
+  },
+  {
+    "consoleId": "gb",
+    "savePath": "<HOME>/Library/Application Support/Mesen2/Saves",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/gb",
+        "dir": "<HOME>/Library/Application Support/Mesen2/Saves",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".sav",
+          ".srm",
+          ".sram",
+          ".rtc",
+          ".eep",
+          ".flash",
+        ],
+        "id": "saves",
+        "importFileName": "custom",
+        "importFormats": [
+          "battery-raw",
+          "rtc-companion",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+      {
+        "cacheDir": "<CACHE>/gb/savestates",
+        "dir": "<HOME>/Library/Application Support/Mesen2/SaveStates",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".mss",
+        ],
+        "id": "savestates",
+        "importFileName": "custom",
+        "importFormats": [
+          "mesen-savestate",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+    ],
+  },
+  {
+    "consoleId": "gba",
+    "savePath": "<HOME>/Library/Application Support/Mesen2/Saves",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/gba",
+        "dir": "<HOME>/Library/Application Support/Mesen2/Saves",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".sav",
+          ".srm",
+          ".sram",
+          ".rtc",
+          ".eep",
+          ".flash",
+        ],
+        "id": "saves",
+        "importFileName": "custom",
+        "importFormats": [
+          "battery-raw",
+          "rtc-companion",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+      {
+        "cacheDir": "<CACHE>/gba/savestates",
+        "dir": "<HOME>/Library/Application Support/Mesen2/SaveStates",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".mss",
+        ],
+        "id": "savestates",
+        "importFileName": "custom",
+        "importFormats": [
+          "mesen-savestate",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+    ],
+  },
+  {
+    "consoleId": "gg",
+    "savePath": "<HOME>/Library/Application Support/Mesen2/Saves",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/gg",
+        "dir": "<HOME>/Library/Application Support/Mesen2/Saves",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".sav",
+          ".srm",
+          ".sram",
+          ".rtc",
+          ".eep",
+          ".flash",
+        ],
+        "id": "saves",
+        "importFileName": "custom",
+        "importFormats": [
+          "battery-raw",
+          "rtc-companion",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+      {
+        "cacheDir": "<CACHE>/gg/savestates",
+        "dir": "<HOME>/Library/Application Support/Mesen2/SaveStates",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".mss",
+        ],
+        "id": "savestates",
+        "importFileName": "custom",
+        "importFormats": [
+          "mesen-savestate",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+    ],
+  },
+  {
+    "consoleId": "sms",
+    "savePath": "<HOME>/Library/Application Support/Mesen2/Saves",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/sms",
+        "dir": "<HOME>/Library/Application Support/Mesen2/Saves",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".sav",
+          ".srm",
+          ".sram",
+          ".rtc",
+          ".eep",
+          ".flash",
+        ],
+        "id": "saves",
+        "importFileName": "custom",
+        "importFormats": [
+          "battery-raw",
+          "rtc-companion",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+      {
+        "cacheDir": "<CACHE>/sms/savestates",
+        "dir": "<HOME>/Library/Application Support/Mesen2/SaveStates",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".mss",
+        ],
+        "id": "savestates",
+        "importFileName": "custom",
+        "importFormats": [
+          "mesen-savestate",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+    ],
+  },
+  {
+    "consoleId": "pce",
+    "savePath": "<HOME>/Library/Application Support/Mesen2/Saves",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/pce",
+        "dir": "<HOME>/Library/Application Support/Mesen2/Saves",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".sav",
+          ".srm",
+          ".sram",
+          ".rtc",
+          ".eep",
+          ".flash",
+        ],
+        "id": "saves",
+        "importFileName": "custom",
+        "importFormats": [
+          "battery-raw",
+          "rtc-companion",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+      {
+        "cacheDir": "<CACHE>/pce/savestates",
+        "dir": "<HOME>/Library/Application Support/Mesen2/SaveStates",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".mss",
+        ],
+        "id": "savestates",
+        "importFileName": "custom",
+        "importFormats": [
+          "mesen-savestate",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+    ],
+  },
+]
+`;
+
+exports[`emulator path matrix (characterization) darwin resolves save paths and roots for pcsx2 1`] = `
+[
+  {
+    "consoleId": "ps2",
+    "savePath": "<HOME>/Library/Application Support/PCSX2/memcards",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/ps2",
+        "dir": "<HOME>/Library/Application Support/PCSX2/memcards",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".ps2",
+          ".mcd",
+          ".mcr",
+        ],
+        "id": "memcards",
+        "importFileName": "custom",
+        "importFormats": [
+          "ps2-memcard",
+          "ps1-memcard",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "shared",
+      },
+      {
+        "cacheDir": "<CACHE>/ps2/savestates",
+        "dir": "<HOME>/Library/Application Support/PCSX2/sstates",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".p2s",
+        ],
+        "id": "savestates",
+        "importFileName": "custom",
+        "importFormats": [
+          "pcsx2-savestate",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "shared",
+      },
+    ],
+  },
+]
+`;
+
+exports[`emulator path matrix (characterization) win32 resolves config and base paths for ares 1`] = `
+{
+  "base": "<HOME>/AppData/Local/ares",
+  "config": "<HOME>/AppData/Local/ares",
+}
+`;
+
+exports[`emulator path matrix (characterization) win32 resolves config and base paths for azahar 1`] = `
+{
+  "base": "<HOME>/AppData/Roaming/Azahar",
+  "config": "<HOME>/AppData/Roaming/Azahar/config",
+}
+`;
+
+exports[`emulator path matrix (characterization) win32 resolves config and base paths for dolphin 1`] = `
+{
+  "base": "<HOME>/AppData/Roaming/Dolphin Emulator",
+  "config": "<HOME>/AppData/Roaming/Dolphin Emulator/Config",
+}
+`;
+
+exports[`emulator path matrix (characterization) win32 resolves config and base paths for duckstation 1`] = `
+{
+  "base": "<HOME>/Documents/DuckStation",
+  "config": "<HOME>/Documents/DuckStation",
+}
+`;
+
+exports[`emulator path matrix (characterization) win32 resolves config and base paths for melonds 1`] = `
+{
+  "base": "<HOME>/AppData/Local/melonDS",
+  "config": "<HOME>/AppData/Local/melonDS",
+}
+`;
+
+exports[`emulator path matrix (characterization) win32 resolves config and base paths for mesen 1`] = `
+{
+  "base": "<HOME>/Documents/Mesen2",
+  "config": "<HOME>/Documents/Mesen2",
+}
+`;
+
+exports[`emulator path matrix (characterization) win32 resolves config and base paths for pcsx2 1`] = `
+{
+  "base": "<HOME>/Documents/PCSX2",
+  "config": "<HOME>/Documents/PCSX2/inis",
+}
+`;
+
+exports[`emulator path matrix (characterization) win32 resolves save paths and roots for ares 1`] = `
+[
+  {
+    "consoleId": "n64",
+    "savePath": "/roms/n64",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/n64",
+        "dir": "/roms/n64",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".sav",
+          ".srm",
+          ".sram",
+          ".eeprom",
+          ".flash",
+          ".ram",
+          ".pak",
+          ".rtc",
+        ],
+        "id": "rom-adjacent",
+        "importFileName": "custom",
+        "importFormats": [
+          "n64-eeprom",
+          "n64-sram",
+          "n64-flash",
+          "n64-controller-pak",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+      {
+        "cacheDir": "<CACHE>/n64/ares-saves",
+        "dir": "<HOME>/AppData/Local/ares/Saves",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".sav",
+          ".srm",
+          ".sram",
+          ".eeprom",
+          ".flash",
+          ".ram",
+          ".pak",
+          ".rtc",
+        ],
+        "id": "ares-saves",
+        "importFileName": undefined,
+        "importFormats": [
+          "n64-eeprom",
+          "n64-sram",
+          "n64-flash",
+          "n64-controller-pak",
+        ],
+        "importPatterns": undefined,
+        "recursive": true,
+        "scope": "per-game",
+      },
+    ],
+  },
+]
+`;
+
+exports[`emulator path matrix (characterization) win32 resolves save paths and roots for azahar 1`] = `
+[
+  {
+    "consoleId": "3ds",
+    "savePath": "<HOME>/AppData/Roaming/Azahar/sdmc",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/3ds/sdmc",
+        "dir": "<HOME>/AppData/Roaming/Azahar/sdmc",
+        "excludeDirs": [
+          "DCIM",
+        ],
+        "extensions": undefined,
+        "id": "sdmc",
+        "importFileName": undefined,
+        "importFormats": undefined,
+        "importPatterns": [
+          "^Nintendo 3DS\\/[0-9a-f]{32}\\/[0-9a-f]{32}\\/(title|extdata)\\/.+",
+          "^Nintendo 3DS\\/Private\\/.+",
+        ],
+        "recursive": true,
+        "scope": "shared",
+      },
+      {
+        "cacheDir": "<CACHE>/3ds/nand-data",
+        "dir": "<HOME>/AppData/Roaming/Azahar/nand/data",
+        "excludeDirs": undefined,
+        "extensions": undefined,
+        "id": "nand-data",
+        "importFileName": undefined,
+        "importFormats": undefined,
+        "importPatterns": [
+          "^[0-9a-f]{32}\\/(sysdata|extdata)\\/.+",
+        ],
+        "recursive": true,
+        "scope": "shared",
+      },
+    ],
+  },
+]
+`;
+
+exports[`emulator path matrix (characterization) win32 resolves save paths and roots for dolphin 1`] = `
+[
+  {
+    "consoleId": "gc",
+    "savePath": "<HOME>/AppData/Roaming/Dolphin Emulator/GC",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/gc",
+        "dir": "<HOME>/AppData/Roaming/Dolphin Emulator/GC",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".gci",
+          ".raw",
+        ],
+        "id": "gc-memcards",
+        "importFileName": "custom",
+        "importFormats": [
+          "gc-gci",
+          "gc-memcard-raw",
+          "gc-sram",
+        ],
+        "importPatterns": [
+          "^(USA|EUR|JAP)\\/Card [AB]\\/[^/]+\\.gci$",
+          "^MemoryCard[AB]\\.(USA|EUR|JAP)\\.raw$",
+          "^SRAM\\.raw$",
+        ],
+        "recursive": true,
+        "scope": "shared",
+      },
+      {
+        "cacheDir": "<CACHE>/_shared/dolphin-savestates",
+        "dir": "<HOME>/AppData/Roaming/Dolphin Emulator/StateSaves",
+        "excludeDirs": undefined,
+        "extensions": undefined,
+        "id": "savestates",
+        "importFileName": undefined,
+        "importFormats": undefined,
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "shared",
+      },
+    ],
+  },
+  {
+    "consoleId": "wii",
+    "savePath": "<HOME>/AppData/Roaming/Dolphin Emulator/Wii",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/wii",
+        "dir": "<HOME>/AppData/Roaming/Dolphin Emulator/Wii",
+        "excludeDirs": [
+          "import",
+          "tmp",
+          "cache",
+        ],
+        "extensions": undefined,
+        "id": "wii-nand",
+        "importFileName": undefined,
+        "importFormats": undefined,
+        "importPatterns": [
+          "^title\\/[0-9a-f]{8}\\/[0-9a-f]{8}\\/(data|content)\\/.+",
+          "^(shared1|shared2|sys|ticket|meta|wfs)\\/.+",
+          "^fst\\.bin$",
+        ],
+        "recursive": true,
+        "scope": "shared",
+      },
+      {
+        "cacheDir": "<CACHE>/_shared/dolphin-savestates",
+        "dir": "<HOME>/AppData/Roaming/Dolphin Emulator/StateSaves",
+        "excludeDirs": undefined,
+        "extensions": undefined,
+        "id": "savestates",
+        "importFileName": undefined,
+        "importFormats": undefined,
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "shared",
+      },
+    ],
+  },
+]
+`;
+
+exports[`emulator path matrix (characterization) win32 resolves save paths and roots for duckstation 1`] = `
+[
+  {
+    "consoleId": "ps1",
+    "savePath": "<HOME>/Documents/DuckStation/memcards",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/ps1",
+        "dir": "<HOME>/Documents/DuckStation/memcards",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".mcd",
+          ".mcr",
+          ".ps",
+          ".srm",
+        ],
+        "id": "memcards",
+        "importFileName": "custom",
+        "importFormats": [
+          "ps1-memcard",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "shared",
+      },
+      {
+        "cacheDir": "<CACHE>/ps1/savestates",
+        "dir": "<HOME>/Documents/DuckStation/savestates",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".sav",
+        ],
+        "id": "savestates",
+        "importFileName": "custom",
+        "importFormats": [
+          "duckstation-savestate",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "shared",
+      },
+    ],
+  },
+]
+`;
+
+exports[`emulator path matrix (characterization) win32 resolves save paths and roots for melonds 1`] = `
+[
+  {
+    "consoleId": "ds",
+    "savePath": "/roms/ds",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/ds",
+        "dir": "/roms/ds",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".sav",
+          ".dsv",
+          ".mln",
+          ".rtc",
+        ],
+        "id": "rom-adjacent",
+        "importFileName": "custom",
+        "importFormats": [
+          "ds-battery",
+          "ds-dsv",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+    ],
+  },
+]
+`;
+
+exports[`emulator path matrix (characterization) win32 resolves save paths and roots for mesen 1`] = `
+[
+  {
+    "consoleId": "nes",
+    "savePath": "<HOME>/Documents/Mesen2/Saves",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/nes",
+        "dir": "<HOME>/Documents/Mesen2/Saves",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".sav",
+          ".srm",
+          ".sram",
+          ".rtc",
+          ".eep",
+          ".flash",
+        ],
+        "id": "saves",
+        "importFileName": "custom",
+        "importFormats": [
+          "battery-raw",
+          "rtc-companion",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+      {
+        "cacheDir": "<CACHE>/nes/savestates",
+        "dir": "<HOME>/Documents/Mesen2/SaveStates",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".mss",
+        ],
+        "id": "savestates",
+        "importFileName": "custom",
+        "importFormats": [
+          "mesen-savestate",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+    ],
+  },
+  {
+    "consoleId": "snes",
+    "savePath": "<HOME>/Documents/Mesen2/Saves",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/snes",
+        "dir": "<HOME>/Documents/Mesen2/Saves",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".sav",
+          ".srm",
+          ".sram",
+          ".rtc",
+          ".eep",
+          ".flash",
+        ],
+        "id": "saves",
+        "importFileName": "custom",
+        "importFormats": [
+          "battery-raw",
+          "rtc-companion",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+      {
+        "cacheDir": "<CACHE>/snes/savestates",
+        "dir": "<HOME>/Documents/Mesen2/SaveStates",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".mss",
+        ],
+        "id": "savestates",
+        "importFileName": "custom",
+        "importFormats": [
+          "mesen-savestate",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+    ],
+  },
+  {
+    "consoleId": "gb",
+    "savePath": "<HOME>/Documents/Mesen2/Saves",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/gb",
+        "dir": "<HOME>/Documents/Mesen2/Saves",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".sav",
+          ".srm",
+          ".sram",
+          ".rtc",
+          ".eep",
+          ".flash",
+        ],
+        "id": "saves",
+        "importFileName": "custom",
+        "importFormats": [
+          "battery-raw",
+          "rtc-companion",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+      {
+        "cacheDir": "<CACHE>/gb/savestates",
+        "dir": "<HOME>/Documents/Mesen2/SaveStates",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".mss",
+        ],
+        "id": "savestates",
+        "importFileName": "custom",
+        "importFormats": [
+          "mesen-savestate",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+    ],
+  },
+  {
+    "consoleId": "gba",
+    "savePath": "<HOME>/Documents/Mesen2/Saves",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/gba",
+        "dir": "<HOME>/Documents/Mesen2/Saves",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".sav",
+          ".srm",
+          ".sram",
+          ".rtc",
+          ".eep",
+          ".flash",
+        ],
+        "id": "saves",
+        "importFileName": "custom",
+        "importFormats": [
+          "battery-raw",
+          "rtc-companion",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+      {
+        "cacheDir": "<CACHE>/gba/savestates",
+        "dir": "<HOME>/Documents/Mesen2/SaveStates",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".mss",
+        ],
+        "id": "savestates",
+        "importFileName": "custom",
+        "importFormats": [
+          "mesen-savestate",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+    ],
+  },
+  {
+    "consoleId": "gg",
+    "savePath": "<HOME>/Documents/Mesen2/Saves",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/gg",
+        "dir": "<HOME>/Documents/Mesen2/Saves",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".sav",
+          ".srm",
+          ".sram",
+          ".rtc",
+          ".eep",
+          ".flash",
+        ],
+        "id": "saves",
+        "importFileName": "custom",
+        "importFormats": [
+          "battery-raw",
+          "rtc-companion",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+      {
+        "cacheDir": "<CACHE>/gg/savestates",
+        "dir": "<HOME>/Documents/Mesen2/SaveStates",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".mss",
+        ],
+        "id": "savestates",
+        "importFileName": "custom",
+        "importFormats": [
+          "mesen-savestate",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+    ],
+  },
+  {
+    "consoleId": "sms",
+    "savePath": "<HOME>/Documents/Mesen2/Saves",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/sms",
+        "dir": "<HOME>/Documents/Mesen2/Saves",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".sav",
+          ".srm",
+          ".sram",
+          ".rtc",
+          ".eep",
+          ".flash",
+        ],
+        "id": "saves",
+        "importFileName": "custom",
+        "importFormats": [
+          "battery-raw",
+          "rtc-companion",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+      {
+        "cacheDir": "<CACHE>/sms/savestates",
+        "dir": "<HOME>/Documents/Mesen2/SaveStates",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".mss",
+        ],
+        "id": "savestates",
+        "importFileName": "custom",
+        "importFormats": [
+          "mesen-savestate",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+    ],
+  },
+  {
+    "consoleId": "pce",
+    "savePath": "<HOME>/Documents/Mesen2/Saves",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/pce",
+        "dir": "<HOME>/Documents/Mesen2/Saves",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".sav",
+          ".srm",
+          ".sram",
+          ".rtc",
+          ".eep",
+          ".flash",
+        ],
+        "id": "saves",
+        "importFileName": "custom",
+        "importFormats": [
+          "battery-raw",
+          "rtc-companion",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+      {
+        "cacheDir": "<CACHE>/pce/savestates",
+        "dir": "<HOME>/Documents/Mesen2/SaveStates",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".mss",
+        ],
+        "id": "savestates",
+        "importFileName": "custom",
+        "importFormats": [
+          "mesen-savestate",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "per-game",
+      },
+    ],
+  },
+]
+`;
+
+exports[`emulator path matrix (characterization) win32 resolves save paths and roots for pcsx2 1`] = `
+[
+  {
+    "consoleId": "ps2",
+    "savePath": "<HOME>/Documents/PCSX2/memcards",
+    "saveRoots": [
+      {
+        "cacheDir": "<CACHE>/ps2",
+        "dir": "<HOME>/Documents/PCSX2/memcards",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".ps2",
+          ".mcd",
+          ".mcr",
+        ],
+        "id": "memcards",
+        "importFileName": "custom",
+        "importFormats": [
+          "ps2-memcard",
+          "ps1-memcard",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "shared",
+      },
+      {
+        "cacheDir": "<CACHE>/ps2/savestates",
+        "dir": "<HOME>/Documents/PCSX2/sstates",
+        "excludeDirs": undefined,
+        "extensions": [
+          ".p2s",
+        ],
+        "id": "savestates",
+        "importFileName": "custom",
+        "importFormats": [
+          "pcsx2-savestate",
+        ],
+        "importPatterns": undefined,
+        "recursive": false,
+        "scope": "shared",
+      },
+    ],
+  },
+]
+`;

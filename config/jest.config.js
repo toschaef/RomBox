@@ -45,53 +45,58 @@ module.exports = {
     'src/main/utils/fsUtils.ts',
     'src/main/utils/identifier.ts',
     'src/shared/resolution.ts',
+    'src/shared/emulators/**/*.ts',
     'src/main/services/**/*.ts',
-    'src/main/utils/configurators/**/*.ts',
-    'src/main/utils/translators/**/*.ts'
+    'src/main/emulators/**/*.ts',
+    'src/main/data/**/*.ts',
+    'src/main/platform/**/*.ts'
   ],
   coverageDirectory: '<rootDir>/test-results/coverage',
+  // Thresholds are ratchets set just below measured coverage: they exist to
+  // stop regressions, not to describe a target. Raise them when coverage
+  // improves; do not lower them to make a change pass.
+  //
+  // Note these were previously declared but never enforced - collectCoverage
+  // was false and no script passed --coverage - so some were aspirational.
+  // ratchets set just below measured coverage: they stop regressions, they are
+  // not targets. raise them when coverage improves; do not lower them to make a
+  // change pass.
   coverageThreshold: {
-    './src/main/utils/downloader.ts': {
-      branches: 80,
-      functions: 80,
-      lines: 80,
-      statements: 80
+    './src/main/data/': {
+      branches: 88, functions: 95, lines: 95, statements: 95
     },
-    './src/main/utils/fsUtils.ts': {
-      branches: 80,
-      functions: 80,
-      lines: 80,
-      statements: 80
+    './src/shared/emulators/': {
+      branches: 95, functions: 85, lines: 95, statements: 95
     },
-    './src/main/utils/identifier.ts': {
-      branches: 80,
-      functions: 80,
-      lines: 80,
-      statements: 80
+    './src/main/services/bios/': {
+      branches: 95, functions: 95, lines: 95, statements: 95
     },
-    './src/shared/resolution.ts': {
-      branches: 80,
-      functions: 80,
-      lines: 80,
-      statements: 80
+    './src/main/services/launch/': {
+      branches: 90, functions: 95, lines: 95, statements: 95
+    },
+    './src/main/platform/': {
+      branches: 76, functions: 95, lines: 93, statements: 91
+    },
+    './src/main/emulators/': {
+      branches: 66, functions: 93, lines: 87, statements: 84
     },
     './src/main/services/': {
-      branches: 45,
-      functions: 70,
-      lines: 65,
-      statements: 65
+      branches: 67, functions: 91, lines: 84, statements: 82
     },
-    './src/main/utils/configurators/': {
-      branches: 50,
-      functions: 80,
-      lines: 80,
-      statements: 80
+    './src/main/utils/': {
+      branches: 76, functions: 85, lines: 87, statements: 85
     },
-    './src/main/utils/translators/': {
-      branches: 40,
-      functions: 90,
-      lines: 80,
-      statements: 70
+    './src/main/utils/downloader.ts': {
+      branches: 80, functions: 75, lines: 80, statements: 80
+    },
+    './src/main/utils/identifier.ts': {
+      branches: 70, functions: 80, lines: 85, statements: 85
+    },
+    './src/main/utils/fsUtils.ts': {
+      branches: 82, functions: 82, lines: 88, statements: 87
+    },
+    './src/shared/resolution.ts': {
+      branches: 80, functions: 80, lines: 80, statements: 80
     }
   }
 };

@@ -11,7 +11,7 @@ import { Downloader } from "../utils/downloader";
 import { Logger } from "../utils/logger";
 import { BiosService } from "./BiosService";
 import { ENGINES } from "../config/engines";
-import { getEmulatorNameFromEngineId } from "../../shared/constants";
+import { getEmulatorNameFromEngineId } from "../../shared/emulators/derived";
 
 const log = Logger.create('EngineService');
 
@@ -151,13 +151,15 @@ export const EngineService = {
           try {
             const binaryConfigPath = cfg.binaries[platform];
             if (!binaryConfigPath) {
+              // previously `return`ed out of the map callback, putting an
+              // `undefined` into the EngineInfo[] the renderer iterates.
               status = "broken";
               lastError = "binary config path not found";
               resolvedBinaryPath = null;
-              return;
+            } else {
+              resolvedBinaryPath = await resolveBinaryPath(installDirAbs, binaryConfigPath);
+              status = resolvedBinaryPath ? "installed" : "broken";
             }
-            resolvedBinaryPath = await resolveBinaryPath(installDirAbs, binaryConfigPath);
-            status = resolvedBinaryPath ? "installed" : "broken";
           } catch (err) {
             status = "broken";
             lastError = (err as Error).message;

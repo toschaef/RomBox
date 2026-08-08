@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ConsoleID } from "../../../shared/types";
 import { biosClient } from "../../clients/biosClient";
-import { getConsoleNameFromId, NOTIFICATION_MESSAGES } from "../../../shared/constants";
+import { NOTIFICATION_MESSAGES } from "../../../shared/constants";
+import { getConsoleNameFromId } from "../../../shared/emulators/derived";
 import { engineClient } from "../../clients/engineClient";
 import type { BiosStatus } from "../../../shared/types/bios";
 import { useOutletContext } from "react-router-dom";

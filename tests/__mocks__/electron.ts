@@ -1,13 +1,12 @@
 import path from 'path';
-
-// Mock path for userData
-const mockUserDataPath = path.resolve(__dirname, '../temp-userdata');
+import { suiteTempDir, suiteUserDataDir } from '../helpers/tempDirs';
 
 export const app = {
   getPath: jest.fn().mockImplementation((name: string) => {
-    if (name === 'userData') {
-      return mockUserDataPath;
-    }
+    // resolved per call rather than captured at module load, so each suite gets
+    // its own directory and suites can run in parallel.
+    if (name === 'userData') return suiteUserDataDir();
+    if (name === 'temp') return path.join(suiteTempDir(), 'temp');
     return `/mock/path/${name}`;
   }),
   getAppPath: jest.fn().mockReturnValue('/mock/app/path'),

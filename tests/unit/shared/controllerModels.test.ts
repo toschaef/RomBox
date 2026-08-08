@@ -3,15 +3,12 @@ import { getPlayerControllerId, withPlayerControllerId, getSupportedControllers 
 describe("controllerModels per-player controller id", () => {
   describe("getPlayerControllerId", () => {
     it("reads player1 from the base controllerId field", () => {
-      expect(getPlayerControllerId({ controllerId: "classic" }, "player1")).toBe("classic");
+      expect(getPlayerControllerId({ controllerIds: ["classic"] }, "player1")).toBe("classic");
     });
 
-    it("reads player2/3/4 from their own dedicated fields", () => {
+    it("reads each player from its own slot", () => {
       const source = {
-        controllerId: "classic",
-        player2ControllerId: "wiimote_nunchuk",
-        player3ControllerId: "wiimote_sideways",
-        player4ControllerId: "gamecube",
+        controllerIds: ["classic", "wiimote_nunchuk", "wiimote_sideways", "gamecube"],
       };
       expect(getPlayerControllerId(source, "player2")).toBe("wiimote_nunchuk");
       expect(getPlayerControllerId(source, "player3")).toBe("wiimote_sideways");
@@ -19,31 +16,32 @@ describe("controllerModels per-player controller id", () => {
     });
 
     it("returns undefined for players with no controller model set yet", () => {
-      expect(getPlayerControllerId({ controllerId: "classic" }, "player2")).toBeUndefined();
+      expect(getPlayerControllerId({ controllerIds: ["classic"] }, "player2")).toBeUndefined();
     });
   });
 
   describe("withPlayerControllerId", () => {
-    it("sets player1's controllerId without touching other players", () => {
-      const before = { controllerId: "wiimote", player2ControllerId: "wiimote_nunchuk" };
+    it("sets player1's controller without touching other players", () => {
+      const before = { controllerIds: ["wiimote", "wiimote_nunchuk"] };
       const after = withPlayerControllerId(before, "player1", "classic");
 
-      expect(after.controllerId).toBe("classic");
-      expect(after.player2ControllerId).toBe("wiimote_nunchuk");
+      expect(after.controllerIds?.[0]).toBe("classic");
+      expect(after.controllerIds?.[1]).toBe("wiimote_nunchuk");
     });
 
-    it("sets player2's controllerId without touching player1's", () => {
-      const before = { controllerId: "classic", player2ControllerId: "wiimote" };
+    it("sets player2's controller without touching player1's", () => {
+      const before = { controllerIds: ["classic", "wiimote"] };
       const after = withPlayerControllerId(before, "player2", "wiimote_nunchuk");
 
-      expect(after.controllerId).toBe("classic");
-      expect(after.player2ControllerId).toBe("wiimote_nunchuk");
+      expect(after.controllerIds?.[0]).toBe("classic");
+      expect(after.controllerIds?.[1]).toBe("wiimote_nunchuk");
     });
 
     it("does not mutate the source object (pure update)", () => {
-      const before = { controllerId: "wiimote" };
+      const before = { controllerIds: ["wiimote"] };
       withPlayerControllerId(before, "player1", "classic");
-      expect(before.controllerId).toBe("wiimote");
+      // the array itself is copied, not written through
+      expect(before.controllerIds[0]).toBe("wiimote");
     });
   });
 

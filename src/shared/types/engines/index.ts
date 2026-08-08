@@ -1,37 +1,11 @@
 import type { Game, ConsoleID, Platform } from '..'
-import type { BiosConfig, BiosConfigRuntime } from "../bios"
+import type { BiosConfigRuntime } from "../bios"
 
 export type EngineID = 'ares' | 'azahar' | 'dolphin' | 'duckstation' | 'melonds' | 'mesen' | 'pcsx2';
 
 export type LaunchOptions = {
   fullscreen?: boolean;
 };
-
-export interface EngineConfig {
-  id: ConsoleID;
-  name: string;
-  acceptedExtensions: string[];
-  installDir?: string;
-  bios?: BiosConfig;
-
-  // installation config
-  downloads: {
-    win32?: string;
-    darwin?: string;
-    linux?: string;
-  };
-  binaries: {
-    win32?: string;
-    darwin?: string;
-    linux?: string;
-  };
-  dependencies?: EngineDependency[];
-
-  // runtime
-  detect: (buffer: Buffer) => boolean;
-  getLaunchCommand: (game: Game, emulatorPath: string, options?: LaunchOptions) => string[];
-  postLaunch?: () => void;
-}
 
 export interface EngineDependency {
   url: string;
@@ -60,7 +34,7 @@ export type EngineDefinition = {
   getLaunchCommand: (game: Game, enginePath: string, options?: LaunchOptions) => string[];
 };
 
-export type EngineDefinitionDTO = Omit<EngineDefinition, "getLaunchCommand" | "postLaunch">;
+export type EngineDefinitionDTO = Omit<EngineDefinition, "getLaunchCommand">;
 export type EngineStatus = "not_installed" | "installed" | "broken" | "unsupported";
 export type EngineBiosState = "ok" | "warning" | "missing" | "none";
 

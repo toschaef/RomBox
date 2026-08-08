@@ -1,5 +1,5 @@
 import type { Game } from "../../../shared/types";
-import { getConsoleNameFromId } from "../../../shared/constants";
+import { getConsoleNameFromId } from "../../../shared/emulators/derived";
 
 interface Props {
   game: Game;

@@ -6,8 +6,13 @@ import { homedir } from "os";
 
 import type { ConsoleID, Game } from "../../shared/types";
 import { CONSOLES } from "../config/consoles";
-import { getEngineIdFromConsoleId } from "../../shared/constants";
-import { BiosStatus } from "../../shared/types/bios";
+import type { BiosFile, BiosStatus } from "../../shared/types/bios";
+import { getDirectoryBios, type DirectoryBios } from "../emulators";
+import {
+  computeBiosStatus,
+  directoryBiosStatus,
+  noBiosStatus,
+} from "./bios/biosStatus";
 import { getRequiredSnesFirmware } from "../utils/mesen/snesFirmware";
 import { Logger } from "../utils/logger";
 
@@ -54,315 +59,133 @@ function getCacheDir(consoleId: ConsoleID): string {
   return path.join(BIOS_CACHE_PATH, consoleId);
 }
 
+function biosDirs(consoleId: ConsoleID) {
+  return { firmwareDir: getFirmwareDir(consoleId), cacheDir: getCacheDir(consoleId) };
+}
+
+/** Files without an explicit level are required; game-specific ones are not. */
+function isRequired(file: BiosFile): boolean {
+  return (file.level ?? "required") === "required" && !file.gameSpecific;
+}
+
+/** Copies whole system-data directories out of the cache. */
+function restoreDirectories(dirs: string[], firmwareDir: string, cacheDir: string) {
+  const copied: string[] = [];
+  const missing: string[] = [];
+
+  for (const name of dirs) {
+    const dest = path.join(firmwareDir, name);
+    if (fs.existsSync(dest)) continue;
+
+    const cached = path.join(cacheDir, name);
+    if (!fs.existsSync(cached)) {
+      missing.push(name);
+      continue;
+    }
+
+    try {
+      fs.cpSync(cached, dest, { recursive: true, force: true });
+      copied.push(name);
+    } catch (err) {
+      missing.push(name);
+      log.warn("Failed to restore system directory from cache", { name, error: (err as Error)?.message });
+    }
+  }
+
+  return { copied, missing };
+}
+
+/** Merges a user-selected system-data folder into each target directory. */
+function installDirectories(layout: DirectoryBios, sourcePath: string, targets: string[]): string[] {
+  if (!fs.statSync(sourcePath).isDirectory()) throw new Error(layout.selectionHint);
+  if (path.basename(sourcePath).toLowerCase() !== layout.sourceFolderName) {
+    throw new Error(layout.selectionHint);
+  }
+
+  const installed: string[] = [];
+  for (const name of layout.dirs) {
+    const src = path.join(sourcePath, name);
+    if (!fs.existsSync(src)) continue;
+
+    for (const target of targets) mergeDirNoOverwrite(src, path.join(target, name));
+    installed.push(name);
+  }
+
+  if (installed.length === 0) throw new Error(layout.incompleteMessage);
+  return installed;
+}
+
 export const BiosService = {
   getConsoleBiosStatus(consoleId: ConsoleID): BiosStatus {
-    const c = CONSOLES[consoleId];
-    const engineId = getEngineIdFromConsoleId(consoleId);
+    const dirs = biosDirs(consoleId);
 
-    const firmwareDir = getFirmwareDir(consoleId);
-    const cacheDir = getCacheDir(consoleId);
+    const directory = getDirectoryBios(consoleId);
+    if (directory) return directoryBiosStatus(consoleId, directory, dirs);
 
-    if (consoleId === "3ds") {
-      const want = ["nand", "sysdata", "sdmc"];
-      const missing = want.filter(n => !fs.existsSync(path.join(firmwareDir, n)));
+    const bios = CONSOLES[consoleId]?.bios;
+    if (!bios) return noBiosStatus(consoleId, dirs);
 
-      return {
-        consoleId, engineId,
-        needsBios: true,
-        biosState: missing.length ? "warning" : "ok",
-        missingRequiredFiles: [],
-        missingWarningFiles: missing,
-        cachedFiles: want.filter(n => fs.existsSync(path.join(cacheDir, n))),
-        cachedComplete: true,
-        cacheMissingFiles: [],
-        required: false,
-        firmwareDir,
-        cacheDir,
-      };
-    }
-
-    if (!c?.bios) {
-      return {
-        consoleId,
-        engineId,
-        needsBios: false,
-
-        biosState: "none",
-        missingRequiredFiles: [],
-        missingWarningFiles: [],
-
-        cachedFiles: [],
-        cachedComplete: true,
-        cacheMissingFiles: [],
-        required: false,
-
-        firmwareDir,
-        cacheDir,
-      };
-    }
-
-    const required = c.bios.required ?? true;
-    const onlyNeedOne = c.bios.onlyNeedOne ?? false;
-
-    const files = c.bios.files ?? [];
-
-    const reqFiles = files.filter((f) => (f.level ?? "required") === "required" && !f.gameSpecific);
-    const warnFiles = files.filter((f) => (f.level ?? "required") === "warning" || !!f.gameSpecific);
-
-    const effectiveReqFiles = required ? reqFiles : [];
-    const effectiveWarnFiles = required ? warnFiles : files;
-
-    const hasAnyInstalled = files.some((f) => fs.existsSync(path.join(firmwareDir, f.filename)));
-    const hasAnyCached = files.some((f) => fs.existsSync(path.join(cacheDir, f.filename)));
-
-    let missingRequiredFiles: string[] = [];
-    let missingWarningFiles: string[] = [];
-    let cacheMissingFiles: string[] = [];
-
-    if (onlyNeedOne) {
-      if (hasAnyInstalled) {
-        missingRequiredFiles = [];
-        missingWarningFiles = [];
-      } else {
-        if (required) {
-          missingRequiredFiles = files.map((f) => f.filename);
-          missingWarningFiles = [];
-        } else {
-          missingRequiredFiles = [];
-          missingWarningFiles = files.map((f) => f.filename);
-        }
-      }
-
-      if (hasAnyCached) {
-        cacheMissingFiles = [];
-      } else {
-        if (required) {
-          cacheMissingFiles = files.map((f) => f.filename);
-        } else {
-          cacheMissingFiles = [];
-        }
-      }
-    } else {
-      missingRequiredFiles = effectiveReqFiles
-        .filter((f) => !fs.existsSync(path.join(firmwareDir, f.filename)))
-        .map((f) => f.filename);
-
-      missingWarningFiles = effectiveWarnFiles
-        .filter((f) => !fs.existsSync(path.join(firmwareDir, f.filename)))
-        .map((f) => f.filename);
-
-      cacheMissingFiles = effectiveReqFiles
-        .filter((f) => !fs.existsSync(path.join(cacheDir, f.filename)))
-        .map((f) => f.filename);
-    }
-
-    const cachedFiles = files
-      .filter((f) => fs.existsSync(path.join(cacheDir, f.filename)))
-      .map((f) => f.filename);
-
-    let biosState: "ok" | "warning" | "missing" | "none" = "ok";
-    if (!files.length) {
-      biosState = "none";
-    } else if (onlyNeedOne) {
-      if (hasAnyInstalled) {
-        biosState = "ok";
-      } else {
-        biosState = required ? "missing" : "warning";
-      }
-    } else if (missingRequiredFiles.length > 0) {
-      biosState = "missing";
-    } else if (missingWarningFiles.length > 0) {
-      biosState = "warning";
-    } else {
-      biosState = "ok";
-    }
-
-    return {
+    const files = bios.files ?? [];
+    return computeBiosStatus({
       consoleId,
-      engineId,
-      needsBios: true,
-
-      biosState,
-      missingRequiredFiles,
-      missingWarningFiles,
-
-      cachedFiles,
-      cachedComplete: cacheMissingFiles.length === 0,
-      cacheMissingFiles,
-      required,
-      onlyNeedOne,
-
-      firmwareDir,
-      cacheDir,
-    };
+      files,
+      required: bios.required ?? true,
+      onlyNeedOne: bios.onlyNeedOne ?? false,
+      requiredFiles: files.filter(isRequired),
+      warningFiles: files.filter((f) => !isRequired(f)),
+      ...dirs,
+    });
   },
 
   getGameBiosStatus(game: Game): BiosStatus {
     const { consoleId } = game;
-    const c = CONSOLES[consoleId];
-    const engineId = getEngineIdFromConsoleId(consoleId);
+    const dirs = biosDirs(consoleId);
 
-    const firmwareDir = getFirmwareDir(consoleId);
-    const cacheDir = getCacheDir(consoleId);
+    const directory = getDirectoryBios(consoleId);
+    if (directory) return directoryBiosStatus(consoleId, directory, dirs);
 
-    if (consoleId === "3ds") {
-      const want = ["nand", "sysdata", "sdmc"];
-      const missing = want.filter(n => !fs.existsSync(path.join(firmwareDir, n)));
+    const bios = CONSOLES[consoleId]?.bios;
+    if (!bios) return noBiosStatus(consoleId, dirs);
 
-      return {
-        consoleId, engineId,
-        needsBios: true,
-        biosState: missing.length ? "warning" : "ok",
-        missingRequiredFiles: [],
-        missingWarningFiles: missing,
-        cachedFiles: want.filter(n => fs.existsSync(path.join(cacheDir, n))),
-        cachedComplete: true,
-        cacheMissingFiles: [],
-        required: false,
-        firmwareDir,
-        cacheDir,
-      };
-    }
-
-    if (!c?.bios) {
-      return {
-        consoleId, engineId,
-        needsBios: false,
-        biosState: "none",
-        missingRequiredFiles: [],
-        missingWarningFiles: [],
-        cachedFiles: [],
-        cachedComplete: true,
-        cacheMissingFiles: [],
-        required: false,
-        firmwareDir, cacheDir,
-      };
-    }
-
-    const required = c.bios.required ?? true;
-    const onlyNeedOne = c.bios.onlyNeedOne ?? false;
-    const files = c.bios.files ?? [];
-
-    let reqFiles = files.filter((f) => (f.level ?? "required") === "required" && !f.gameSpecific);
-    let warnFiles = files.filter((f) => (f.level ?? "required") === "warning" || !!f.gameSpecific);
-    let forceRequiredForThisGame = false;
+    const files = bios.files ?? [];
+    const required = bios.required ?? true;
+    const onlyNeedOne = bios.onlyNeedOne ?? false;
 
     if (consoleId === "snes") {
       const needed = getRequiredSnesFirmware(game.filePath);
-      const neededSet = new Set(needed.map((x) => x.toLowerCase()));
-
-      reqFiles = files.filter((f) => neededSet.has(f.filename.toLowerCase()));
-      warnFiles = [];
-
       if (needed.length === 0) {
         return {
-          consoleId, engineId,
-          needsBios: false,
-          biosState: "none",
-          missingRequiredFiles: [],
-          missingWarningFiles: [],
+          ...noBiosStatus(consoleId, dirs),
           cachedFiles: files
-            .filter((f) => fs.existsSync(path.join(cacheDir, f.filename)))
+            .filter((f) => fs.existsSync(path.join(dirs.cacheDir, f.filename)))
             .map((f) => f.filename),
-          cachedComplete: true,
-          cacheMissingFiles: [],
           required,
           onlyNeedOne,
-          firmwareDir, cacheDir,
         };
       }
 
-      forceRequiredForThisGame = true;
+      const neededSet = new Set(needed.map((n) => n.toLowerCase()));
+      return computeBiosStatus({
+        consoleId,
+        files,
+        required,
+        onlyNeedOne,
+        requiredFiles: files.filter((f) => neededSet.has(f.filename.toLowerCase())),
+        warningFiles: [],
+        forceRequired: true,
+        ...dirs,
+      });
     }
 
-    const effectiveReqFiles = forceRequiredForThisGame ? reqFiles : (required ? reqFiles : []);
-    const effectiveWarnFiles = forceRequiredForThisGame ? warnFiles : (required ? warnFiles : files);
-
-    const hasAnyInstalled = files.some((f) => fs.existsSync(path.join(firmwareDir, f.filename)));
-    const hasAnyCached = files.some((f) => fs.existsSync(path.join(cacheDir, f.filename)));
-
-    let missingRequiredFiles: string[] = [];
-    let missingWarningFiles: string[] = [];
-    let cacheMissingFiles: string[] = [];
-
-    if (onlyNeedOne) {
-      if (hasAnyInstalled) {
-        missingRequiredFiles = [];
-        missingWarningFiles = [];
-      } else {
-        if (required) {
-          missingRequiredFiles = files.map((f) => f.filename);
-          missingWarningFiles = [];
-        } else {
-          missingRequiredFiles = [];
-          missingWarningFiles = files.map((f) => f.filename);
-        }
-      }
-
-      if (hasAnyCached) {
-        cacheMissingFiles = [];
-      } else {
-        if (required) {
-          cacheMissingFiles = files.map((f) => f.filename);
-        } else {
-          cacheMissingFiles = [];
-        }
-      }
-    } else {
-      missingRequiredFiles = effectiveReqFiles
-        .filter((f) => !fs.existsSync(path.join(firmwareDir, f.filename)))
-        .map((f) => f.filename);
-
-      missingWarningFiles = effectiveWarnFiles
-        .filter((f) => !fs.existsSync(path.join(firmwareDir, f.filename)))
-        .map((f) => f.filename);
-
-      cacheMissingFiles = effectiveReqFiles
-        .filter((f) => !fs.existsSync(path.join(cacheDir, f.filename)))
-        .map((f) => f.filename);
-    }
-
-    const cachedFiles = files
-      .filter((f) => fs.existsSync(path.join(cacheDir, f.filename)))
-      .map((f) => f.filename);
-
-    let biosState: "ok" | "warning" | "missing" | "none" = "ok";
-    if (!files.length) {
-      biosState = "none";
-    } else if (onlyNeedOne) {
-      if (hasAnyInstalled) {
-        biosState = "ok";
-      } else {
-        biosState = required ? "missing" : "warning";
-      }
-    } else if (missingRequiredFiles.length > 0) {
-      biosState = "missing";
-    } else if (missingWarningFiles.length > 0) {
-      biosState = "warning";
-    } else {
-      biosState = "ok";
-    }
-
-    let needsBios = false;
-    if (onlyNeedOne) {
-      needsBios = required;
-    } else {
-      needsBios = forceRequiredForThisGame ? true : (effectiveReqFiles.length > 0 ? true : false);
-    }
-
-    return {
-      consoleId, engineId,
-      needsBios,
-      biosState,
-      missingRequiredFiles,
-      missingWarningFiles,
-      cachedFiles,
-      cachedComplete: cacheMissingFiles.length === 0,
-      cacheMissingFiles,
+    return computeBiosStatus({
+      consoleId,
+      files,
       required,
       onlyNeedOne,
-      firmwareDir, cacheDir,
-    };
+      requiredFiles: files.filter(isRequired),
+      warningFiles: files.filter((f) => !isRequired(f)),
+      ...dirs,
+    });
   },
 
   ensureBiosInstalledFromCache(consoleId: ConsoleID): { copied: string[]; missing: string[] } {
@@ -379,37 +202,9 @@ export const BiosService = {
     const copied: string[] = [];
     const missing: string[] = [];
 
-    if (consoleId === "3ds") {
-      const firmwareDir = getFirmwareDir(consoleId);
-      const cacheDir = getCacheDir(consoleId);
-
-      ensureDir(firmwareDir);
-      ensureDir(cacheDir);
-
-      const want = ["nand", "sysdata", "sdmc"];
-      const copied: string[] = [];
-      const missing: string[] = [];
-
-      for (const name of want) {
-        const dest = path.join(firmwareDir, name);
-        if (fs.existsSync(dest)) continue;
-
-        const cached = path.join(cacheDir, name);
-        if (!fs.existsSync(cached)) {
-          missing.push(name);
-          continue;
-        }
-
-        try {
-          fs.cpSync(cached, dest, { recursive: true, force: true });
-          copied.push(name);
-        } catch (err) {
-          missing.push(name);
-          log.warn('Failed to restore 3ds BIOS from cache', { name, error: err.message ?? err });
-        }
-      }
-
-      return { copied, missing };
+    const directory = getDirectoryBios(consoleId);
+    if (directory) {
+      return restoreDirectories(directory.dirs, firmwareDir, cacheDir);
     }
 
     for (const f of c.bios.files) {
@@ -459,32 +254,9 @@ export const BiosService = {
     const installedFiles: string[] = [];
     const isZip = path.extname(sourcePath).toLowerCase() === ".zip";
 
-    if (consoleId === "3ds") {
-      const stat = fs.statSync(sourcePath);
-      if (!stat.isDirectory()) throw new Error("Select the Azahar 'user' folder.");
-
-      if (path.basename(sourcePath).toLowerCase() !== "user") {
-        throw new Error("Select the Azahar 'user' folder (must be named 'user').");
-      }
-
-      const roots = ["nand", "sysdata", "sdmc"];
-      const installed: string[] = [];
-
-      for (const name of roots) {
-        const src = path.join(sourcePath, name);
-        if (!fs.existsSync(src)) continue;
-
-        const destA = path.join(firmwareDir, name);
-        const destC = path.join(cacheDir, name);
-
-        mergeDirNoOverwrite(src, destA);
-        mergeDirNoOverwrite(src, destC);
-
-        installed.push(name);
-      }
-
-      if (installed.length === 0) throw new Error("Invalid user folder (missing nand/sysdata/sdmc).");
-
+    const directory = getDirectoryBios(consoleId);
+    if (directory) {
+      const installed = installDirectories(directory, sourcePath, [firmwareDir, cacheDir]);
       const status = BiosService.getConsoleBiosStatus(consoleId);
       return { success: true, consoleId, installed, biosState: status.biosState };
     }
@@ -545,9 +317,6 @@ export const BiosService = {
       log.warn('Attempted to delete unknown BIOS file', { consoleId, fileName });
       throw new Error(`'${fileName}' is not a known BIOS file for ${consoleId}.`);
     }
-
-    const target = path.join(c.bios.installDir, fileName);
-    if (fs.existsSync(target)) fs.rmSync(target, { recursive: true, force: true });
 
     const firmwareDir = getFirmwareDir(consoleId);
     const cacheDir = getCacheDir(consoleId);

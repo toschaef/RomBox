@@ -104,9 +104,15 @@ test-results/
 # Package
 out/
 
-# In-Progress
+# WIP
 /icon/
+docs/
+
 # Native Binaries
 bin/
 *.dmg
 *.framework
+
+# per-suite test scratch directories
+tests/.tmp/
+tests/temp-*/

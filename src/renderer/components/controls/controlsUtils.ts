@@ -1,4 +1,4 @@
-import type { ControlsProfile, AnyConsoleLayout, DigitalBinding, DpadBinding, StickBinding } from "../../../shared/types/controls";
+import type { ControlsProfile, AnyConsoleLayout, DigitalBinding, DpadBinding, StickBinding, PlayerBindings } from "../../../shared/types/controls";
 
 export type DigitalPath =
   | "face.primary"
@@ -40,7 +40,7 @@ export function clearDigital(p: ControlsProfile, playerKey: "player1" | "player2
 
 export function setGroupMode(p: ControlsProfile, playerKey: "player1" | "player2" | "player3" | "player4", group: "move" | "dpad" | "look", mode: "dpad" | "stick"): ControlsProfile {
   const next = structuredClone(p);
-  if (!next[playerKey]) next[playerKey] = {} as any;
+  if (!next[playerKey]) next[playerKey] = {} as PlayerBindings;
   if (!next[playerKey]) return next;
   const player = next[playerKey];
 
@@ -95,7 +95,7 @@ export function setConsoleGroupMode(layout: AnyConsoleLayout, playerKey: "player
   const stick: "left" | "right" = (group === "special.c" || group === "look" || group === "special.tilt" || group === "special.ir") ? "right" : "left";
   const val = mode === "dpad" ? defaultDpad() : defaultStick(stick);
 
-  if (!next[playerKey]) next[playerKey] = {} as any;
+  if (!next[playerKey]) next[playerKey] = {} as PlayerBindings;
   let parent: Record<string, unknown> = next[playerKey] as unknown as Record<string, unknown>;
   const parts = group.split(".");
   for (let i = 0; i < parts.length - 1; i++) {

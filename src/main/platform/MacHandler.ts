@@ -9,6 +9,14 @@ import { Extractor } from "../utils/extractor";
 import { Logger } from "../utils/logger";
 import type { Platform, Game } from "../../shared/types";
 import type { EngineID } from "../../shared/types/engines";
+import {
+  allBasePaths,
+  resolveBasePath,
+  resolveBiosPath,
+  resolveConfigPath,
+  resolveSavePath,
+} from "../emulators/paths";
+import type { PlatformRoots } from "../emulators/types";
 
 const log = Logger.create("MacHandler");
 
@@ -95,24 +103,11 @@ export class MacHandler implements PlatformHandler {
       await this.deepSign(appPath);
     }
   }
-  // rework this eventually
   async clearPlatformData(): Promise<void> {
-    const home = homedir();
-    const pathsToDelete = [
-      path.join(home, ".config", "Mesen2"),
-      path.join(home, "Library", "Application Support", "Mesen2"),
-      path.join(home, "Library", "Application Support", "ares"),
-      path.join(home, "Library", "Application Support", "Dolphin"),
-      path.join(home, "Library", "Application Support", "azahar"),
-      path.join(home, "Library", "Preferences", "melonDS"),
-      path.join(home, "Library", "Application Support", "PCSX2"),
-      path.join(home, "Library", "Application Support", "DuckStation"),
-    ];
-
-    for (const p of pathsToDelete) {
-      if (fs.existsSync(p)) {
-        log.info(`Cleaning config: ${p}`);
-        await fs.promises.rm(p, { recursive: true, force: true });
+    for (const dir of allBasePaths("darwin", this.getRoots())) {
+      if (fs.existsSync(dir)) {
+        log.info(`Cleaning config: ${dir}`);
+        await fs.promises.rm(dir, { recursive: true, force: true });
       }
     }
   }
@@ -144,75 +139,32 @@ export class MacHandler implements PlatformHandler {
     return spawn(binaryPath, args, { detached: true, stdio: ["ignore", "pipe", "pipe"], env });
   }
 
-  getEmulatorConfigPath(engineId: EngineID): string {
+  getRoots(): PlatformRoots {
     const home = homedir();
+    const appSupport = path.join(home, "Library", "Application Support");
+    return {
+      home,
+      appSupport,
+      preferences: path.join(home, "Library", "Preferences"),
+      localAppData: appSupport,
+      documents: path.join(home, "Documents"),
+    };
+  }
 
-    switch (engineId) {
-      case "dolphin":
-        return path.join(home, "Library", "Application Support", "Dolphin", "Config");
-      case "mesen":
-        return path.join(home, "Library", "Application Support", "Mesen2");
-      case "ares":
-        return path.join(home, "Library", "Application Support", "ares");
-      case "melonds":
-        return path.join(home, "Library", "Preferences", "melonDS");
-      case "azahar":
-        return path.join(home, "Library", "Application Support", "Azahar", "config");
-      case "pcsx2":
-        return path.join(home, "Library", "Application Support", "PCSX2", "inis");
-      case "duckstation":
-        return path.join(home, "Library", "Application Support", "DuckStation");
-      default:
-        throw new Error(`[Mac] Emulator config path not found for: ${engineId}`);
-    }
+  getEmulatorConfigPath(engineId: EngineID): string {
+    return resolveConfigPath(engineId, "darwin", this.getRoots());
   }
 
   getEmulatorBasePath(engineId: EngineID): string {
-    const home = homedir();
-
-    switch (engineId) {
-      case "dolphin":
-        return path.join(home, "Library", "Application Support", "Dolphin");
-      case "mesen":
-        return path.join(home, "Library", "Application Support", "Mesen2");
-      case "ares":
-        return path.join(home, "Library", "Application Support", "ares");
-      case "melonds":
-        return path.join(home, "Library", "Preferences", "melonDS");
-      case "azahar":
-        return path.join(home, "Library", "Application Support", "Azahar");
-      case "pcsx2":
-        return path.join(home, "Library", "Application Support", "PCSX2");
-      case "duckstation":
-        return path.join(home, "Library", "Application Support", "DuckStation");
-      default:
-        throw new Error(`[Mac] Emulator base path not found for: ${engineId}`);
-    }
+    return resolveBasePath(engineId, "darwin", this.getRoots());
   }
 
-  getSavePath(game: Game) {
-    const home = homedir();
-    switch (game.engineId) {
-      case "mesen":
-        return path.join(home, "Library", "Application Support", "Mesen2", "Saves");
-      case "melonds":
-        return path.dirname(game.filePath);
-      case "dolphin":
-        if (game.consoleId === "wii") {
-          return path.join(home, "Library", "Application Support", "Dolphin", "Wii");
-        }
-        return path.join(home, "Library", "Application Support", "Dolphin", "GC");
-      case "azahar":
-        return path.join(home, "Library", "Application Support", "Azahar", "sdmc");
-      case "ares":
-        return path.dirname(game.filePath);
-      case "duckstation":
-        return path.join(home, "Library", "Application Support", "DuckStation", "memcards");
-      case "pcsx2":
-        return path.join(home, "Library", "Application Support", "PCSX2", "memcards");
-      default:
-        throw new Error(`[SaveService] Unknown engine: ${game.engineId}`);
-    }
+  getSavePath(game: Game): string {
+    return resolveSavePath(game, "darwin", this.getRoots());
+  }
+
+  getBiosPath(engineId: EngineID): string | null {
+    return resolveBiosPath(engineId, "darwin", this.getRoots());
   }
 
   getPlatformId(): "macos" {

@@ -6,7 +6,8 @@ import { gameClient } from '../../clients/gameClient';
 import { saveClient } from '../../clients/saveClient';
 import { IpcResponse } from '../../../shared/types';
 import { useNotifications } from '../../hooks/useNotifications';
-import { getEmulatorNameFromEngineId, NOTIFICATION_MESSAGES } from '../../../shared/constants';
+import { NOTIFICATION_MESSAGES } from '../../../shared/constants';
+import { getEmulatorNameFromEngineId } from '../../../shared/emulators/derived';
 
 function formatPlaytime(seconds: number): string {
   if (seconds < 60) return `${seconds}s`;
@@ -300,6 +301,7 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
     <div className="relative" ref={menuRef}>
       <button
         onClick={toggleMenu}
+        data-testid="game-menu-button"
         className={hasCover ? buttonClass : fallbackButtonClass}
       >
         {'\u22EE'}
@@ -339,6 +341,7 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
           </button>
           <button
             onClick={handleExportSave}
+            data-testid="export-save"
             className="
               w-full text-left px-3 py-2 text-xs font-semibold 
               text-fg-secondary hover:text-fg-primary hover:bg-bg-muted
@@ -349,6 +352,7 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
           </button>
           <button
             onClick={handleImportSave}
+            data-testid="import-save"
             className="
               w-full text-left px-3 py-2 text-xs font-semibold
               text-fg-secondary hover:text-fg-primary hover:bg-bg-muted

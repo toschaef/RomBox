@@ -1,4 +1,6 @@
-import type { EngineDefinition, LaunchOptions } from "../../shared/types/engines";
+import type { EngineDefinition, EngineID, LaunchOptions } from "../../shared/types/engines";
+import { ENGINE_CATALOG } from "../../shared/emulators/catalog";
+import { getConsoleIdsForEngine } from "../../shared/emulators/derived";
 import type { Game } from "../../shared/types";
 import fs from "fs";
 import path from "path";
@@ -10,11 +12,11 @@ export const AZAHAR_VERSION = '2123.3';
 export const DOLPHIN_VERSION = '2407';
 export const PCSX2_VERSION = 'v2.6.2';
 
-export const ENGINES: Record<string, EngineDefinition> = {
+export const ENGINES: Record<EngineID, EngineDefinition> = {
   mesen: {
     engineId: "mesen",
-    name: "Mesen 2",
-    consoles: ["nes", "snes", "gb", "gba", "gg", "sms", "pce"],
+    name: ENGINE_CATALOG["mesen"].displayName,
+    consoles: getConsoleIdsForEngine("mesen"),
     downloads: {
       win32: `https://github.com/SourMesen/Mesen2/releases/download/${MESEN_VERSION}/Mesen_${MESEN_VERSION}_Windows.zip`,
       darwin:
@@ -44,8 +46,8 @@ export const ENGINES: Record<string, EngineDefinition> = {
 
   melonds: {
     engineId: "melonds",
-    name: "MelonDS",
-    consoles: ["ds"],
+    name: ENGINE_CATALOG["melonds"].displayName,
+    consoles: getConsoleIdsForEngine("melonds"),
     downloads: {
       win32: `https://github.com/melonDS-emu/melonDS/releases/download/${MELON_VERSION}/melonDS-${MELON_VERSION}-windows-x86_64.zip`,
       darwin: `https://github.com/melonDS-emu/melonDS/releases/download/${MELON_VERSION}/melonDS-${MELON_VERSION}-macOS-universal.zip`,
@@ -64,8 +66,8 @@ export const ENGINES: Record<string, EngineDefinition> = {
 
   azahar: {
     engineId: "azahar",
-    name: "Azahar",
-    consoles: ["3ds"],
+    name: ENGINE_CATALOG["azahar"].displayName,
+    consoles: getConsoleIdsForEngine("azahar"),
     downloads: {
       win32: `https://github.com/azahar-emu/azahar/releases/download/${AZAHAR_VERSION}/azahar-${AZAHAR_VERSION}-windows-msvc.zip`,
       darwin: `https://github.com/azahar-emu/azahar/releases/download/${AZAHAR_VERSION}/azahar-${AZAHAR_VERSION}-macos-universal.zip`,
@@ -79,8 +81,8 @@ export const ENGINES: Record<string, EngineDefinition> = {
 
   dolphin: {
     engineId: "dolphin",
-    name: "Dolphin",
-    consoles: ["gc", "wii"],
+    name: ENGINE_CATALOG["dolphin"].displayName,
+    consoles: getConsoleIdsForEngine("dolphin"),
     downloads: {
       win32: `https://dl.dolphin-emu.org/releases/${DOLPHIN_VERSION}/dolphin-${DOLPHIN_VERSION}-x64.7z`,
       darwin: `https://dl.dolphin-emu.org/releases/${DOLPHIN_VERSION}/dolphin-${DOLPHIN_VERSION}-universal.dmg`,
@@ -105,8 +107,8 @@ export const ENGINES: Record<string, EngineDefinition> = {
 
   ares: {
     engineId: "ares",
-    name: "Ares",
-    consoles: ["n64"],
+    name: ENGINE_CATALOG["ares"].displayName,
+    consoles: getConsoleIdsForEngine("ares"),
     downloads: {
       win32: `https://github.com/ares-emulator/ares/releases/download/v${ARES_VERSION}/ares-windows-amd64.zip`,
       darwin: `https://github.com/ares-emulator/ares/releases/download/v${ARES_VERSION}/ares-macos-universal.zip`,
@@ -125,8 +127,8 @@ export const ENGINES: Record<string, EngineDefinition> = {
 
   duckstation: {
     engineId: "duckstation",
-    name: "DuckStation",
-    consoles: ["ps1"],
+    name: ENGINE_CATALOG["duckstation"].displayName,
+    consoles: getConsoleIdsForEngine("duckstation"),
     downloads: {
       win32: "https://github.com/stenzek/duckstation/releases/latest/download/duckstation-windows-x64-release.zip",
       darwin: "https://github.com/stenzek/duckstation/releases/latest/download/duckstation-mac-release.zip",
@@ -158,8 +160,8 @@ export const ENGINES: Record<string, EngineDefinition> = {
 
   pcsx2: {
     engineId: "pcsx2",
-    name: "PCSX2",
-    consoles: ["ps2"],
+    name: ENGINE_CATALOG["pcsx2"].displayName,
+    consoles: getConsoleIdsForEngine("pcsx2"),
     downloads: {
       win32: `https://github.com/PCSX2/pcsx2/releases/download/${PCSX2_VERSION}/pcsx2-${PCSX2_VERSION}-windows-x64-Qt.7z`,
       darwin: `https://github.com/PCSX2/pcsx2/releases/download/${PCSX2_VERSION}/pcsx2-${PCSX2_VERSION}-macos-Qt.tar.xz`,

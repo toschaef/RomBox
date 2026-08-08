@@ -1,173 +1,123 @@
 import { ipcMain } from "electron";
 import { SaveService } from "../services/SaveService";
 import { LibraryService } from "../services/LibraryService";
+import { Logger } from "../utils/logger";
 import type { Game } from "../../shared/types";
 
-function isValidGameId(x: unknown): x is string {
-  return typeof x === "string" && x.length > 0;
+const log = Logger.create("saveHandler");
+
+type GameIdPayload = { gameId: string };
+
+function withGame<TPayload extends GameIdPayload, TResult>(
+  operation: string,
+  handler: (game: Game, payload: TPayload) => TResult | Promise<TResult>
+) {
+  return async (_event: unknown, payload: TPayload) => {
+    try {
+      const gameId = payload?.gameId;
+      if (typeof gameId !== "string" || gameId.length === 0) {
+        return { success: false, message: "Invalid gameId" };
+      }
+
+      const result = LibraryService.getGame(gameId);
+      if (!result.success || !result.game) {
+        return { success: false, message: "Game not found" };
+      }
+
+      return await handler(result.game as Game, payload);
+    } catch (err) {
+      const message = (err as Error)?.message;
+      log.error(`Failed to ${operation}`, err);
+      return { success: false, message };
+    }
+  };
 }
 
 export default function registerSaveHandlers() {
-  ipcMain.handle("save:status", async (_evt, payload: { gameId: string }) => {
-    try {
-      const { gameId } = payload ?? ({} as { gameId: string });
-      if (!isValidGameId(gameId)) {
-        return { success: false, message: "Invalid gameId" };
-      }
+  ipcMain.handle(
+    "save:status",
+    withGame("get save status", (game) => ({
+      success: true,
+      status: SaveService.getSaveStatus(game),
+    }))
+  );
 
-      const result = LibraryService.getGame(gameId);
-      if (!result.success || !result.game) {
-        return { success: false, message: "Game not found" };
-      }
-
-      const status = SaveService.getSaveStatus(result.game as Game);
-      return { success: true, status };
-    } catch (err) {
-      console.error("Failed to get save status:", (err as Error).message);
-      return { success: false, message: (err as Error).message };
-    }
-  });
-
-  ipcMain.handle("save:backup", async (_evt, payload: { gameId: string }) => {
-    try {
-      const { gameId } = payload ?? ({} as { gameId: string });
-      if (!isValidGameId(gameId)) {
-        return { success: false, message: "Invalid gameId" };
-      }
-
-      const result = LibraryService.getGame(gameId);
-      if (!result.success || !result.game) {
-        return { success: false, message: "Game not found" };
-      }
-
-      const game = result.game as Game;
-      const backupResult = SaveService.backupSave(game);
+  ipcMain.handle(
+    "save:backup",
+    withGame("backup save", (game) => {
+      const result = SaveService.backupSave(game);
       return {
-        success: backupResult.success,
-        gameId,
-        backedUpFiles: backupResult.backedUpFiles,
-        message: backupResult.error
+        success: result.success,
+        gameId: game.id,
+        backedUpFiles: result.backedUpFiles,
+        message: result.error,
       };
-    } catch (err) {
-      console.error("Failed to backup save:", (err as Error).message);
-      return { success: false, message: (err as Error).message };
-    }
-  });
+    })
+  );
 
-  ipcMain.handle("save:restore", async (_evt, payload: { gameId: string }) => {
-    try {
-      const { gameId } = payload ?? ({} as { gameId: string });
-      if (!isValidGameId(gameId)) {
-        return { success: false, message: "Invalid gameId" };
-      }
-
-      const result = LibraryService.getGame(gameId);
-      if (!result.success || !result.game) {
-        return { success: false, message: "Game not found" };
-      }
-
-      const game = result.game as Game;
-      const restoreResult = SaveService.restoreSave(game);
+  ipcMain.handle(
+    "save:restore",
+    withGame("restore save", (game) => {
+      const result = SaveService.restoreSave(game);
       return {
-        success: restoreResult.success,
-        gameId,
-        restoredFiles: restoreResult.restoredFiles,
-        message: restoreResult.error,
+        success: result.success,
+        gameId: game.id,
+        restoredFiles: result.restoredFiles,
+        message: result.error,
       };
-    } catch (err) {
-      console.error("Failed to restore save:", (err as Error).message);
-      return { success: false, message: (err as Error).message };
-    }
-  });
+    })
+  );
 
-  ipcMain.handle("save:delete", async (_evt, payload: { gameId: string }) => {
-    try {
-      const { gameId } = payload ?? ({} as { gameId: string });
-      if (!isValidGameId(gameId)) {
-        return { success: false, message: "Invalid gameId" };
-      }
-
-      const result = LibraryService.getGame(gameId);
-      if (!result.success || !result.game) {
-        return { success: false, message: "Game not found" };
-      }
-
-      const game = result.game as Game;
-      const deleteResult = SaveService.deleteCachedSave(game);
+  ipcMain.handle(
+    "save:delete",
+    withGame("delete cached save", (game) => {
+      const result = SaveService.deleteCachedSave(game);
       return {
-        success: deleteResult.success,
-        gameId,
-        deletedFiles: deleteResult.deletedFiles,
-        message: deleteResult.error,
+        success: result.success,
+        gameId: game.id,
+        deletedFiles: result.deletedFiles,
+        message: result.error,
       };
-    } catch (err) {
-      console.error("Failed to delete cached save:", (err as Error).message);
-      return { success: false, message: (err as Error).message };
-    }
-  });
+    })
+  );
+
+  ipcMain.handle(
+    "save:export",
+    withGame("export save", async (game) => {
+      const result = await SaveService.exportSave(game);
+      return {
+        success: result.success,
+        gameId: game.id,
+        exportedTo: result.exportedTo,
+        message: result.error,
+      };
+    })
+  );
+
+  ipcMain.handle(
+    "save:import",
+    withGame(
+      "import save",
+      async (game, payload: GameIdPayload & { sourcePath?: string }) => {
+        const result = await SaveService.importSave(game, payload.sourcePath);
+        return {
+          success: result.success,
+          gameId: game.id,
+          importedFiles: result.importedFiles,
+          replacedTo: result.replacedTo,
+          issues: result.issues,
+          message: result.error,
+        };
+      }
+    )
+  );
 
   ipcMain.handle("save:list", async () => {
     try {
-      const saves = SaveService.listAllSaves();
-      return { success: true, saves };
+      return { success: true, saves: SaveService.listAllSaves() };
     } catch (err) {
-      console.error("Failed to list saves:", (err as Error).message);
-      return { success: false, message: (err as Error).message };
-    }
-  });
-
-  ipcMain.handle("save:export", async (_evt, payload: { gameId: string }) => {
-    try {
-      const { gameId } = payload ?? ({} as { gameId: string });
-      if (!isValidGameId(gameId)) {
-        return { success: false, message: "Invalid gameId" };
-      }
-
-      const result = LibraryService.getGame(gameId);
-      if (!result.success || !result.game) {
-        return { success: false, message: "Game not found" };
-      }
-
-      const game = result.game as Game;
-      const exportResult = await SaveService.exportSave(game);
-      return {
-        success: exportResult.success,
-        gameId,
-        exportedTo: exportResult.exportedTo,
-        message: exportResult.error,
-      };
-    } catch (err) {
-      console.error("Failed to export save:", (err as Error).message);
-      return { success: false, message: (err as Error).message };
-    }
-  });
-
-  ipcMain.handle("save:import", async (_evt, payload: { gameId: string; sourcePath?: string }) => {
-    try {
-      const { gameId, sourcePath } = payload ?? ({} as { gameId: string; sourcePath?: string });
-      if (!isValidGameId(gameId)) {
-        return { success: false, message: "Invalid gameId" };
-      }
-
-      const result = LibraryService.getGame(gameId);
-      if (!result.success || !result.game) {
-        return { success: false, message: "Game not found" };
-      }
-
-      const game = result.game as Game;
-      const importResult = await SaveService.importSave(game, sourcePath);
-      return {
-        success: importResult.success,
-        gameId,
-        importedFiles: importResult.importedFiles,
-        replacedTo: importResult.replacedTo,
-        issues: importResult.issues,
-        message: importResult.error,
-      };
-    } catch (err) {
-      console.error("Failed to import save:", (err as Error).message);
-      return { success: false, message: (err as Error).message };
+      log.error("Failed to list saves", err);
+      return { success: false, message: (err as Error)?.message };
     }
   });
 }
-

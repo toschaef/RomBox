@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
-import path from "path";
+import { suiteUserDataDir } from "../helpers/tempDirs";
 import fs from "fs";
 import { initDB } from "../../src/main/data/db";
 import { EngineService } from "../../src/main/services/EngineService";
@@ -9,10 +9,10 @@ import type { EngineID } from "../../src/shared/types/engines";
 
 // Mock 'os' to redirect homedir to our temp userdata folder
 jest.mock("os", () => {
-  const path = require("path");
   return {
     ...jest.requireActual("os"),
-    homedir: () => path.resolve(__dirname, "../temp-userdata"),
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    homedir: () => require("../helpers/tempDirs").suiteUserDataDir(),
   };
 });
 
@@ -36,7 +36,8 @@ jest.mock("../../src/main/platform", () => {
   const path = require("path");
   const fs = require("fs");
   const { ENGINES } = require("../../src/main/config/engines");
-  const tempDir = path.resolve(__dirname, "../temp-userdata");
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const tempDir = require("../helpers/tempDirs").suiteUserDataDir();
 
   return {
     osHandler: {
@@ -80,7 +81,7 @@ jest.mock("../../src/main/services/BiosService", () => ({
 }));
 
 describe("Emulator Installation and Binary Path Integration Tests", () => {
-  const tempDir = path.resolve(__dirname, "../temp-userdata");
+  const tempDir = suiteUserDataDir();
 
   beforeEach(() => {
     if (fs.existsSync(tempDir)) {

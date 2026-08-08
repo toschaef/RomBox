@@ -1,13 +1,13 @@
 // Mock 'os' at the very top before any service/config imports are resolved
 jest.mock("os", () => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const path = require("path");
   return {
     ...jest.requireActual("os"),
-    homedir: () => path.resolve(__dirname, "../temp-userdata"),
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    homedir: () => require("../helpers/tempDirs").suiteUserDataDir(),
   };
 });
 
+import { suiteUserDataDir } from "../helpers/tempDirs";
 import path from "path";
 import fs from "fs";
 import { ipcMain as electronIpcMain } from "electron";
@@ -23,7 +23,7 @@ import { LibraryService } from "../../src/main/services/LibraryService";
 import type { Game } from "../../src/shared/types";
 
 describe("IPC Handler Integration Tests", () => {
-  const tempDir = path.resolve(__dirname, "../temp-userdata");
+  const tempDir = suiteUserDataDir();
 
   beforeAll(() => {
     // Ensure all IPC handlers are registered

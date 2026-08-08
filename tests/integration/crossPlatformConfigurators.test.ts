@@ -46,13 +46,13 @@ describe("Cross-Platform (win32 & darwin) Integration Tests for POC Emulators", 
 
   for (const plat of platforms) {
     describe(`Platform Context: ${plat}`, () => {
-      let DuckStationConfigurator: any;
-      let MesenConfigurator: any;
-      let AresConfigurator: any;
-      let DolphinConfigurator: any;
-      let EngineService: any;
-      let DuckStation: any;
-      let osHandler: any;
+      let DuckStationConfigurator: typeof import("../../src/main/emulators/duckstation/configurator").DuckStationConfigurator;
+      let MesenConfigurator: typeof import("../../src/main/emulators/mesen/configurator").MesenConfigurator;
+      let AresConfigurator: typeof import("../../src/main/emulators/ares/configurator").AresConfigurator;
+      let DolphinConfigurator: typeof import("../../src/main/emulators/dolphin/configurator").DolphinConfigurator;
+      let EngineService: typeof import("../../src/main/services/EngineService").EngineService;
+      let DuckStation: typeof import("../../src/main/emulators/duckstation/schema").DuckStation;
+      let osHandler: typeof import("../../src/main/platform").osHandler;
 
       beforeEach(() => {
         Object.defineProperty(process, "platform", {
@@ -84,17 +84,17 @@ describe("Cross-Platform (win32 & darwin) Integration Tests for POC Emulators", 
         osHandler = platformModule.osHandler;
 
         // eslint-disable-next-line @typescript-eslint/no-var-requires
-        DuckStationConfigurator = require("../../src/main/utils/configurators/DuckStationConfigurator").DuckStationConfigurator;
+        DuckStationConfigurator = require("../../src/main/emulators/duckstation/configurator").DuckStationConfigurator;
         // eslint-disable-next-line @typescript-eslint/no-var-requires
-        MesenConfigurator = require("../../src/main/utils/configurators/MesenConfigurator").MesenConfigurator;
+        MesenConfigurator = require("../../src/main/emulators/mesen/configurator").MesenConfigurator;
         // eslint-disable-next-line @typescript-eslint/no-var-requires
-        AresConfigurator = require("../../src/main/utils/configurators/AresConfigurator").AresConfigurator;
+        AresConfigurator = require("../../src/main/emulators/ares/configurator").AresConfigurator;
         // eslint-disable-next-line @typescript-eslint/no-var-requires
-        DolphinConfigurator = require("../../src/main/utils/configurators/DolphinConfigurator").DolphinConfigurator;
+        DolphinConfigurator = require("../../src/main/emulators/dolphin/configurator").DolphinConfigurator;
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         EngineService = require("../../src/main/services/EngineService").EngineService;
         // eslint-disable-next-line @typescript-eslint/no-var-requires
-        DuckStation = require("../../src/main/utils/schema/duckstation").DuckStation;
+        DuckStation = require("../../src/main/emulators/duckstation/schema").DuckStation;
       });
 
       it(`should configure DuckStation correctly on ${plat}`, async () => {

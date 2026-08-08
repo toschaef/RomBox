@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import path from "path";
 import { app } from "electron";
 import { schema } from "./schema";
+import { runMigrations } from "./migrations";
 
 let db: Database.Database | null = null;
 
@@ -24,26 +25,7 @@ export function initDB() {
   db.pragma("journal_mode = WAL");
 
   db.exec(schema);
-
-  // v0.9.3 migrations
-  const columns = db.prepare("PRAGMA table_info(games)").all() as { name: string }[];
-  const hasLastPlayedAt = columns.some(c => c.name === 'last_played_at');
-  if (!hasLastPlayedAt) {
-    db.exec("ALTER TABLE games ADD COLUMN last_played_at INTEGER");
-  }
-
-  const clColumns = db.prepare("PRAGMA table_info(console_layouts)").all() as { name: string }[];
-  const hasControllerId = clColumns.some(c => c.name === 'controller_id');
-  if (!hasControllerId) {
-    db.exec("ALTER TABLE console_layouts ADD COLUMN controller_id TEXT");
-  }
-
-  // v0.10.0 migration: per-player controller model
-  for (const col of ['player2_controller_id', 'player3_controller_id', 'player4_controller_id']) {
-    if (!clColumns.some(c => c.name === col)) {
-      db.exec(`ALTER TABLE console_layouts ADD COLUMN ${col} TEXT`);
-    }
-  }
+  runMigrations(db);
 
   console.log("Database initialized");
 }
