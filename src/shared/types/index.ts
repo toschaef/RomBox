@@ -21,6 +21,8 @@ export interface Game {
   coverImage?: string;
   playtimeSeconds?: number;
   lastPlayedAt?: number;
+  /** computed on read, not stored: the file the entry points at is gone */
+  fileMissing?: boolean;
 }
 
 export interface IpcResponse {

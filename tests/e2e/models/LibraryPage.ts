@@ -15,6 +15,17 @@ export class LibraryPage extends BasePage {
     return this.page.getByRole('heading', { name: title }).first();
   }
 
+  /** remounts the library so it refetches - file state is computed on read */
+  async refresh() {
+    await this.navigateToSettings();
+    await this.navigateToLibrary();
+    await this.page.waitForSelector('#root');
+  }
+
+  async openGameMenu() {
+    await this.page.getByTestId('game-menu-button').first().click();
+  }
+
   async search(query: string) {
     if (await this.searchBar.isVisible()) {
       await this.searchBar.fill(query);

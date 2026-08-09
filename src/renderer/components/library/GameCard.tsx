@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Game } from '../../../shared/types';
 import InstallModal from '../inputs/InstallModal';
 import BiosModal from '../inputs/BiosModal';
+import LocateGameModal from '../inputs/LocateGameModal';
 import { gameClient } from '../../clients/gameClient';
 import { saveClient } from '../../clients/saveClient';
 import { IpcResponse } from '../../../shared/types';
@@ -21,15 +22,16 @@ function formatPlaytime(seconds: number): string {
 interface Props {
   game: Game;
   lastBiosUpdate: string;
-  onDelete: () => void;
+  onRefresh: () => void;
   onUpdate: (game: Game) => void;
   gridSize?: number;
 }
 
-export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gridSize = 3 }: Props) {
+export default function GameCard({ game, lastBiosUpdate, onRefresh, onUpdate, gridSize = 3 }: Props) {
   const [showMenu, setShowMenu] = useState(false);
   const [installModalOpen, setInstallModalOpen] = useState(false);
   const [biosModalOpen, setBiosModalOpen] = useState(false);
+  const [locateModalOpen, setLocateModalOpen] = useState(false);
   const [biosMissing, setBiosMissing] = useState<string | null>(null);
   const [coverPath, setCoverPath] = useState<string | null>(null);
   const [coverError, setCoverError] = useState(false);
@@ -196,6 +198,11 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
   }, [game.id, game.title, shouldLoad]);
 
   const handlePlay = async () => {
+    if (game.fileMissing) {
+      setLocateModalOpen(true);
+      return;
+    }
+
     try {
       const result: IpcResponse = await gameClient.launch(game);
 
@@ -208,6 +215,8 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
       } else if (result.code === 'MISSING_BIOS') {
         setBiosMissing(result.message ?? null);
         setBiosModalOpen(true);
+      } else if (result.code === 'MISSING_FILE') {
+        setLocateModalOpen(true);
       } else {
         console.error("Launch error:", result.message);
         notify(NOTIFICATION_MESSAGES.LAUNCH_FAILED(game.title), { type: 'error', duration: durations.medium });
@@ -230,7 +239,7 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
       try {
         await window.electron.invoke('game:delete', game.id);
         notify(NOTIFICATION_MESSAGES.GAME_DELETED(game.title), { type: 'success', duration: durations.short });
-        onDelete();
+        onRefresh();
       } catch (err) {
         console.error(err);
         notify(NOTIFICATION_MESSAGES.DELETE_FAILED(game.title), { type: 'error', duration: durations.medium });
@@ -290,6 +299,12 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
     }
   };
 
+  const handleLocate = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    setLocateModalOpen(true);
+  };
+
   const toggleMenu = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowMenu(!showMenu);
@@ -338,6 +353,17 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
             "
           >
             Rename
+          </button>
+          <button
+            onClick={handleLocate}
+            data-testid="locate-game"
+            className="
+              w-full text-left px-3 py-2 text-xs font-semibold
+              text-fg-secondary hover:text-fg-primary hover:bg-bg-muted
+              transition-colors
+            "
+          >
+            Locate File
           </button>
           <button
             onClick={handleExportSave}
@@ -457,9 +483,25 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
         )}
       </div>
 
-      <div 
+      {game.fileMissing && (
+        <div
+          data-testid="game-missing-badge"
+          title={`File not found: ${game.filePath}`}
+          className="
+            absolute z-20 top-2 left-2
+            px-1.5 py-0.5 rounded-sm
+            bg-red-500/90 text-white
+            text-[10px] font-bold uppercase tracking-wider
+            shadow-md
+          "
+        >
+          Missing
+        </div>
+      )}
+
+      <div
         className={`
-          absolute z-20 
+          absolute z-20
           ${hasCover ? 'opacity-0 group-hover:opacity-100 bottom-2 right-2' : 'bottom-3 right-3'}
           transition-opacity duration-200
         `} 
@@ -486,6 +528,18 @@ export default function GameCard({ game, lastBiosUpdate, onDelete, onUpdate, gri
             game={game}
             missing={biosMissing}
             onClose={() => setBiosModalOpen(false)}
+          />
+        </div>
+      )}
+      {locateModalOpen && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <LocateGameModal
+            game={game}
+            onClose={() => setLocateModalOpen(false)}
+            onSuccess={() => {
+              setLocateModalOpen(false);
+              onRefresh();
+            }}
           />
         </div>
       )}

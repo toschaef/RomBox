@@ -120,7 +120,7 @@ export default function GameGrid({
                   <GameCard
                     game={game}
                     lastBiosUpdate={lastBiosUpdate}
-                    onDelete={onRefresh}
+                    onRefresh={onRefresh}
                     onUpdate={onUpdate}
                     gridSize={gridSize}
                   />
@@ -158,7 +158,7 @@ export default function GameGrid({
             <GameCard
               game={game}
               lastBiosUpdate={lastBiosUpdate}
-              onDelete={onRefresh}
+              onRefresh={onRefresh}
               onUpdate={onUpdate}
               gridSize={gridSize}
             />

@@ -62,6 +62,14 @@ export class GamesRepository extends BaseRepository {
     return result.changes > 0;
   }
 
+  /** Returns whether a row was actually updated. */
+  updateFilePath(id: string, filePath: string): boolean {
+    const result = this.db
+      .prepare("update games set filePath = @filePath where id = @id")
+      .run({ id, filePath });
+    return result.changes > 0;
+  }
+
   delete(id: string): boolean {
     return this.db.prepare("delete from games where id = ?").run(id).changes > 0;
   }

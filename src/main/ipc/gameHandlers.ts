@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { dialog, ipcMain } from 'electron';
 import { LibraryService } from '../services/LibraryService';
 import { LaunchService } from '../services/LaunchService';
 import { CoverService } from '../services/CoverService';
@@ -50,6 +50,30 @@ export default function registerGameHandlers() {
       return await LibraryService.updateGame(game);
     } catch (err) {
       console.error('Failed to update game:', err.message);
+      return { success: false, message: err.message };
+    }
+  });
+
+  // newPath is optional: the renderer omits it and lets the user browse
+  ipcMain.handle('game:relocate', async (event, gameId: string, newPath?: string) => {
+    try {
+      let target = newPath;
+
+      if (!target) {
+        const result = await dialog.showOpenDialog({
+          properties: ['openFile', 'openDirectory'],
+          title: 'Locate Game File',
+          buttonLabel: 'Use This File',
+        });
+        if (result.canceled || result.filePaths.length === 0) {
+          return { success: false, code: 'CANCELLED', message: 'Relocate cancelled' };
+        }
+        target = result.filePaths[0];
+      }
+
+      return await LibraryService.relocateGame(gameId, target);
+    } catch (err) {
+      console.error('Failed to relocate game:', err.message);
       return { success: false, message: err.message };
     }
   });

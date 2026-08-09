@@ -1,13 +1,18 @@
 import fs from "fs";
-import path from "path";
 import { gamesRepository } from "../data/repositories/GamesRepository";
 import type { Game } from "../../shared/types";
 import { ScannerService } from "./ScannerService";
 import { SaveService } from "./SaveService";
+import { isManagedPath, isMissing, romsRoot } from "./library/gamePaths";
 import { Logger } from "../utils/logger";
-import { app } from "electron";
 
 const log = Logger.create('LibraryService');
+
+// games live wherever the user keeps them, so a row can outlive its file.
+// the renderer uses this to mark the card and offer to repoint it.
+function withFileState(game: Game): Game {
+  return { ...game, fileMissing: isMissing(game.filePath) };
+}
 
 export const LibraryService = {
   createGame: (gameData: Game) => {
@@ -62,7 +67,7 @@ export const LibraryService = {
   getGames: () => {
     log.debug('Getting all games');
     try {
-      const games = gamesRepository.findAll();
+      const games = gamesRepository.findAll().map(withFileState);
       log.debug('Games retrieved', { count: games.length });
       return { success: true, games };
     } catch (err) { 
@@ -76,7 +81,7 @@ export const LibraryService = {
     try {
       const game = gamesRepository.findById(id);
       if (!game) return { success: false, message: "Game not found" };
-      return { success: true, game };
+      return { success: true, game: withFileState(game) };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       return { success: false, message: msg };
@@ -90,6 +95,51 @@ export const LibraryService = {
       };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      return { success: false, message: msg };
+    }
+  },
+
+  relocateGame: async (gameId: string, newPath: string) => {
+    log.info('Relocating game', { gameId, newPath });
+
+    const game = gamesRepository.findById(gameId);
+    if (!game) return { success: false, message: "Game not found" };
+
+    if (!newPath || !fs.existsSync(newPath))
+      return { success: false, message: `No file found at ${newPath}` };
+
+    try {
+      const results = await ScannerService.scanPath(newPath);
+      const candidates = results.filter((r) => r.type === 'game');
+
+      let filePath: string;
+
+      if (candidates.length === 0) {
+        if (!fs.statSync(newPath).isFile())
+          return { success: false, message: `No game found in ${newPath}` };
+
+        filePath = newPath;
+      } else {
+        const match = candidates.find((r) => r.consoleId === game.consoleId);
+        if (!match) {
+          return {
+            success: false,
+            code: "CONSOLE_MISMATCH",
+            message: `That file looks like a ${candidates[0].consoleId.toUpperCase()} game, but ${game.title} is ${game.consoleId.toUpperCase()}`,
+          };
+        }
+
+        filePath = (await ScannerService.importGame(match)).filePath;
+      }
+
+      const updated = gamesRepository.updateFilePath(gameId, filePath);
+      if (!updated) return { success: false, message: "Game not found" };
+
+      log.info('Game relocated', { gameId, filePath });
+      return { success: true, game: withFileState({ ...game, filePath }) };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      log.error('Relocate failed', err);
       return { success: false, message: msg };
     }
   },
@@ -113,7 +163,7 @@ export const LibraryService = {
       }
 
       gamesRepository.delete(gameId);
-      if (game.filePath && fs.existsSync(game.filePath)) {
+      if (isManagedPath(game.filePath) && fs.existsSync(game.filePath)) {
         try {
           fs.unlinkSync(game.filePath);
         } catch (err) {
@@ -151,7 +201,7 @@ export const LibraryService = {
     }
 
     gamesRepository.deleteAll();
-    const romsDir = path.join(app.getPath('userData'), 'roms');
+    const romsDir = romsRoot();
     if (fs.existsSync(romsDir)) {
       fs.rmSync(romsDir, { recursive: true, force: true });
       fs.mkdirSync(romsDir);

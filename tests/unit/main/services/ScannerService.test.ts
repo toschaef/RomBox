@@ -327,7 +327,7 @@ describe("ScannerService", () => {
   });
 
   describe("importGame", () => {
-    it("should import normal game file", async () => {
+    it("should reference a normal game file in place instead of copying it", async () => {
       const result = await ScannerService.importGame({
         type: "game",
         consoleId: "nes",
@@ -337,7 +337,40 @@ describe("ScannerService", () => {
 
       expect(result.title).toBe("game");
       expect(result.consoleId).toBe("nes");
+      // duplicating roms is what fills the user's disk - the library records
+      // where the file already lives
+      expect(result.filePath).toBe("/mock/src/game.nes");
+      expect(Extractor.extractToFile).not.toHaveBeenCalled();
+    });
+
+    it("should still extract an entry out of an archive", async () => {
+      // no emulator can be handed a path inside a .zip, so this one copy stays
+      const result = await ScannerService.importGame({
+        type: "game",
+        consoleId: "nes",
+        engineId: "mesen",
+        filePath: "/mock/src/pack.zip",
+        zipEntryName: "game.nes"
+      });
+
+      expect(result.filePath).toBe(path.join(suiteUserDataDir(), "roms", "nes", "game.nes"));
       expect(Extractor.extractToFile).toHaveBeenCalled();
+    });
+
+    it("should reference a game directory in place", async () => {
+      const gameDir = path.join(tempDir, "InPlaceDir");
+      fs.mkdirSync(gameDir);
+      fs.writeFileSync(path.join(gameDir, "file.bin"), "bin content");
+      fs.writeFileSync(path.join(gameDir, "game.cue"), "cue content");
+
+      const result = await ScannerService.importGame({
+        type: "game",
+        consoleId: "ps1",
+        engineId: "duckstation",
+        filePath: gameDir
+      });
+
+      expect(result.filePath).toBe(path.join(gameDir, "game.cue"));
     });
 
     it("should import directory game for PS1/PS2, pointing filePath at the .cue file (not the directory)", async () => {

@@ -11,6 +11,8 @@ export const NOTIFICATION_MESSAGES = {
   SAVE_IMPORT_REJECTED: (reason: string) => `Save not imported - ${reason}`,
   SAVE_IMPORT_FAILED: (gameTitle: string) => `Error importing ${gameTitle} save data`,
   RENAME_FAILED: (gameTitle: string) => `Error renaming ${gameTitle}`,
+  GAME_RELOCATED: (gameTitle: string) => `${gameTitle} location updated`,
+  RELOCATE_FAILED: (gameTitle: string) => `Error updating the location of ${gameTitle}`,
 
   // bios
   BIOS_INSTALLED: (label: string) => `${label} installed`,

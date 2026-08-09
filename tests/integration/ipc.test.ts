@@ -118,9 +118,10 @@ describe("IPC Handler Integration Tests", () => {
       const checkRes = (await ipcMain._invoke("game:get", "ipc-game")) as { game: { title: string } };
       expect(checkRes.game.title).toBe("IPC Updated Title");
 
-      // Delete game via IPC
-      // Since fs.unlinkSync is called, let's create the fake rom file
-      const romPath = path.join(tempDir, "ipc-game.nes");
+      // Delete game via IPC. The rom lives under userData/roms, so it is a copy
+      // rombox extracted itself and deleting the entry removes it too.
+      const romPath = path.join(tempDir, "roms", "nes", "ipc-game.nes");
+      fs.mkdirSync(path.dirname(romPath), { recursive: true });
       fs.writeFileSync(romPath, "mock-rom");
       const testGame = { ...mockGame, filePath: romPath };
       LibraryService.createGame(testGame);
@@ -128,6 +129,54 @@ describe("IPC Handler Integration Tests", () => {
       const deleteRes = (await ipcMain._invoke("game:delete", "ipc-game")) as { success: boolean };
       expect(deleteRes.success).toBe(true);
       expect(fs.existsSync(romPath)).toBe(false);
+    });
+
+    it("should keep a referenced rom on disk when the game is deleted", async () => {
+      const romPath = path.join(tempDir, "elsewhere", "kept-game.nes");
+      fs.mkdirSync(path.dirname(romPath), { recursive: true });
+      fs.writeFileSync(romPath, "mock-rom");
+      LibraryService.createGame({ ...mockGame, id: "kept-game", filePath: romPath });
+
+      const deleteRes = (await ipcMain._invoke("game:delete", "kept-game")) as { success: boolean };
+      expect(deleteRes.success).toBe(true);
+      expect(fs.existsSync(romPath)).toBe(true);
+    });
+
+    it("should report a game whose file has gone missing", async () => {
+      const romPath = path.join(tempDir, "elsewhere", "moved-game.nes");
+      fs.mkdirSync(path.dirname(romPath), { recursive: true });
+      fs.writeFileSync(romPath, "mock-rom");
+      LibraryService.createGame({ ...mockGame, id: "moved-game", filePath: romPath });
+
+      let res = (await ipcMain._invoke("game:get", "moved-game")) as { game: Game };
+      expect(res.game.fileMissing).toBe(false);
+
+      fs.rmSync(romPath);
+
+      res = (await ipcMain._invoke("game:get", "moved-game")) as { game: Game };
+      expect(res.game.fileMissing).toBe(true);
+    });
+
+    it("should relocate a moved game to its new path via IPC", async () => {
+      const originalPath = path.join(tempDir, "elsewhere", "relocate-me.nes");
+      const movedPath = path.join(tempDir, "moved", "relocate-me.nes");
+      fs.mkdirSync(path.dirname(originalPath), { recursive: true });
+      fs.mkdirSync(path.dirname(movedPath), { recursive: true });
+      fs.writeFileSync(originalPath, "NES\x1a\x01\x01");
+      LibraryService.createGame({ ...mockGame, id: "relocate-me", filePath: originalPath });
+
+      fs.renameSync(originalPath, movedPath);
+
+      const relocateRes = (await ipcMain._invoke(
+        "game:relocate",
+        "relocate-me",
+        movedPath
+      )) as { success: boolean };
+      expect(relocateRes.success).toBe(true);
+
+      const res = (await ipcMain._invoke("game:get", "relocate-me")) as { game: Game };
+      expect(res.game.filePath).toBe(movedPath);
+      expect(res.game.fileMissing).toBe(false);
     });
   });
 

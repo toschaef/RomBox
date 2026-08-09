@@ -1,5 +1,6 @@
-// the paths that destroy data: deleting a game removes the rom from disk, and
-// ares/melonds keep saves next to it, so backups have to happen first.
+// the paths that destroy data: deleting a game removes any rom rombox extracted
+// itself, and ares/melonds keep saves next to it, so backups have to happen
+// first. files the library only references are never deleted.
 import fs from "fs";
 import path from "path";
 import { LibraryService } from "../../../../src/main/services/LibraryService";
@@ -23,6 +24,7 @@ jest.mock("../../../../src/main/data/repositories/GamesRepository", () => ({
     findAll: jest.fn().mockReturnValue([]),
     findById: jest.fn(),
     updateTitleAndConsole: jest.fn(),
+    updateFilePath: jest.fn(),
     delete: jest.fn(),
     deleteAll: jest.fn(),
     addPlaytime: jest.fn(),
@@ -32,11 +34,14 @@ jest.mock("../../../../src/main/data/repositories/GamesRepository", () => ({
 
 const repo = gamesRepository as jest.Mocked<typeof gamesRepository>;
 
+/** inside userData/roms - i.e. a copy rombox extracted and therefore owns */
+const MANAGED_ROM = path.join(suiteUserDataDir(), "roms", "nes", "Test Game.nes");
+
 function makeGame(overrides: Partial<Game> = {}): Game {
   return {
     id: "g1",
     title: "Test Game",
-    filePath: "/roms/nes/Test Game.nes",
+    filePath: MANAGED_ROM,
     consoleId: "nes",
     engineId: "mesen",
     playtimeSeconds: 0,
@@ -116,18 +121,45 @@ describe("deleteGame", () => {
     expect(order).toEqual(["backup", "delete"]);
   });
 
-  it("deletes the rom file from disk", () => {
+  it("deletes an extracted rom from disk", () => {
     repo.findById.mockReturnValue(makeGame());
     jest.spyOn(fs, "existsSync").mockReturnValue(true);
     const unlink = jest.spyOn(fs, "unlinkSync").mockImplementation(() => undefined);
 
     expect(LibraryService.deleteGame("g1")).toEqual({ success: true });
-    expect(unlink).toHaveBeenCalledWith("/roms/nes/Test Game.nes");
+    expect(unlink).toHaveBeenCalledWith(MANAGED_ROM);
+  });
+
+  it("leaves a referenced rom on disk", () => {
+    // the file is the user's, sitting outside userData - the library entry goes
+    // away, the game does not
+    repo.findById.mockReturnValue(makeGame({ filePath: "/Users/someone/Games/Test Game.nes" }));
+    jest.spyOn(fs, "existsSync").mockReturnValue(true);
+    const unlink = jest.spyOn(fs, "unlinkSync").mockImplementation(() => undefined);
+    const rm = jest.spyOn(fs, "rmSync").mockImplementation(() => undefined);
+
+    expect(LibraryService.deleteGame("g1")).toEqual({ success: true });
+    expect(repo.delete).toHaveBeenCalledWith("g1");
+    expect(unlink).not.toHaveBeenCalled();
+    expect(rm).not.toHaveBeenCalled();
+  });
+
+  it("still backs up saves for a referenced rom", () => {
+    // ares/melonds write saves next to the rom, wherever that is
+    repo.findById.mockReturnValue(makeGame({ filePath: "/Users/someone/Games/Test Game.nes" }));
+    jest.spyOn(fs, "existsSync").mockReturnValue(true);
+    jest.spyOn(fs, "unlinkSync").mockImplementation(() => undefined);
+
+    LibraryService.deleteGame("g1");
+
+    expect(SaveService.backupSave).toHaveBeenCalled();
   });
 
   it("removes a directory rom recursively", () => {
     // ps1 games can be a folder of .bin/.cue files
-    repo.findById.mockReturnValue(makeGame({ filePath: "/roms/ps1/Game" }));
+    repo.findById.mockReturnValue(makeGame({
+      filePath: path.join(suiteUserDataDir(), "roms", "ps1", "Game"),
+    }));
     jest.spyOn(fs, "existsSync").mockReturnValue(true);
     jest.spyOn(fs, "unlinkSync").mockImplementation(() => {
       const err = new Error("is a directory") as NodeJS.ErrnoException;
@@ -137,7 +169,10 @@ describe("deleteGame", () => {
     const rm = jest.spyOn(fs, "rmSync").mockImplementation(() => undefined);
 
     expect(LibraryService.deleteGame("g1")).toEqual({ success: true });
-    expect(rm).toHaveBeenCalledWith("/roms/ps1/Game", { recursive: true, force: true });
+    expect(rm).toHaveBeenCalledWith(
+      path.join(suiteUserDataDir(), "roms", "ps1", "Game"),
+      { recursive: true, force: true }
+    );
   });
 
   it("reports an unexpected filesystem error", () => {

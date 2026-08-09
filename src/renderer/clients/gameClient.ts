@@ -16,6 +16,9 @@ export const gameClient = {
   update: (game: Game) =>
     window.electron.invoke("game:update", game) as Promise<IpcResponse & { game?: Game }>,
 
+  relocate: (gameId: string, newPath?: string) =>
+    window.electron.invoke("game:relocate", gameId, newPath) as Promise<IpcResponse & { game?: Game }>,
+
   delete: (gameId: string) =>
     window.electron.invoke("game:delete", gameId) as Promise<IpcResponse>,
 

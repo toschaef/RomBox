@@ -1,6 +1,8 @@
 import fs from "fs";
+import path from "path";
 import { LibraryService } from "../../../../src/main/services/LibraryService";
 import { initDB, getDB } from "../../../../src/main/data/db";
+import { suiteUserDataDir } from "../../../helpers/tempDirs";
 import type { Game } from "../../../../src/shared/types";
 
 jest.mock("../../../../src/main/services/ScannerService", () => ({
@@ -81,24 +83,33 @@ describe("LibraryService", () => {
     expect(checkResult.game?.title).toBe("Super Mario Bros. Deluxe");
   });
 
-  it("should delete a game and remove its rom file if it exists", () => {
-    const tempRomPath = "/tmp/smb.nes";
-    jest.spyOn(fs, "writeFileSync").mockImplementation(() => { /* mock */ });
+  it("should delete a game and remove a rom rombox extracted itself", () => {
+    const managedRomPath = path.join(suiteUserDataDir(), "roms", "nes", "smb.nes");
     jest.spyOn(fs, "existsSync").mockReturnValue(true);
     const unlinkSpy = jest.spyOn(fs, "unlinkSync").mockImplementation(() => { /* mock */ });
 
-    const game = {
-      ...mockGame,
-      filePath: tempRomPath
-    };
-    LibraryService.createGame(game);
+    LibraryService.createGame({ ...mockGame, filePath: managedRomPath });
 
     const deleteResult = LibraryService.deleteGame("mario-bros");
     expect(deleteResult.success).toBe(true);
-    expect(unlinkSpy).toHaveBeenCalledWith(tempRomPath);
+    expect(unlinkSpy).toHaveBeenCalledWith(managedRomPath);
 
     const getResult = LibraryService.getGame("mario-bros");
     expect(getResult.success).toBe(false);
+  });
+
+  it("should delete a game without touching the user's own copy of the rom", () => {
+    // the library only references this file, so removing the entry must not
+    // delete the file the user keeps in their own folder
+    const userRomPath = "/Users/someone/Games/smb.nes";
+    jest.spyOn(fs, "existsSync").mockReturnValue(true);
+    const unlinkSpy = jest.spyOn(fs, "unlinkSync").mockImplementation(() => { /* mock */ });
+
+    LibraryService.createGame({ ...mockGame, filePath: userRomPath });
+
+    expect(LibraryService.deleteGame("mario-bros").success).toBe(true);
+    expect(unlinkSpy).not.toHaveBeenCalled();
+    expect(LibraryService.getGame("mario-bros").success).toBe(false);
   });
 
   it("should increment playtime successfully", () => {

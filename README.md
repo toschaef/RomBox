@@ -25,7 +25,11 @@ RomBox does not come bundled with any copyrighted game files or BIOS images. Use
 
 # Setup
 
-**IMPORTANT** - RomBox creates copies of the files installed onto it, so keep that in mind your disk space could fill up quickly with large games. I suggest keeping your games on an external drive, to avoid them taking up twice as much necessary space.
+RomBox does not copy your games, but if an archive (`.zip` or `.7z`) is imported, that game is extracted into RomBox's own storage.
+
+Because your games are referenced rather than copied, moving or renaming one leaves RomBox pointing at nothing. Such a game is marked **Missing** in the library; click it (or use *Locate File* in its menu) and pick the new location. Your saves and playtime are kept. Deleting a game from the library never deletes a file RomBox only referenced.
+
+BIOS files are still copied, since they have to be installed where each emulator looks for them.
 
 To install games and BIOSes, drag and drop your aquired files anywhere on the application. The accepted game file extentions and BIOS filenames are described below.
 
@@ -39,7 +43,7 @@ Rombox automatically caches game's save files, so state should persist on reinst
 
 You can manually delete a game's save data in the submenu on the bottom right of the cover. Memory cards and NANDs that several games share are kept, since deleting them would take other games' progress with them.
 
-**Importing saves.** The same submenu has an Import Save option, which takes either a single save file or a RomBox save archive. Every file is verified before anything is written — a PS1 memory card has to pass the checksums on all sixteen of its directory frames, a GameCube save's header has to declare the same block count as its length, a PS2 card has to carry Sony's header and be a real card size, and a cartridge save has to be a size a save chip actually comes in. Files that cannot be proven valid are refused with the reason, and nothing is written unless the whole import verifies.
+**Importing saves.** The same submenu has an Import Save option, which takes either a single save file or a RomBox save archive. Files that cannot be proven valid are refused with the reason.
 
 Imported saves are renamed to the game they were imported onto, so a save from someone else's library is picked up correctly. Anything an import replaces is copied to `saves/_replaced/` first, so it can be put back by hand. A save exported from RomBox can always be imported again.
 

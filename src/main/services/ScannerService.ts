@@ -10,6 +10,7 @@ import type { EngineID } from '../../shared/types/engines';
 import { detectConsoleFromHeader, detectConsoleFromBuffer, detectPS1orPS2FromISO9660, detectPS1orPS2FromBuffer, parseCueSectorGeometry, parseCueSectorGeometryFromFile, PLAIN_ISO_GEOMETRY } from '../utils/identifier';
 import { scanZipEntries, readZipEntryHeader } from '../utils/fsUtils';
 import { BiosService } from './BiosService';
+import { romsRoot } from './library/gamePaths';
 import { Logger } from '../utils/logger';
 import AdmZip from 'adm-zip';
 
@@ -405,8 +406,7 @@ export const ScannerService = {
       .replace(/[#]/g, '')
       .trim();
 
-    const userDataPath = app.getPath('userData');
-    const romsDir = path.join(userDataPath, 'roms', scanResult.consoleId);
+    const romsDir = path.join(romsRoot(), scanResult.consoleId);
 
     if (scanResult.isMultiFile && scanResult.zipEntryName) {
       log.info('Importing multi-file game from archive');
@@ -465,44 +465,37 @@ export const ScannerService = {
     }
 
     const isDirectory = fs.existsSync(scanResult.filePath) && fs.statSync(scanResult.filePath).isDirectory();
-    if ((scanResult.consoleId === 'ps1' || scanResult.consoleId === 'ps2') && isDirectory) {
-      const dirName = path.basename(scanResult.filePath);
-      let destDir = path.join(romsDir, dirName);
-
-      if (fs.existsSync(destDir)) {
-        destDir = path.join(romsDir, `${dirName}_${Date.now()}`);
-      }
-
-      try {
-        fs.mkdirSync(destDir, { recursive: true });
-
-        const files = fs.readdirSync(scanResult.filePath);
-        for (const file of files) {
-          const srcFile = path.join(scanResult.filePath, file);
-          const destFile = path.join(destDir, file);
-
-          if (fs.statSync(srcFile).isFile()) {
-            fs.copyFileSync(srcFile, destFile);
-          }
-        }
-
-        log.info('Copied game directory', { destDir });
-      } catch (err) {
-        log.error('Failed to copy game directory', err);
-        throw new Error("Could not import game directory.");
-      }
-
-      const cueFile = fs.readdirSync(destDir).find(f => f.toLowerCase().endsWith('.cue'));
+    if (isDirectory) {
+      const cueFile = fs.readdirSync(scanResult.filePath).find(f => f.toLowerCase().endsWith('.cue'));
       if (!cueFile) {
-        throw new Error('Could not find .cue file in copied game directory');
+        throw new Error('Could not find .cue file in game directory');
       }
 
-      const entrypoint = resolveDiscEntrypoint(destDir, path.join(destDir, cueFile), scanResult.consoleId);
+      const entrypoint = resolveDiscEntrypoint(
+        scanResult.filePath,
+        path.join(scanResult.filePath, cueFile),
+        scanResult.consoleId
+      );
+
+      log.info('Referencing game directory in place', { entrypoint });
 
       return {
         id: crypto.randomUUID(),
         title,
         filePath: entrypoint,
+        consoleId: scanResult.consoleId,
+        engineId: getEngineIdFromConsoleId(scanResult.consoleId),
+      };
+    }
+
+    // a loose file is left where the user keeps it - only archive entries have
+    // to be extracted, because no emulator can be handed a path inside a .zip
+    if (!scanResult.zipEntryName) {
+      log.info('Referencing game file in place', { filePath: scanResult.filePath });
+      return {
+        id: crypto.randomUUID(),
+        title,
+        filePath: scanResult.filePath,
         consoleId: scanResult.consoleId,
         engineId: getEngineIdFromConsoleId(scanResult.consoleId),
       };

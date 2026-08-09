@@ -81,6 +81,19 @@ describe("GamesRepository", () => {
     expect(game?.consoleId).toBe("snes");
   });
 
+  it("updates only the file path, leaving the rest of the row alone", () => {
+    repo.insert(makeGame());
+    repo.addPlaytime("game-1", 60);
+
+    expect(repo.updateFilePath("game-1", "/elsewhere/Test Game.nes")).toBe(true);
+    expect(repo.updateFilePath("missing", "/elsewhere/x.nes")).toBe(false);
+
+    const game = repo.findById("game-1");
+    expect(game?.filePath).toBe("/elsewhere/Test Game.nes");
+    expect(game?.title).toBe("Test Game");
+    expect(game?.playtimeSeconds).toBe(60);
+  });
+
   it("deletes one game and all games", () => {
     repo.insert(makeGame());
     repo.insert(makeGame({ id: "game-2", filePath: "/roms/nes/Other.nes" }));
