@@ -45,6 +45,24 @@ describe("TomlEditor", () => {
       expect(lines).toContain("key1 = updated");
       expect(lines).toContain("key2 = new");
     });
+
+    it("should insert missing root keys above the first table, not inside the last one", () => {
+      fs.writeFileSync(testFile, "key1 = value1\n\n[table]\nother = 1\n");
+      TomlEditor.updateTomlKV(testFile, { key2: "new" });
+
+      const content = fs.readFileSync(testFile, "utf-8");
+      const lines = content.split("\n").map(l => l.trim()).filter(Boolean);
+      expect(lines.indexOf("key2 = new")).toBeLessThan(lines.indexOf("[table]"));
+    });
+
+    it("should not touch a same-named key that lives inside a table", () => {
+      fs.writeFileSync(testFile, "key1 = root\n\n[table]\nkey1 = scoped\n");
+      TomlEditor.updateTomlKV(testFile, { key1: "updated" });
+
+      const content = fs.readFileSync(testFile, "utf-8");
+      expect(content).toContain("key1 = updated");
+      expect(content).toContain("key1 = scoped");
+    });
   });
 
   describe("updateTomlTableKV", () => {

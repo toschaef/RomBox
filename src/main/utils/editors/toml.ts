@@ -9,10 +9,15 @@ export const TomlEditor = {
     const out: string[] = [];
     const seen = new Set<string>();
 
+    const headerRe = /^\s*\[([^\]]+)\]\s*$/;
     const kvRe = /^\s*([A-Za-z0-9_.-]+)\s*=\s*([^#]*?)(\s*#.*)?$/;
 
-    for (const line of lines) {
-      const m = line.match(kvRe);
+    let firstHeader = lines.findIndex((l) => headerRe.test(l));
+    if (firstHeader === -1) firstHeader = lines.length;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const m = i < firstHeader ? line.match(kvRe) : null;
       if (!m) {
         out.push(line);
         continue;
@@ -31,8 +36,10 @@ export const TomlEditor = {
 
     const missing = Object.entries(updates).filter(([k]) => !seen.has(k));
     if (missing.length) {
-      if (out.length && out[out.length - 1].trim() !== "") out.push("");
-      for (const [k, v] of missing) out.push(`${k} = ${v}`);
+      const insertAt = firstHeader;
+      const added = missing.map(([k, v]) => `${k} = ${v}`);
+      if (insertAt < out.length) added.push("");
+      out.splice(insertAt, 0, ...added);
     }
 
     fs.mkdirSync(path.dirname(filePath), { recursive: true });

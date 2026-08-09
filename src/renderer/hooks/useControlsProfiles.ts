@@ -81,6 +81,7 @@ export function useControlsProfiles() {
       const created = await controlsClient.createProfile({
         name,
         copyFromId: copyCurrent && activeProfileId ? activeProfileId : undefined,
+        makeDefault: true,
       });
       await refreshProfiles();
       await changeProfile(created.id);
