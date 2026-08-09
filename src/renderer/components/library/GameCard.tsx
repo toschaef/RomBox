@@ -286,7 +286,6 @@ export default function GameCard({ game, lastBiosUpdate, onRefresh, onUpdate, gr
       } else if (result.message === 'Import cancelled') {
         console.log('[GameCard] Import cancelled by user');
       } else if (result.issues?.length) {
-        // The save failed verification: show why, so the user can fix it.
         console.warn('[GameCard] Save rejected:', result.issues);
         notify(NOTIFICATION_MESSAGES.SAVE_IMPORT_REJECTED(result.message ?? ''), { type: 'error', duration: durations.long });
       } else {
@@ -297,12 +296,6 @@ export default function GameCard({ game, lastBiosUpdate, onRefresh, onUpdate, gr
       console.error('[GameCard] Import error:', err);
       notify(NOTIFICATION_MESSAGES.SAVE_IMPORT_FAILED(game.title), { type: 'error', duration: durations.medium });
     }
-  };
-
-  const handleLocate = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowMenu(false);
-    setLocateModalOpen(true);
   };
 
   const toggleMenu = (e: React.MouseEvent) => {
@@ -353,17 +346,6 @@ export default function GameCard({ game, lastBiosUpdate, onRefresh, onUpdate, gr
             "
           >
             Rename
-          </button>
-          <button
-            onClick={handleLocate}
-            data-testid="locate-game"
-            className="
-              w-full text-left px-3 py-2 text-xs font-semibold
-              text-fg-secondary hover:text-fg-primary hover:bg-bg-muted
-              transition-colors
-            "
-          >
-            Locate File
           </button>
           <button
             onClick={handleExportSave}
