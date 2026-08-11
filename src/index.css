@@ -33,6 +33,10 @@
   --radius-xl: 4px;
 }
 
+.html {
+  @apply text-sm;
+}
+
 body {
   overflow: hidden;
   user-select: none;
