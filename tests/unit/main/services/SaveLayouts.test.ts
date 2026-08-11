@@ -155,6 +155,85 @@ describe("SaveService console coverage", () => {
     });
   });
 
+  describe("melonDS (DS)", () => {
+    const ds = game({
+      consoleId: "ds",
+      engineId: "melonds",
+      title: "Mario Kart DS",
+      filePath: path.join(ROMS_DIR, "ds", "Mario Kart DS (USA).nds"),
+    });
+    const romDir = path.join(ROMS_DIR, "ds");
+    const liveSave = path.join(romDir, "Mario Kart DS (USA).sav");
+
+    it("removes the save it injected next to the ROM once it is cached", () => {
+      write(ds.filePath, "rom");
+      write(liveSave, "progress");
+
+      SaveService.backupSave(ds);
+      const cleaned = SaveService.cleanupEphemeralSaves(ds);
+
+      expect(cleaned.removedFiles).toEqual(["Mario Kart DS (USA).sav"]);
+      expect(fs.existsSync(liveSave)).toBe(false);
+      expect(cachedFiles("ds")).toEqual(["Mario Kart DS (USA).sav"]);
+      expect(fs.existsSync(ds.filePath)).toBe(true);
+    });
+
+    it("injects the cached save back on the next launch", () => {
+      write(ds.filePath, "rom");
+      write(liveSave, "progress");
+      SaveService.backupSave(ds);
+      SaveService.cleanupEphemeralSaves(ds);
+
+      const result = SaveService.restoreSave(ds);
+
+      expect(result.restoredFiles).toEqual(["Mario Kart DS (USA).sav"]);
+      expect(fs.readFileSync(liveSave, "utf-8")).toBe("progress");
+    });
+
+    it("keeps a save the cache does not have an identical copy of", () => {
+      write(ds.filePath, "rom");
+      write(liveSave, "progress");
+      SaveService.backupSave(ds);
+
+      // as if the emulator wrote again after the backup ran
+      write(liveSave, "later progress");
+
+      const cleaned = SaveService.cleanupEphemeralSaves(ds);
+
+      expect(cleaned.removedFiles).toEqual([]);
+      expect(cleaned.keptFiles).toEqual(["Mario Kart DS (USA).sav"]);
+      expect(fs.readFileSync(liveSave, "utf-8")).toBe("later progress");
+    });
+
+    it("leaves other games' saves in a shared ROM folder alone", () => {
+      write(ds.filePath, "rom");
+      write(liveSave, "progress");
+      const otherSave = path.join(romDir, "Phoenix Wright (USA).sav");
+      write(otherSave, "someone else's");
+
+      SaveService.backupSave(ds);
+      SaveService.cleanupEphemeralSaves(ds);
+
+      expect(fs.existsSync(otherSave)).toBe(true);
+    });
+
+    it("does not clean up roots rombox owns", () => {
+      const n64 = game({
+        consoleId: "n64",
+        engineId: "ares",
+        filePath: path.join(ROMS_DIR, "n64", "Mario Kart 64 (USA).z64"),
+      });
+      const save = path.join(ROMS_DIR, "n64", "Mario Kart 64 (USA).eeprom");
+      write(save, "progress");
+
+      SaveService.backupSave(n64);
+      const cleaned = SaveService.cleanupEphemeralSaves(n64);
+
+      expect(cleaned.removedFiles).toEqual([]);
+      expect(fs.existsSync(save)).toBe(true);
+    });
+  });
+
   describe("Dolphin", () => {
     it("backs up GameCube memory cards stored in nested GCI folders", () => {
       const gc = game({ consoleId: "gc", engineId: "dolphin", title: "Mario Kart - Double Dash!!" });

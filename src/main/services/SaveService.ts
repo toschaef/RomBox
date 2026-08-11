@@ -199,6 +199,18 @@ function copyIfChanged(srcPath: string, destPath: string): boolean {
   }
 }
 
+/**
+ * whether dest holds exactly what src holds
+ */
+function mirrors(srcPath: string, destPath: string): boolean {
+  try {
+    if (fs.statSync(srcPath).size !== fs.statSync(destPath).size) return false;
+    return fs.readFileSync(srcPath).equals(fs.readFileSync(destPath));
+  } catch {
+    return false;
+  }
+}
+
 function newestMtime(paths: string[]): number {
   let newest = 0;
   for (const p of paths) {
@@ -451,6 +463,47 @@ export const SaveService = {
       skipped: skippedFiles.length,
     });
     return { success: true, restoredFiles };
+  },
+
+  /**
+   * removes the saves rombox injected into directories it does not own
+   */
+  cleanupEphemeralSaves(game: Game): { removedFiles: string[]; keptFiles: string[] } {
+    const saveLog = log.child({ gameId: game.id, title: game.title });
+    const removedFiles: string[] = [];
+    const keptFiles: string[] = [];
+
+    for (const file of collectSaveFiles(game, "emulator")) {
+      if (!file.root.ephemeral || !file.matched) continue;
+
+      const cachedPath = path.join(file.root.cacheDir, file.relPath);
+
+      if (!mirrors(file.absPath, cachedPath)) {
+        keptFiles.push(file.relPath);
+        continue;
+      }
+
+      try {
+        fs.unlinkSync(file.absPath);
+        removedFiles.push(file.relPath);
+      } catch (err) {
+        keptFiles.push(file.relPath);
+        saveLog.warn('Could not remove injected save', {
+          savePath: file.absPath,
+          error: (err as Error)?.message ?? err,
+        });
+      }
+    }
+
+    if (removedFiles.length || keptFiles.length) {
+      saveLog.info('Injected saves cleaned up', {
+        removed: removedFiles.length,
+        kept: keptFiles.length,
+        files: removedFiles.slice(0, 20),
+      });
+    }
+
+    return { removedFiles, keptFiles };
   },
 
   deleteCachedSave(game: Game): { success: boolean; deletedFiles: string[]; error?: string } {

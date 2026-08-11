@@ -47,6 +47,12 @@ function backupSaves(game: Game, gameLog: ReturnType<typeof log.child>) {
     if (result.backedUpFiles.length > 0) {
       gameLog.info("Save files backed up", { count: result.backedUpFiles.length });
     }
+
+    // only safe once the cache holds the copy the backup just made
+    const cleaned = SaveService.cleanupEphemeralSaves(game);
+    if (cleaned.removedFiles.length > 0) {
+      gameLog.info("Injected saves removed", { count: cleaned.removedFiles.length });
+    }
   } catch (err) {
     gameLog.error("Save backup failed", err);
   }
