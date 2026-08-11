@@ -13,6 +13,13 @@ export const rendererConfig: Configuration = {
           filename: "assets/[name][ext][query]",
         },
       },
+      {
+        test: /\.woff2?$/i,
+        type: "asset/resource",
+        generator: {
+          filename: "assets/fonts/[name][ext][query]",
+        },
+      },
     ],
   },
   plugins,
