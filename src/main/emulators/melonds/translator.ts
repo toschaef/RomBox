@@ -2,13 +2,13 @@ import type {
   EmulatorPatch,
   IEmulatorTranslator,
   TranslateContext,
+  LearnedBinds
 } from "../translatorTypes";
 import type { ControlsProfile, PlayerBindings, DigitalBinding } from "../../../shared/types/controls";
 import { digitalToGamepadToken, type Dir } from "../../utils/profileRead";
 import { MELONDS, melondsJoyCodeForToken, melondsJoyCodeFromLearnedBind } from "./schema";
 import type { GamepadToken } from "../../../shared/controls/gamepadTokens";
 import type { Platform } from "../../../shared/types";
-import type { LearnedBinds } from "../translatorTypes";
 
 const { ROOT, KB_TABLE, JOY_TABLE } = MELONDS;
 

@@ -141,13 +141,13 @@ export class MacHandler implements PlatformHandler {
 
   getRoots(): PlatformRoots {
     const home = homedir();
-    const appSupport = path.join(home, "Library", "Application Support");
+    const appSupport = path.posix.join(home, "Library", "Application Support");
     return {
       home,
       appSupport,
-      preferences: path.join(home, "Library", "Preferences"),
+      preferences: path.posix.join(home, "Library", "Preferences"),
       localAppData: appSupport,
-      documents: path.join(home, "Documents"),
+      documents: path.posix.join(home, "Documents"),
     };
   }
 
