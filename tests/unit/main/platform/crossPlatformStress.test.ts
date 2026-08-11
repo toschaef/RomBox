@@ -81,10 +81,10 @@ describe("Milestone 3 Empirical Stress Test Harness - Platform Logic & WinHandle
       const handler = new WinHandler();
       const actualHomedir = os.homedir();
 
-      const expectedConfig = path.join(actualHomedir, "AppData", "Roaming", "Dolphin Emulator", "Config");
+      const expectedConfig = path.win32.join(actualHomedir, "AppData", "Roaming", "Dolphin Emulator", "Config");
       expect(handler.getEmulatorConfigPath("dolphin")).toBe(expectedConfig);
 
-      const expectedAres = path.join(actualHomedir, "AppData", "Local", "ares");
+      const expectedAres = path.win32.join(actualHomedir, "AppData", "Local", "ares");
       expect(handler.getEmulatorConfigPath("ares")).toBe(expectedAres);
     });
 
@@ -96,12 +96,12 @@ describe("Milestone 3 Empirical Stress Test Harness - Platform Logic & WinHandle
 
       const handler = new WinHandler();
       expect(handler.getEmulatorConfigPath("dolphin")).toBe(
-        path.join("C:\\UserProfile", "AppData", "Roaming", "Dolphin Emulator", "Config")
+        path.win32.join("C:\\UserProfile", "AppData", "Roaming", "Dolphin Emulator", "Config")
       );
 
       delete process.env.USERPROFILE;
       expect(handler.getEmulatorConfigPath("dolphin")).toBe(
-        path.join("C:\\HomeDir", "AppData", "Roaming", "Dolphin Emulator", "Config")
+        path.win32.join("C:\\HomeDir", "AppData", "Roaming", "Dolphin Emulator", "Config")
       );
     });
   });

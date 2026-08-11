@@ -10,21 +10,14 @@ jest.mock("os", () => {
 import path from "path";
 import fs from "fs";
 import type { Game } from "../../src/shared/types";
+import { cleanTempDirCrossPlatform } from "../helpers/tempDirs";
 
 describe("Milestone 3 Empirical Stress Test Harness - Cross-Platform Integration & 4 POC Emulators", () => {
   const tempDir = path.resolve(__dirname, "../temp-userdata-crossplatform-stress");
   const originalPlatform = process.platform;
   const originalEnv = process.env;
 
-  const cleanTempDir = () => {
-    if (fs.existsSync(tempDir)) {
-      try {
-        fs.rmSync(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
-      } catch {
-        // Ignore cleanup error
-      }
-    }
-  };
+  const cleanTempDir = () => cleanTempDirCrossPlatform(tempDir);
 
   beforeEach(() => {
     cleanTempDir();

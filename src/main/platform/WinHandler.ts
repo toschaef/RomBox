@@ -30,7 +30,7 @@ export class WinHandler implements PlatformHandler {
     targetFilename: string
   ): Promise<void> {
     log.info(`Installing dependency: ${searchName} to ${targetFilename}`);
-    const destPath = path.join(targetDir, targetFilename);
+    const destPath = path.win32.join(targetDir, targetFilename);
     await fs.promises.copyFile(filePath, destPath);
   }
 
@@ -42,9 +42,9 @@ export class WinHandler implements PlatformHandler {
   private getBaseDirs() {
     const env = process.env;
     const home = env.USERPROFILE || env.HOME || homedir();
-    const appData = env.APPDATA || path.join(home, "AppData", "Roaming");
-    const localAppData = env.LOCALAPPDATA || path.join(home, "AppData", "Local");
-    const docs = path.join(home, "Documents");
+    const appData = env.APPDATA || path.win32.join(home, "AppData", "Roaming");
+    const localAppData = env.LOCALAPPDATA || path.win32.join(home, "AppData", "Local");
+    const docs = path.win32.join(home, "Documents");
     return { appData, localAppData, docs, home };
   }
 
@@ -67,7 +67,7 @@ export class WinHandler implements PlatformHandler {
 
   launchProcess(binaryPath: string, args: string[], opts?: { cwd?: string }): ChildProcess {
     log.info(`Launch: ${binaryPath}`);
-    const cwd = opts?.cwd || (binaryPath.includes("\\") ? path.win32.dirname(binaryPath) : path.dirname(binaryPath));
+    const cwd = opts?.cwd || path.win32.dirname(binaryPath);
     return spawn(binaryPath, args, {
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
