@@ -5,8 +5,10 @@ import type {
 } from "../translatorTypes";
 import type { ControlsProfile, PlayerBindings, DigitalBinding } from "../../../shared/types/controls";
 import { digitalToGamepadToken, type Dir } from "../../utils/profileRead";
-import { MELONDS, melondsJoyCodeForToken } from "./schema";
+import { MELONDS, melondsJoyCodeForToken, melondsJoyCodeFromLearnedBind } from "./schema";
 import type { GamepadToken } from "../../../shared/controls/gamepadTokens";
+import type { Platform } from "../../../shared/types";
+import type { LearnedBinds } from "../translatorTypes";
 
 const { ROOT, KB_TABLE, JOY_TABLE } = MELONDS;
 
@@ -81,10 +83,17 @@ function digitalToMelonToken(d?: DigitalBinding): GamepadToken | null {
   return null;
 }
 
-function toMelonJoyCode(d?: DigitalBinding): number {
+function resolveJoyCode(tok: GamepadToken, learnedBinds?: LearnedBinds): number {
+  const fixed = melonFixToken(tok);
+  const learned = learnedBinds?.[fixed];
+  if (learned) return melondsJoyCodeFromLearnedBind(learned);
+  return melondsJoyCodeForToken(fixed);
+}
+
+function toMelonJoyCode(d: DigitalBinding | undefined, learnedBinds?: LearnedBinds): number {
   const tok = digitalToMelonToken(d);
   if (!tok) return -1;
-  return melondsJoyCodeForToken(melonFixToken(tok));
+  return resolveJoyCode(tok, learnedBinds);
 }
 
 export class MelonDSTranslator implements IEmulatorTranslator {
@@ -105,6 +114,8 @@ export class MelonDSTranslator implements IEmulatorTranslator {
     joystickId: number
   ): EmulatorPatch[] {
     const patches: EmulatorPatch[] = [];
+    const platform = ctx.platform;
+    const learnedBinds = ctx.learnedBinds;
 
     patches.push({
       kind: "ini-set",
@@ -122,8 +133,8 @@ export class MelonDSTranslator implements IEmulatorTranslator {
       const dpadTok = digitalToMelonToken(dpadBind);
       const moveTok = digitalToMelonToken(moveBind);
 
-      const dpadCode = dpadTok ? melondsJoyCodeForToken(melonFixToken(dpadTok)) : -1;
-      const moveCode = moveTok ? melondsJoyCodeForToken(melonFixToken(moveTok)) : -1;
+      const dpadCode = dpadTok ? resolveJoyCode(dpadTok, learnedBinds) : -1;
+      const moveCode = moveTok ? resolveJoyCode(moveTok, learnedBinds) : -1;
 
       let finalJoy = -1;
 
@@ -136,7 +147,7 @@ export class MelonDSTranslator implements IEmulatorTranslator {
       patches.push({ kind: "ini-set", section: JOY_TABLE, key: k, value: String(finalJoy) });
 
       const kb = firstKeyboard(dpadBind) ?? firstKeyboard(moveBind);
-      const kbCode = kb ? toMelonKeyboardCode(kb) : -1;
+      const kbCode = kb ? toMelonKeyboardCode(kb, platform) : -1;
       patches.push({ kind: "ini-set", section: KB_TABLE, key: k, value: String(kbCode) });
     }
 
@@ -155,8 +166,8 @@ export class MelonDSTranslator implements IEmulatorTranslator {
 
     for (const [key, bind] of binds) {
       const kb = firstKeyboard(bind);
-      const melonCode = kb ? toMelonKeyboardCode(kb) : -1;
-      const joyCode = toMelonJoyCode(bind);
+      const melonCode = kb ? toMelonKeyboardCode(kb, platform) : -1;
+      const joyCode = toMelonJoyCode(bind, learnedBinds);
 
       patches.push({ kind: "ini-set", section: KB_TABLE, key, value: String(melonCode) });
       patches.push({ kind: "ini-set", section: ROOT, key: `Key_${key}`, value: String(melonCode) });
@@ -167,20 +178,22 @@ export class MelonDSTranslator implements IEmulatorTranslator {
   }
 }
 
-function toMelonKeyboardCode(domCode: string): number {
+function toMelonKeyboardCode(domCode: string, platform: Platform): number {
   const s = domCode.trim();
 
   if (/^Key[A-Z]$/.test(s)) return s.charCodeAt(3);
   if (/^Digit[0-9]$/.test(s)) return s.charCodeAt(5);
   if (s === "Space") return 32;
-  if (s === "Enter") return 13;
-  if (s === "Tab") return 9;
-  if (s === "Backspace") return 8;
-  if (s === "Escape") return 27;
+  if (s === "Enter") return 0x01000004; // Qt::Key_Return
+  if (s === "NumpadEnter") return 0x01000005; // Qt::Key_Enter
+  if (s === "Tab") return 0x01000001; // Qt::Key_Tab
+  if (s === "Backspace") return 0x01000003; // Qt::Key_Backspace
+  if (s === "Escape") return 0x01000000; // Qt::Key_Escape
 
-  if (s === "ArrowLeft") return 553648146;
-  if (s === "ArrowUp") return 553648147;
-  if (s === "ArrowRight") return 553648148;
-  if (s === "ArrowDown") return 553648149;
+  const KEYPAD_MOD = platform === "win32" ? 0x20000000 : 0;
+  if (s === "ArrowLeft") return 0x01000012 | KEYPAD_MOD;
+  if (s === "ArrowUp") return 0x01000013 | KEYPAD_MOD;
+  if (s === "ArrowRight") return 0x01000014 | KEYPAD_MOD;
+  if (s === "ArrowDown") return 0x01000015 | KEYPAD_MOD;
   return -1;
 }

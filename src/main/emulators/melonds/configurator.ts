@@ -5,7 +5,13 @@ import { IniEditor } from "../../utils/editors/ini";
 import { TomlEditor } from "../../utils/editors/toml";
 import { osHandler } from "../../platform";
 import { MelonDSTranslator } from "./translator";
-import type { TranslateContext } from "../translatorTypes";
+import type { TranslateContext, LearnedBinds } from "../translatorTypes";
+import type { PlayerBindings, DigitalBinding } from "../../../shared/types/controls";
+import { EngineService, getSdlProbePath, installSdlProbe } from "../../services/EngineService";
+import { runSdlProbe } from "../azahar/sdlProbe";
+import { Logger } from "../../utils/logger";
+
+const log = Logger.create("MelonDSConfigurator");
 
 function readMelonJoystickID(filePath: string): number | null {
   if (!fs.existsSync(filePath)) return null;
@@ -14,11 +20,41 @@ function readMelonJoystickID(filePath: string): number | null {
   return match ? Number(match[1]) : null;
 }
 
+function looksLikeGamepadPlayer(p1: PlayerBindings): boolean {
+  if (p1.move.type === "stick") return true;
+
+  const all: (DigitalBinding | undefined)[] = [
+    p1.face.primary, p1.face.secondary, p1.face.tertiary, p1.face.quaternary,
+    p1.shoulders.bumperL, p1.shoulders.bumperR,
+    p1.system.start, p1.system.select,
+    p1.dpad.up, p1.dpad.down, p1.dpad.left, p1.dpad.right,
+    p1.move.up, p1.move.down, p1.move.left, p1.move.right,
+  ];
+
+  return all.some((b) => b?.type === "gp_button" || b?.type === "gp_axis_digital");
+}
+
+async function resolveMelonConfigDir(platform: string, osConfigDir: string): Promise<string> {
+  if (platform !== "win32") return osConfigDir;
+
+  const enginePath = await EngineService.getEnginePath("melonds");
+  const engineDir = enginePath ? path.dirname(enginePath) : null;
+  if (!engineDir) return osConfigDir;
+
+  const hasConfigIn = (dir: string) =>
+    fs.existsSync(path.join(dir, "melonDS.toml")) || fs.existsSync(path.join(dir, "melonDS.ini"));
+
+  if (hasConfigIn(engineDir)) return engineDir;
+  if (hasConfigIn(osConfigDir)) return osConfigDir;
+  return engineDir;
+}
+
 export class MelonDSConfigurator extends BaseConfigurator {
   async configure(): Promise<void> {
     const { controls, profile, layout, effectiveProfile } = await this.resolveControls("ds");
 
-    const configDir = osHandler.getEmulatorConfigPath("melonds");
+    const platform = osHandler.getPlatform();
+    const configDir = await resolveMelonConfigDir(platform, osHandler.getEmulatorConfigPath("melonds"));
     const tomlPath = path.join(configDir, "melonDS.toml");
     const iniPath = path.join(configDir, "melonDS.ini");
 
@@ -55,11 +91,31 @@ export class MelonDSConfigurator extends BaseConfigurator {
       fs.writeFileSync(targetPath, scaffold, "utf-8");
     }
 
+    let learnedBinds: LearnedBinds | undefined;
+    if (looksLikeGamepadPlayer(effectiveProfile.player1)) {
+      try {
+        let probeHelperPath = getSdlProbePath();
+        if (!fs.existsSync(probeHelperPath)) {
+          const installed = installSdlProbe();
+          if (installed.dest) probeHelperPath = installed.dest;
+        }
+        if (fs.existsSync(probeHelperPath)) {
+          const probed = runSdlProbe({ helperPath: probeHelperPath, timeoutMs: 1500 });
+          if (probed.learned?.binds) learnedBinds = probed.learned.binds as LearnedBinds;
+        } else {
+          log.warn("SDL probe helper missing after install attempt", { probeHelperPath });
+        }
+      } catch (err) {
+        log.warn("SDL probe failed; falling back to static joy-code table", err);
+      }
+    }
+
     const ctx: TranslateContext = {
       platform: osHandler.getPlatform(),
       configDir,
       player: 1,
       controllerIds: layout.controllerIds,
+      learnedBinds,
     };
 
     const patches = new MelonDSTranslator().translate(effectiveProfile, ctx);

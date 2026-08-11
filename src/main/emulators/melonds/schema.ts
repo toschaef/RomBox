@@ -1,4 +1,5 @@
 import type { GamepadToken } from "../../../shared/controls/gamepadTokens";
+import type { LearnedBind } from "../translatorTypes";
 
 export const MELONDS = {
   ROOT: "" as const,
@@ -30,6 +31,12 @@ function encodeAxis(axisIndex: number, sign: "pos" | "neg"): number {
   return (axisIndex << 24) | (signByte << 16);
 }
 
+// hasbtn bit (0x100) set + hat number in bits 4-7 + direction bit in bits 0-3,
+function encodeHat(hatIndex: number, direction: "up" | "down" | "left" | "right"): number {
+  const dirBit = direction === "up" ? 0x1 : direction === "right" ? 0x2 : direction === "down" ? 0x4 : 0x8;
+  return 0x100 | (hatIndex << 4) | dirBit;
+}
+
 export function melondsJoyCodeForToken(token: GamepadToken): number {
   switch (token) {
     case "GP_LS_RIGHT": return encodeAxis(0, "pos");
@@ -44,4 +51,13 @@ export function melondsJoyCodeForToken(token: GamepadToken): number {
   }
 
   return TOKEN_TO_JOY_CODE[token] ?? -1;
+}
+
+/**
+ * Converts raw SDL button/axis/hat index to melonDS's packed joy-code
+ */
+export function melondsJoyCodeFromLearnedBind(bind: LearnedBind): number {
+  if (bind.kind === "button") return bind.button;
+  if (bind.kind === "axis") return encodeAxis(bind.axis, bind.direction === "+" ? "pos" : "neg");
+  return encodeHat(bind.hat, bind.direction);
 }

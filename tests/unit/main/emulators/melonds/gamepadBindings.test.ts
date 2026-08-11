@@ -160,4 +160,65 @@ describe("MelonDSTranslator gamepad bindings", () => {
     );
     expect(kb).toBeDefined();
   });
+
+  describe("with a probed physical device", () => {
+    // the static table is a guess; a probed bind for the same token must win,
+    // since it reflects whatever raw index the attached controller actually
+    // reports on this platform/backend.
+    it("prefers a probed button index over the static table", () => {
+      const base = createDefaultProfileShape().player1;
+      const patches = new MelonDSTranslator().translate(
+        profileWith({
+          face: { ...base.face, primary: { type: "gp_button", token: "GP_A" } },
+        } as Partial<PlayerBindings>),
+        { ...ctx, learnedBinds: { GP_A: { kind: "button", button: 42 } } }
+      );
+
+      expect(joyValue(patches, "A")).toBe(42);
+    });
+
+    it("packs a probed axis bind the same way as the static axis encoding", () => {
+      const base = createDefaultProfileShape().player1;
+      const patches = new MelonDSTranslator().translate(
+        profileWith({
+          dpad: {
+            ...base.dpad,
+            left: { type: "gp_axis_digital", stick: "left", axis: "x", dir: "neg", threshold: 0.65 },
+          },
+        } as Partial<PlayerBindings>),
+        { ...ctx, learnedBinds: { GP_LS_LEFT: { kind: "axis", axis: 5, direction: "-", threshold: 0.5 } } }
+      );
+
+      // axisIndex << 24 | negative-sign byte << 16
+      expect(joyValue(patches, "Left")).toBe((5 << 24) | (0x11 << 16));
+    });
+
+    it("packs a probed hat bind using melonDS's hat/direction bit layout", () => {
+      const base = createDefaultProfileShape().player1;
+      const patches = new MelonDSTranslator().translate(
+        profileWith({
+          dpad: {
+            ...base.dpad,
+            up: { type: "gp_button", token: "GP_DPAD_UP" },
+          },
+        } as Partial<PlayerBindings>),
+        { ...ctx, learnedBinds: { GP_DPAD_UP: { kind: "hat", hat: 0, direction: "up" } } }
+      );
+
+      // hasbtn flag (0x100) | hat index << 4 | up direction bit (0x1)
+      expect(joyValue(patches, "Up")).toBe(0x100 | (0 << 4) | 0x1);
+    });
+
+    it("falls back to the static table for a token the probe didn't report", () => {
+      const base = createDefaultProfileShape().player1;
+      const patches = new MelonDSTranslator().translate(
+        profileWith({
+          face: { ...base.face, primary: { type: "gp_button", token: "GP_A" } },
+        } as Partial<PlayerBindings>),
+        { ...ctx, learnedBinds: { GP_B: { kind: "button", button: 99 } } }
+      );
+
+      expect(joyValue(patches, "A")).toBe(melondsJoyCodeForToken("GP_A"));
+    });
+  });
 });
