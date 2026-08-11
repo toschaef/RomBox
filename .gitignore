@@ -1,5 +1,5 @@
 # Temp
-emulators/
+/emulators/
 **/*.local.*
 
 # Logs
@@ -106,7 +106,7 @@ out/
 
 # WIP
 /icon/
-docs/
+/docs/
 
 # Native Binaries
 bin/
