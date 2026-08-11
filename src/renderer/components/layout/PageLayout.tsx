@@ -19,8 +19,7 @@ export default function PageLayout({ title, children, actions, noPadding = false
       ">
         <h1 className="
           text-lg font-bold uppercase tracking-wider 
-          text-transparent bg-clip-text bg-linear-to-r from-accent-primary to-accent-secondary
-          drop-shadow-sm
+          text-accent-primary drop-shadow-sm
         ">
           {title}
         </h1>
