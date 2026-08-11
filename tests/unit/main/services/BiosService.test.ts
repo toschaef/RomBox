@@ -16,6 +16,7 @@ import AdmZip from "adm-zip";
 
 describe("BiosService", () => {
   const tempDir = suiteUserDataDir();
+  const originalEnv = process.env;
 
   beforeEach(() => {
     // Setup clean environment in tempUserData
@@ -23,9 +24,17 @@ describe("BiosService", () => {
       fs.rmSync(tempDir, { recursive: true, force: true });
     }
     fs.mkdirSync(tempDir, { recursive: true });
+    // WinHandler falls back to these real env vars when set, which would
+    // otherwise leak the real machine's AppData paths into this test.
+    process.env = { ...originalEnv };
+    delete process.env.USERPROFILE;
+    delete process.env.HOME;
+    delete process.env.APPDATA;
+    delete process.env.LOCALAPPDATA;
   });
 
   afterEach(() => {
+    process.env = originalEnv;
     if (fs.existsSync(tempDir)) {
       fs.rmSync(tempDir, { recursive: true, force: true });
     }

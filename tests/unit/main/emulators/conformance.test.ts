@@ -28,13 +28,31 @@ import type { PlatformRoots } from "../../../../src/main/emulators/types";
 
 const PLATFORMS: Platform[] = ["darwin", "win32"];
 
-const ROOTS: PlatformRoots = {
-  home: "/home/user",
-  appSupport: "/home/user/AppSupport",
-  preferences: "/home/user/Preferences",
-  localAppData: "/home/user/LocalAppData",
-  documents: "/home/user/Documents",
+// path.win32/path.posix normalize every separator to their own convention, so
+// a POSIX-style fixture fed through the win32 branch would no longer start
+// with itself - each platform needs roots in its own native style.
+const ROOTS_BY_PLATFORM: Partial<Record<Platform, PlatformRoots>> = {
+  darwin: {
+    home: "/home/user",
+    appSupport: "/home/user/AppSupport",
+    preferences: "/home/user/Preferences",
+    localAppData: "/home/user/LocalAppData",
+    documents: "/home/user/Documents",
+  },
+  win32: {
+    home: "C:\\Users\\user",
+    appSupport: "C:\\Users\\user\\AppSupport",
+    preferences: "C:\\Users\\user\\Preferences",
+    localAppData: "C:\\Users\\user\\LocalAppData",
+    documents: "C:\\Users\\user\\Documents",
+  },
 };
+
+function rootsFor(platform: Platform): PlatformRoots {
+  const roots = ROOTS_BY_PLATFORM[platform];
+  if (!roots) throw new Error(`No fixture roots defined for platform: ${platform}`);
+  return roots;
+}
 
 function gameFor(engineId: EngineID): Game {
   const consoleId = getConsoleIdsForEngine(engineId)[0];
@@ -86,11 +104,12 @@ describe.each(ENGINE_IDS)("%s module", (engineId) => {
     it("resolves absolute, distinct-looking paths", () => {
       if (!supported()) return;
 
-      const base = resolveBasePath(engineId, platform, ROOTS);
-      const config = resolveConfigPath(engineId, platform, ROOTS);
+      const roots = rootsFor(platform);
+      const base = resolveBasePath(engineId, platform, roots);
+      const config = resolveConfigPath(engineId, platform, roots);
 
       expect(path.isAbsolute(base)).toBe(true);
-      expect(base.startsWith(ROOTS.home)).toBe(true);
+      expect(base.startsWith(roots.home)).toBe(true);
       // config defaults to base, but must never sit above it
       expect(config.startsWith(base)).toBe(true);
     });
@@ -98,9 +117,10 @@ describe.each(ENGINE_IDS)("%s module", (engineId) => {
     it("puts BIOS inside the emulator's own directory when it needs one", () => {
       if (!supported()) return;
 
-      const bios = resolveBiosPath(engineId, platform, ROOTS);
+      const roots = rootsFor(platform);
+      const bios = resolveBiosPath(engineId, platform, roots);
       if (bios === null) return;
-      expect(bios.startsWith(resolveBasePath(engineId, platform, ROOTS))).toBe(true);
+      expect(bios.startsWith(resolveBasePath(engineId, platform, roots))).toBe(true);
     });
 
     it("resolves a save path for every console it runs", () => {
@@ -108,7 +128,7 @@ describe.each(ENGINE_IDS)("%s module", (engineId) => {
 
       for (const consoleId of getConsoleIdsForEngine(engineId)) {
         const game = { ...gameFor(engineId), consoleId } as Game;
-        const savePath = resolveSavePath(game, platform, ROOTS);
+        const savePath = resolveSavePath(game, platform, rootsFor(platform));
         expect(typeof savePath).toBe("string");
         expect(savePath.length).toBeGreaterThan(0);
       }
@@ -116,7 +136,7 @@ describe.each(ENGINE_IDS)("%s module", (engineId) => {
 
     it("rejects the platforms it does not support", () => {
       if (supported()) return;
-      expect(() => resolveBasePath(engineId, platform, ROOTS)).toThrow(/not supported/);
+      expect(() => resolveBasePath(engineId, platform, rootsFor(platform))).toThrow(/not supported/);
     });
   });
 
@@ -188,7 +208,7 @@ describe("cross-emulator invariants", () => {
   it.each(PLATFORMS)("gives every emulator a distinct base directory on %s", (platform) => {
     // two emulators sharing a base directory would make "clear platform data"
     // for one wipe the other.
-    const bases = allBasePaths(platform, ROOTS);
+    const bases = allBasePaths(platform, rootsFor(platform));
     expect(new Set(bases).size).toBe(bases.length);
   });
 

@@ -249,7 +249,7 @@ describe("clearPlatformData", () => {
     // one per registered emulator
     expect(rm).toHaveBeenCalledTimes(7);
     expect(rm).toHaveBeenCalledWith(
-      path.join("/mock/home", "Library", "Application Support", "Dolphin"),
+      path.posix.join("/mock/home", "Library", "Application Support", "Dolphin"),
       { recursive: true, force: true }
     );
   });
@@ -272,8 +272,8 @@ describe("path accessors", () => {
   it("builds roots from the home directory", () => {
     const roots = handler.getRoots();
     expect(roots.home).toBe("/mock/home");
-    expect(roots.appSupport).toBe(path.join("/mock/home", "Library", "Application Support"));
-    expect(roots.preferences).toBe(path.join("/mock/home", "Library", "Preferences"));
+    expect(roots.appSupport).toBe(path.posix.join("/mock/home", "Library", "Application Support"));
+    expect(roots.preferences).toBe(path.posix.join("/mock/home", "Library", "Preferences"));
   });
 
   it("resolves save paths per console", () => {

@@ -16,17 +16,29 @@ import { osHandler } from "../../../../../src/main/platform";
 
 describe("AresConfigurator", () => {
   const tempDir = suiteUserDataDir();
+  const originalEnv = process.env;
 
   beforeEach(() => {
     if (fs.existsSync(tempDir)) {
       fs.rmSync(tempDir, { recursive: true, force: true });
     }
     fs.mkdirSync(tempDir, { recursive: true });
+    // WinHandler falls back to these real env vars when set, which would
+    // otherwise leak the real machine's AppData paths into this test.
+    process.env = { ...originalEnv };
+    delete process.env.USERPROFILE;
+    delete process.env.HOME;
+    delete process.env.APPDATA;
+    delete process.env.LOCALAPPDATA;
+    // the expected keycodes below are macOS ones; pin the platform so this
+    // test is deterministic regardless of which OS actually runs it.
+    jest.spyOn(osHandler, "getPlatform").mockReturnValue("darwin");
     initDB();
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
+    process.env = originalEnv;
     if (fs.existsSync(tempDir)) {
       fs.rmSync(tempDir, { recursive: true, force: true });
     }

@@ -48,13 +48,13 @@ describe("MacHandler", () => {
   describe("getEmulatorConfigPath", () => {
     it("should return correct path for Dolphin", () => {
       expect(handler.getEmulatorConfigPath("dolphin")).toBe(
-        path.join("/mock/home", "Library", "Application Support", "Dolphin", "Config")
+        path.posix.join("/mock/home", "Library", "Application Support", "Dolphin", "Config")
       );
     });
 
     it("should return correct path for Mesen", () => {
       expect(handler.getEmulatorConfigPath("mesen")).toBe(
-        path.join("/mock/home", "Library", "Application Support", "Mesen2")
+        path.posix.join("/mock/home", "Library", "Application Support", "Mesen2")
       );
     });
 
@@ -66,7 +66,7 @@ describe("MacHandler", () => {
   describe("getEmulatorBasePath", () => {
     it("should return correct base path for dolphin", () => {
       expect(handler.getEmulatorBasePath("dolphin")).toBe(
-        path.join("/mock/home", "Library", "Application Support", "Dolphin")
+        path.posix.join("/mock/home", "Library", "Application Support", "Dolphin")
       );
     });
   });
@@ -75,7 +75,7 @@ describe("MacHandler", () => {
     it("should return correct save path for mesen", () => {
       const mockGame = { engineId: "mesen", filePath: "/roms/nes/game.nes", consoleId: "nes", id: "dummy", title: "Dummy", playtimeSeconds: 0, lastPlayedAt: 0 } as Game;
       expect(handler.getSavePath(mockGame)).toBe(
-        path.join("/mock/home", "Library", "Application Support", "Mesen2", "Saves")
+        path.posix.join("/mock/home", "Library", "Application Support", "Mesen2", "Saves")
       );
     });
 

@@ -22,9 +22,13 @@ describe("MesenConfigurator", () => {
     }
     fs.mkdirSync(tempDir, { recursive: true });
     initDB();
+    // the expected keycodes below are macOS ones; pin the platform so this
+    // test is deterministic regardless of which OS actually runs it.
+    jest.spyOn(osHandler, "getPlatform").mockReturnValue("darwin");
   });
 
   afterEach(() => {
+    jest.restoreAllMocks();
     if (fs.existsSync(tempDir)) {
       fs.rmSync(tempDir, { recursive: true, force: true });
     }

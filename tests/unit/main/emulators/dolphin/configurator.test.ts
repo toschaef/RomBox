@@ -38,10 +38,14 @@ describe("DolphinConfigurator", () => {
     jest.spyOn(osHandler, "getEmulatorConfigPath").mockReturnValue(
       path.join(tempDir, "Library", "Application Support", "Dolphin", "Config")
     );
+    // device strings below (Quartz/SDL) are macOS ones; pin the platform so
+    // this test is deterministic regardless of which OS actually runs it.
+    jest.spyOn(osHandler, "getPlatform").mockReturnValue("darwin");
     initDB();
   });
 
   afterEach(() => {
+    jest.restoreAllMocks();
     if (fs.existsSync(tempDir)) {
       fs.rmSync(tempDir, { recursive: true, force: true });
     }

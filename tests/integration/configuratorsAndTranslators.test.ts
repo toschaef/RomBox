@@ -33,6 +33,7 @@ import { ControlsService } from "../../src/main/services/ControlsService";
 
 describe("Configurator and Translator Pairs Integration Tests", () => {
   const tempDir = suiteUserDataDir();
+  const originalEnv = process.env;
 
   const cleanTempDir = () => {
     closeDB();
@@ -48,16 +49,31 @@ describe("Configurator and Translator Pairs Integration Tests", () => {
   beforeEach(() => {
     cleanTempDir();
     fs.mkdirSync(tempDir, { recursive: true });
+    // WinHandler falls back to these real env vars when set, which would
+    // otherwise leak the real machine's AppData paths into this test.
+    process.env = { ...originalEnv };
+    delete process.env.USERPROFILE;
+    delete process.env.HOME;
+    delete process.env.APPDATA;
+    delete process.env.LOCALAPPDATA;
     initDB();
   });
 
   afterEach(() => {
     closeDB();
     jest.restoreAllMocks();
+    process.env = originalEnv;
     cleanTempDir();
   });
 
   describe("darwin / macOS Platform Configuration", () => {
+    beforeEach(() => {
+      // the expected keycodes/device strings below are macOS ones; pin the
+      // platform so this suite is deterministic regardless of which OS
+      // actually runs it (osHandler is whatever the real host resolves to).
+      jest.spyOn(osHandler, "getPlatform").mockReturnValue("darwin");
+    });
+
     it("should configure DolphinConfigurator (GameCube) and DolphinTranslator correctly", async () => {
       const game: Game = {
         id: "wind-waker",
