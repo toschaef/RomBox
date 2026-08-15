@@ -12,7 +12,10 @@ jest.mock("../../../../src/main/services/LibraryService", () => ({
 }));
 
 jest.mock("../../../../src/main/services/SaveService", () => ({
-  SaveService: { backupSave: jest.fn().mockReturnValue({ backedUpFiles: [] }) },
+  SaveService: {
+    backupSave: jest.fn().mockReturnValue({ backedUpFiles: [] }),
+    cleanupEphemeralSaves: jest.fn().mockReturnValue({ removedFiles: [], keptFiles: [] }),
+  },
 }));
 
 jest.mock("../../../../src/main/platform", () => ({
@@ -52,6 +55,7 @@ describe("startSession", () => {
     jest.clearAllMocks();
     jest.useFakeTimers();
     (SaveService.backupSave as jest.Mock).mockReturnValue({ backedUpFiles: [] });
+    (SaveService.cleanupEphemeralSaves as jest.Mock).mockReturnValue({ removedFiles: [], keptFiles: [] });
     (BrowserWindow.getAllWindows as jest.Mock).mockReturnValue([]);
   });
 
@@ -92,6 +96,22 @@ describe("startSession", () => {
     handlers.close(0);
 
     expect(SaveService.backupSave).toHaveBeenCalledWith(game);
+  });
+
+  it("clears injected saves only after the backup ran", () => {
+    const { handlers } = spawnSession();
+
+    (SaveService.backupSave as jest.Mock).mockReturnValue({ backedUpFiles: ["smb.sav"] });
+    (SaveService.cleanupEphemeralSaves as jest.Mock).mockReturnValue({
+      removedFiles: ["smb.sav"],
+      keptFiles: [],
+    });
+    handlers.close(0);
+
+    expect(SaveService.cleanupEphemeralSaves).toHaveBeenCalledWith(game);
+    const backupOrder = (SaveService.backupSave as jest.Mock).mock.invocationCallOrder[0];
+    const cleanupOrder = (SaveService.cleanupEphemeralSaves as jest.Mock).mock.invocationCallOrder[0];
+    expect(cleanupOrder).toBeGreaterThan(backupOrder);
   });
 
   it("still backs up saves after a crash", () => {

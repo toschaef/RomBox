@@ -1,8 +1,8 @@
 import { _electron as electron, test, expect, type ElectronApplication, type Page } from '@playwright/test';
 import findExecutable from './findExecutable';
 import path from 'path';
-import fs from 'fs';
 import { EnginesPage } from './models/EnginesPage';
+import { resetUserDataDir, cleanUserDataDir } from './userDataDir';
 
 test.describe('RomBox Engines E2E Suite', () => {
   let electronApp: ElectronApplication;
@@ -10,10 +10,7 @@ test.describe('RomBox Engines E2E Suite', () => {
   const tempUserDataDir = path.join(__dirname, '../../temp-e2e-engines-userdata');
 
   test.beforeAll(async () => {
-    if (fs.existsSync(tempUserDataDir)) {
-      fs.rmSync(tempUserDataDir, { recursive: true, force: true });
-    }
-    fs.mkdirSync(tempUserDataDir, { recursive: true });
+    resetUserDataDir(tempUserDataDir);
 
     const executablePath = findExecutable();
 
@@ -40,9 +37,7 @@ test.describe('RomBox Engines E2E Suite', () => {
       await electronApp.close();
     }
     try {
-      if (fs.existsSync(tempUserDataDir)) {
-        fs.rmSync(tempUserDataDir, { recursive: true, force: true });
-      }
+      cleanUserDataDir(tempUserDataDir);
     } catch (err) {
       console.error('[E2E-Engines Teardown] Failed to clean up temp user data directory:', err);
     }

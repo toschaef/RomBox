@@ -126,6 +126,18 @@ describe("LaunchService", () => {
     expect(result.code).toBe("MISSING_BIOS");
   });
 
+  it("should proceed when the cache supplies the missing BIOS", async () => {
+    (EngineService.getEnginePath as jest.Mock).mockResolvedValue("/path/to/mesen");
+    (BiosService.getGameBiosStatus as jest.Mock)
+      .mockReturnValueOnce({ needsBios: true, biosState: "missing", missingRequiredFiles: ["bios.bin"] })
+      .mockReturnValueOnce({ needsBios: true, biosState: "installed", missingRequiredFiles: [] });
+    (osHandler.launchProcess as jest.Mock).mockReturnValue(mockChildProcess);
+
+    const result = await LaunchService.launch(mockGame);
+    expect(BiosService.ensureBiosInstalledFromCache).toHaveBeenCalledWith("nes");
+    expect(result.success).toBe(true);
+  });
+
   it("should launch emulator process successfully under normal conditions", async () => {
     (EngineService.getEnginePath as jest.Mock).mockResolvedValue("/path/to/mesen");
     (BiosService.getGameBiosStatus as jest.Mock).mockReturnValue({ needsBios: false });
