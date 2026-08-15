@@ -1,18 +1,19 @@
 import type { SettingKey, SettingsShape } from "../../shared/settings";
+import { invoke } from "./invoke";
 
 export const settingsClient = {
   get: <K extends SettingKey>(key: K) =>
-    window.electron.invoke("settings:get", key) as Promise<SettingsShape[K]>,
+    invoke<SettingsShape[K]>("settings:get", key),
 
   set: <K extends SettingKey>(key: K, value: SettingsShape[K]) =>
-    window.electron.invoke("settings:set", { key, value }) as Promise<{ ok: true }>,
+    invoke<{ ok: true }>("settings:set", { key, value }),
 
   getMany: (keys: SettingKey[]) =>
-    window.electron.invoke("settings:getMany", keys) as Promise<Partial<SettingsShape>>,
+    invoke<Partial<SettingsShape>>("settings:getMany", keys),
 
   setMany: (values: Partial<SettingsShape>) =>
-    window.electron.invoke("settings:setMany", values) as Promise<{ ok: true }>,
+    invoke<{ ok: true }>("settings:setMany", values),
 
   reset: (key?: SettingKey) =>
-    window.electron.invoke("settings:reset", key) as Promise<{ ok: true }>,
+    invoke<{ ok: true }>("settings:reset", key),
 };

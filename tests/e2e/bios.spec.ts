@@ -75,7 +75,7 @@ test.describe('RomBox Bios E2E Suite', () => {
     await expect(page.url()).toContain('/bios');
 
     // Verify initial state for PS1 when engine is not installed
-    const ps1Container = page.locator('div.rounded-sm').filter({ hasText: 'PS1' }).first();
+    const ps1Container = biosPage.getBiosRow('ps1');
     await expect(ps1Container.getByText('Not set up yet')).toBeVisible();
     await expect(ps1Container.getByText('Installed: None')).toBeVisible();
 

@@ -7,26 +7,20 @@ import type {
   SaveExportResponse,
   SaveImportResponse,
 } from "../../shared/types/saves";
+import { invoke } from "./invoke";
 
 export const saveClient = {
-  getStatus: (gameId: string) =>
-    window.electron.invoke("save:status", { gameId }) as Promise<SaveGetStatusResponse>,
+  getStatus: (gameId: string) => invoke<SaveGetStatusResponse>("save:status", { gameId }),
 
-  backup: (gameId: string) =>
-    window.electron.invoke("save:backup", { gameId }) as Promise<SaveBackupResponse>,
+  backup: (gameId: string) => invoke<SaveBackupResponse>("save:backup", { gameId }),
 
-  restore: (gameId: string) =>
-    window.electron.invoke("save:restore", { gameId }) as Promise<SaveRestoreResponse>,
+  restore: (gameId: string) => invoke<SaveRestoreResponse>("save:restore", { gameId }),
 
-  delete: (gameId: string) =>
-    window.electron.invoke("save:delete", { gameId }) as Promise<SaveDeleteResponse>,
+  delete: (gameId: string) => invoke<SaveDeleteResponse>("save:delete", { gameId }),
 
-  listAll: () =>
-    window.electron.invoke("save:list") as Promise<SaveListResponse>,
+  listAll: () => invoke<SaveListResponse>("save:list"),
 
-  export: (gameId: string) =>
-    window.electron.invoke("save:export", { gameId }) as Promise<SaveExportResponse>,
+  export: (gameId: string) => invoke<SaveExportResponse>("save:export", { gameId }),
 
-  import: (gameId: string) =>
-    window.electron.invoke("save:import", { gameId }) as Promise<SaveImportResponse>,
+  import: (gameId: string) => invoke<SaveImportResponse>("save:import", { gameId }),
 };

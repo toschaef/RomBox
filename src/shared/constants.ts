@@ -25,6 +25,8 @@ export const NOTIFICATION_MESSAGES = {
   ENGINE_INSTALLED: (displayName: string) => `${displayName} installed`,
   ENGINE_UNINSTALLED: (displayName: string) => `${displayName} uninstalled`,
   ENGINE_REPAIRED: (displayName: string) => `${displayName} repaired`,
+  ENGINES_CLEARED: () => `All emulators uninstalled`,
+  LIBRARY_CLEARED: () => `Library cleared`,
 
   // useNotifications
   ITEM_SUCCEEDED: (label: string) => `${label} succeeded`,

@@ -26,6 +26,12 @@ export class LibraryPage extends BasePage {
     await this.page.getByTestId('game-menu-button').first().click();
   }
 
+  /** delete goes through the in-app confirm modal, not a native confirm() */
+  async deleteGameFromMenu() {
+    await this.page.getByTestId('delete-game').click();
+    await this.page.getByTestId('confirm-modal-confirm').click();
+  }
+
   async search(query: string) {
     if (await this.searchBar.isVisible()) {
       await this.searchBar.fill(query);

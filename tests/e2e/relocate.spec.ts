@@ -120,10 +120,8 @@ test.describe('RomBox Game Relocation E2E Suite', () => {
   });
 
   test('keeps the relocated file on disk when the game is deleted', async () => {
-    page.on('dialog', (dialog) => dialog.accept());
-
     await libraryPage.openGameMenu();
-    await page.getByRole('button', { name: 'Delete' }).click();
+    await libraryPage.deleteGameFromMenu();
 
     await expect(libraryPage.getGameCard('moving-game')).toHaveCount(0, { timeout: 15000 });
     // the library only referenced this file - it is the user's, not rombox's

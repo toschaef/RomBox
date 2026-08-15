@@ -1,13 +1,14 @@
 import type { ConsoleID } from "../../shared/types";
 import type { BiosInstallResponse, BiosGetResponse, BiosDeleteResponse } from "../../shared/types/bios";
+import { invoke } from "./invoke";
 
 export const biosClient = {
   installBios: (payload: { consoleId: ConsoleID; filePath: string }) =>
-    window.electron.invoke("bios:install", payload) as Promise<BiosInstallResponse>,
+    invoke<BiosInstallResponse>("bios:install", payload),
 
   getAll: () =>
-    window.electron.invoke("bios:get") as Promise<BiosGetResponse>,
+    invoke<BiosGetResponse>("bios:get"),
 
   deleteBios: (payload: { consoleId: ConsoleID; fileName: string }) =>
-    window.electron.invoke("bios:delete", payload) as Promise<BiosDeleteResponse>,
+    invoke<BiosDeleteResponse>("bios:delete", payload),
 };

@@ -3,26 +3,46 @@ import { BasePage } from './BasePage';
 
 export class ControlsPage extends BasePage {
   readonly newProfileButton: Locator;
+  readonly renameProfileButton: Locator;
   readonly nameInput: Locator;
-  readonly saveButton: Locator;
   readonly profileSelect: Locator;
+  readonly consoleSelect: Locator;
 
   constructor(page: Page) {
     super(page);
     this.newProfileButton = this.page.getByRole('button', { name: 'New Profile' });
-    this.nameInput = this.page.getByPlaceholder('Profile Name');
-    this.saveButton = this.page.getByRole('button', { name: 'Save', exact: true });
-    this.profileSelect = this.page.getByRole('combobox');
+    this.renameProfileButton = this.page.getByRole('button', { name: 'Rename Current' });
+    this.nameInput = this.page.getByTestId('profile-name-input');
+    this.profileSelect = this.page.getByTestId('profile-select');
+    this.consoleSelect = this.page.getByTestId('console-select');
   }
 
   getControlCard(key: string): Locator {
-    return this.page.locator('.relative.w-full.p-4').filter({ has: this.page.getByText(key, { exact: true }) }).first();
+    return this.page
+      .getByTestId('binding-card')
+      .filter({ has: this.page.getByText(key, { exact: true }) })
+      .first();
+  }
+
+  async selectConsole(label: string) {
+    await this.consoleSelect.selectOption({ label });
+  }
+
+  /** the standard/console switch is a tablist, not a pair of plain buttons */
+  async setLayoutMode(mode: 'Standard' | 'Console') {
+    await this.page.getByRole('tab', { name: mode, exact: true }).click();
   }
 
   async createProfile(name: string) {
     await this.newProfileButton.click();
     await this.nameInput.fill(name);
-    await this.saveButton.click();
+    await this.nameInput.press('Enter');
+  }
+
+  async renameProfile(name: string) {
+    await this.renameProfileButton.click();
+    await this.nameInput.fill(name);
+    await this.nameInput.press('Enter');
   }
 
   async selectProfile(name: string) {

@@ -1,27 +1,28 @@
-import type { ConsoleID, IpcResponse } from "../../shared/types";
+import type { IpcResponse } from "../../shared/types";
 import type { EngineID, EngineInfo } from "../../shared/types/engines";
+import { invoke, on } from "./invoke";
 
 export const engineClient = {
   installEngine: (engineId: EngineID) =>
-    window.electron.invoke("engine:install-engine", engineId) as Promise<IpcResponse>,
+    invoke<IpcResponse>("engine:install-engine", engineId),
 
   deleteEngine: (engineId: EngineID) => 
-    window.electron.invoke("engine:delete-engine", engineId) as Promise<IpcResponse>,
+    invoke<IpcResponse>("engine:delete-engine", engineId),
 
   isInstalled: (engineId: EngineID) =>
-    window.electron.invoke("engine:is-installed", engineId) as Promise<boolean>,
+    invoke<boolean>("engine:is-installed", engineId),
 
   getEngines: () =>
-    window.electron.invoke("engine:get") as Promise<EngineInfo[]>,
+    invoke<EngineInfo[]>("engine:get"),
 
-  repairEngine: async (engineId: ConsoleID) => {
-    await window.electron.invoke("engine:delete-engine", engineId);
-    return window.electron.invoke("engine:install-engine", engineId) as Promise<IpcResponse>
+  repairEngine: async (engineId: EngineID) => {
+    await invoke<IpcResponse>("engine:delete-engine", engineId);
+    return invoke<IpcResponse>("engine:install-engine", engineId)
   },
 
   clear: () =>
-    window.electron.invoke("engine:clear") as Promise<IpcResponse>,
+    invoke<IpcResponse>("engine:clear"),
 
   onInstallStatusUpdate: (cb: (status: string) => void) =>
-    window.electron.on("install-status-update", (status: string) => cb(status)),
+    on("install-status-update", ((status: string) => cb(status)) as never),
 };
