@@ -52,15 +52,6 @@ module.exports = {
     'src/main/platform/**/*.ts'
   ],
   coverageDirectory: '<rootDir>/test-results/coverage',
-  // Thresholds are ratchets set just below measured coverage: they exist to
-  // stop regressions, not to describe a target. Raise them when coverage
-  // improves; do not lower them to make a change pass.
-  //
-  // Note these were previously declared but never enforced - collectCoverage
-  // was false and no script passed --coverage - so some were aspirational.
-  // ratchets set just below measured coverage: they stop regressions, they are
-  // not targets. raise them when coverage improves; do not lower them to make a
-  // change pass.
   coverageThreshold: {
     './src/main/data/': {
       branches: 88, functions: 95, lines: 95, statements: 95
