@@ -125,22 +125,15 @@ describe("Milestone 3 Empirical Stress Test Harness - Cross-Platform Integration
         const settings = JSON.parse(fs.readFileSync(settingsJsonPath, "utf-8"));
         expect(settings.Snes?.Port1?.Mapping1).toBeDefined();
 
+        // Windows and macOS both funnel into Mesen's shared KeyDefinition
+        // ordinal space, so every key produces the same value on both platforms.
         const m1 = settings.Snes.Port1.Mapping1;
-        if (plat === "win32") {
-          expect(m1.A).toBe(85); // VK KeyU
-          expect(m1.B).toBe(73); // VK KeyI
-          expect(m1.X).toBe(79); // VK KeyO
-          expect(m1.Y).toBe(80); // VK KeyP
-          expect(m1.Start).toBe(84); // VK KeyT
-          expect(m1.Select).toBe(89); // VK KeyY
-        } else {
-          expect(m1.A).toBe(64); // Apple KeyU
-          expect(m1.B).toBe(52); // Apple KeyI mapped to Mesen B
-          expect(m1.X).toBe(58); // Apple KeyO mapped to Mesen X
-          expect(m1.Y).toBe(59); // Apple KeyP mapped to Mesen Y
-          expect(m1.Start).toBe(63); // Apple KeyT
-          expect(m1.Select).toBe(68); // Apple KeyY
-        }
+        expect(m1.A).toBe(64); // KeyU
+        expect(m1.B).toBe(52); // KeyI mapped to Mesen B
+        expect(m1.X).toBe(58); // KeyO mapped to Mesen X
+        expect(m1.Y).toBe(59); // KeyP mapped to Mesen Y
+        expect(m1.Start).toBe(63); // KeyT
+        expect(m1.Select).toBe(68); // KeyY
       });
 
       it(`3. Ares deep assertion on ${plat}`, async () => {

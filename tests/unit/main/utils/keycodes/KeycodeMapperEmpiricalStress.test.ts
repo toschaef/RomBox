@@ -212,8 +212,9 @@ describe("Empirical KeycodeMapper & Key Translators Stress Test", () => {
         // KeyJ (Face Primary)
         // On darwin, KeyJ -> 38 -> MESEN_KEYCODE_MAP_128[38] -> 53
         expect(mapping1Darwin.A).toBe(53);
-        // On win32, KeyJ -> charCodeAt(0) -> 74
-        expect(mapping1Win32.A).toBe(74);
+        // On win32, KeyJ -> shared KeyDefinition ordinal -> 53 (same as darwin,
+        // since both platforms funnel into the same ordinal space)
+        expect(mapping1Win32.A).toBe(53);
       } else {
         throw new Error("Expected json-set patch kind");
       }

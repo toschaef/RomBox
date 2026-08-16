@@ -31,8 +31,9 @@ export function runSdlProbe(args: {
   preferredGuid?: string;
   listen?: boolean;
   deviceIndex?: number;
+  forceDirectInputBackend?: boolean;
 }): { learned: AzaharLearnedSDL | null; rawStdout: string; rawStderr: string; exitCode: number | null } {
-  const { helperPath, timeoutMs = 1500, preferredGuid, listen, deviceIndex } = args;
+  const { helperPath, timeoutMs = 1500, preferredGuid, listen, deviceIndex, forceDirectInputBackend } = args;
 
   const helperArgs: string[] = [];
   if (preferredGuid) helperArgs.push("--guid", preferredGuid);
@@ -43,13 +44,14 @@ export function runSdlProbe(args: {
     encoding: "utf-8",
     timeout: timeoutMs,
     windowsHide: true,
+    ...(forceDirectInputBackend
+      ? { env: { ...process.env, SDL_JOYSTICK_HIDAPI: "0", SDL_JOYSTICK_RAWINPUT: "0" } }
+      : {}),
   });
 
   const stdout = (res.stdout ?? "").trim();
   const stderr = (res.stderr ?? "").trim();
 
-  // If we are listening, we expect a different payload but DolphinTranslator doesn't care about `learned` anyway.
-  // It just prints stdout. We still try to parse it.
   const parsed = safeJsonParse<AzaharLearnedSDL>(stdout);
   
   if (listen) {

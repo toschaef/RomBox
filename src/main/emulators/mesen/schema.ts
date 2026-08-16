@@ -1,4 +1,5 @@
 import type { ConsoleID } from "../../../shared/types";
+import type { GamepadToken } from "../../../shared/controls/gamepadTokens";
 
 export const BASE_GAMEPAD = 0x1000;
 
@@ -70,6 +71,43 @@ export const APPLE_KEYCODE_BY_CODE: Record<string, number> = Object.assign(Objec
   NumLock: 71, NumpadDivide: 75, NumpadMultiply: 67, NumpadSubtract: 78,
   NumpadAdd: 69, NumpadDecimal: 65, NumpadEnter: 76, NumpadEqual: 81,
 });
+
+export const MESEN_WIN32_DI_BASE = 0x2000;
+
+function mesenDirectInputCode(deviceIndex: number, offset: number): number {
+  return MESEN_WIN32_DI_BASE + deviceIndex * 0x100 + offset;
+}
+
+type StickDir = "up" | "down" | "left" | "right";
+
+const DI_LEFT_STICK_OFFSET: Record<StickDir, number> = { up: 0, down: 1, left: 2, right: 3 };
+const DI_HAT_OFFSET: Record<StickDir, number> = { up: 12, down: 13, right: 14, left: 15 };
+const DI_RIGHT_STICK_OFFSET: Record<StickDir, number> = { left: 8, right: 9, up: 10, down: 11 };
+
+export function mesenDirectInputHatCode(deviceIndex: number, dir: StickDir): number {
+  return mesenDirectInputCode(deviceIndex, DI_HAT_OFFSET[dir]);
+}
+
+export function mesenDirectInputStickCode(deviceIndex: number, stick: "left" | "right", dir: StickDir): number {
+  return mesenDirectInputCode(deviceIndex, (stick === "left" ? DI_LEFT_STICK_OFFSET : DI_RIGHT_STICK_OFFSET)[dir]);
+}
+
+export function mesenDirectInputButtonCode(deviceIndex: number, rawButtonIndex0Based: number): number {
+  return mesenDirectInputCode(deviceIndex, 16 + rawButtonIndex0Based);
+}
+
+const DI_AXIS_TO_CASE_BASE = [2, 0, 8, 6, 4, 10]; // indexed by X,Y,Z,Rx,Ry,Rz
+export function mesenDirectInputAxisCode(deviceIndex: number, axis: number, sign: "+" | "-"): number {
+  const base = DI_AXIS_TO_CASE_BASE[axis] ?? axis * 2;
+  return mesenDirectInputCode(deviceIndex, base + (sign === "-" ? 0 : 1));
+}
+
+export const MESEN_WIN32_DI_FALLBACK_BUTTON: Partial<Record<GamepadToken, number>> = {
+  GP_X: 0, GP_A: 1, GP_B: 2, GP_Y: 3,
+  GP_L1: 4, GP_R1: 5, GP_L2: 6, GP_R2: 7,
+  GP_SELECT: 8, GP_START: 9,
+  GP_L3: 10, GP_R3: 11,
+};
 
 export const MESEN_BUCKET_BY_CONSOLE: Partial<Record<ConsoleID, string>> = {
   nes: "Nes",

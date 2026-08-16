@@ -11,8 +11,8 @@ describe("schema -> KeycodeMapper bridge", () => {
     });
 
     it("resolves a letter key on Windows", () => {
-      // win32 virtual-key codes are the ASCII code of the uppercase letter.
-      expect(getMesenKeyboardCode("KeyA", "win32")).toBe(65);
+      // Mesen's Windows UI forwards Avalonia's Key enum ordinal, not a VK code.
+      expect(getMesenKeyboardCode("KeyA", "win32")).toBe(44);
     });
 
     it("returns null for a code it cannot map", () => {

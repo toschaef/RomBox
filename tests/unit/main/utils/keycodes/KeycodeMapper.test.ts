@@ -13,17 +13,26 @@ describe("KeycodeMapper", () => {
       expect(KeycodeMapper.toKeycode("mesen", "Digit3", "darwin")).toBe(37);
     });
 
-    it("should map DOM key codes to Windows VK codes on win32", () => {
-      // KeyA -> 65 (VK_A)
-      expect(KeycodeMapper.toKeycode("mesen", "KeyA", "win32")).toBe(65);
-      // KeyW -> 87 (VK_W)
-      expect(KeycodeMapper.toKeycode("mesen", "KeyW", "win32")).toBe(87);
-      // Space -> 32
-      expect(KeycodeMapper.toKeycode("mesen", "Space", "win32")).toBe(32);
-      // ArrowUp -> 38
-      expect(KeycodeMapper.toKeycode("mesen", "ArrowUp", "win32")).toBe(38);
-      // ShiftLeft -> 160
-      expect(KeycodeMapper.toKeycode("mesen", "ShiftLeft", "win32")).toBe(160);
+    it("should map DOM key codes to Mesen's shared KeyDefinition ordinals on win32", () => {
+      // Mesen's Windows UI forwards Avalonia's Key enum ordinal (KeyDefinitions.h),
+      // not a Win32 VK code - these values must match that shared table, and thus
+      // match the darwin-side result for the same physical key (see below).
+      // KeyA -> 44
+      expect(KeycodeMapper.toKeycode("mesen", "KeyA", "win32")).toBe(44);
+      // KeyW -> 66
+      expect(KeycodeMapper.toKeycode("mesen", "KeyW", "win32")).toBe(66);
+      // Space -> 18
+      expect(KeycodeMapper.toKeycode("mesen", "Space", "win32")).toBe(18);
+      // ArrowUp -> 24
+      expect(KeycodeMapper.toKeycode("mesen", "ArrowUp", "win32")).toBe(24);
+      // ShiftLeft -> 116
+      expect(KeycodeMapper.toKeycode("mesen", "ShiftLeft", "win32")).toBe(116);
+
+      // darwin and win32 both funnel into the same shared ordinal space, so the
+      // same physical key must produce the same final value on both platforms.
+      expect(KeycodeMapper.toKeycode("mesen", "KeyW", "win32")).toBe(
+        KeycodeMapper.toKeycode("mesen", "KeyW", "darwin")
+      );
     });
   });
 
@@ -76,9 +85,9 @@ describe("KeycodeMapper", () => {
 
   describe("Instance & alias methods", () => {
     it("should work using instance methods and aliases", () => {
-      expect(keycodeMapper.toKeycode("mesen", "KeyA", "win32")).toBe(65);
-      expect(KeycodeMapper.resolve("mesen", "KeyA", "win32")).toBe(65);
-      expect(keycodeMapper.resolve("mesen", "KeyA", "win32")).toBe(65);
+      expect(keycodeMapper.toKeycode("mesen", "KeyA", "win32")).toBe(44);
+      expect(KeycodeMapper.resolve("mesen", "KeyA", "win32")).toBe(44);
+      expect(keycodeMapper.resolve("mesen", "KeyA", "win32")).toBe(44);
     });
 
     it("should return null for unknown engines or invalid key codes", () => {
@@ -104,8 +113,8 @@ describe("KeycodeMapper", () => {
       // Mesen darwin & win32 punctuation & F1-F12 & Numpad
       expect(typeof KeycodeMapper.toKeycode("mesen", "Comma", "darwin")).toBe("number");
       expect(typeof KeycodeMapper.toKeycode("mesen", "Semicolon", "win32")).toBe("number");
-      expect(KeycodeMapper.toKeycode("mesen", "F1", "win32")).toBe(112);
-      expect(KeycodeMapper.toKeycode("mesen", "Numpad0", "win32")).toBe(96);
+      expect(KeycodeMapper.toKeycode("mesen", "F1", "win32")).toBe(90);
+      expect(KeycodeMapper.toKeycode("mesen", "Numpad0", "win32")).toBe(74);
 
       // Ares win32 punctuation & F1-F12 & Numpad (index into rawinput key list, not raw VK codes)
       expect(KeycodeMapper.toKeycode("ares", "Comma", "win32")).toBe(66);

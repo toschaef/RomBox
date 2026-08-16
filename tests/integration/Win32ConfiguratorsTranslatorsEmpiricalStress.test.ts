@@ -145,7 +145,7 @@ describe("M3 Integration Stress Test - Win32 Configurators & Translators for All
   });
 
   describe("2. Mesen (NES & SNES) Win32 Integration & Stress", () => {
-    it("should configure Mesen NES on win32 with Virtual Keycodes (KeyU=85, KeyT=84)", async () => {
+    it("should configure Mesen NES on win32 with shared KeyDefinition ordinals (KeyU=64, KeyT=63)", async () => {
       const configurator = new MesenConfigurator("nes");
       await configurator.configure();
 
@@ -155,8 +155,8 @@ describe("M3 Integration Stress Test - Win32 Configurators & Translators for All
 
       const settings = JSON.parse(fs.readFileSync(settingsPath, "utf-8"));
       expect(settings.Nes.Port1.Type).toBe("NesController");
-      expect(settings.Nes.Port1.Mapping1.A).toBe(85);
-      expect(settings.Nes.Port1.Mapping1.Start).toBe(84);
+      expect(settings.Nes.Port1.Mapping1.A).toBe(64);
+      expect(settings.Nes.Port1.Mapping1.Start).toBe(63);
     });
 
     it("should configure Mesen SNES on win32 and produce valid settings JSON", async () => {
@@ -167,7 +167,7 @@ describe("M3 Integration Stress Test - Win32 Configurators & Translators for All
       const settingsPath = path.join(configDir, "settings.json");
       const settings = JSON.parse(fs.readFileSync(settingsPath, "utf-8"));
       expect(settings.Snes.Port1.Type).toBe("SnesController");
-      expect(settings.Snes.Port1.Mapping1.A).toBe(85);
+      expect(settings.Snes.Port1.Mapping1.A).toBe(64);
     });
   });
 

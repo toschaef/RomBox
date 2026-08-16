@@ -127,15 +127,10 @@ describe("Cross-Platform (win32 & darwin) Integration Tests for POC Emulators", 
         expect(settings.Snes?.Port1?.Mapping1).toBeDefined();
         const mapping1 = settings.Snes.Port1.Mapping1;
 
-        if (plat === "win32") {
-          // Windows VK code for 'KeyU' is 85, 'KeyT' is 84
-          expect(mapping1.A).toBe(85);
-          expect(mapping1.Start).toBe(84);
-        } else {
-          // macOS Apple keycode for 'KeyU' mapped to 64, 'KeyT' to 63
-          expect(mapping1.A).toBe(64);
-          expect(mapping1.Start).toBe(63);
-        }
+        // Windows and macOS both funnel into Mesen's shared KeyDefinition
+        // ordinal space, so 'KeyU' -> 64 and 'KeyT' -> 63 on both platforms.
+        expect(mapping1.A).toBe(64);
+        expect(mapping1.Start).toBe(63);
       });
 
       it(`should configure Ares with platform-appropriate keycodes on ${plat}`, async () => {

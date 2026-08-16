@@ -399,7 +399,7 @@ describe("Configurator and Translator Pairs Integration Tests", () => {
       }
     });
 
-    it("2. Mesen: should configure Mesen for win32 with VK keycode mapping in settings.json", async () => {
+    it("2. Mesen: should configure Mesen for win32 with shared KeyDefinition ordinal mapping in settings.json", async () => {
       const configurator = new MesenConfigurator("nes");
       await configurator.configure();
 
@@ -412,10 +412,11 @@ describe("Configurator and Translator Pairs Integration Tests", () => {
       const settings = JSON.parse(fs.readFileSync(settingsJsonPath, "utf-8"));
       expect(settings.Nes?.Port1?.Type).toBe("NesController");
 
-      // Verify Win32 VK mapping: 'KeyU' -> 85 (ASCII U), 'KeyT' -> 84 (ASCII T)
+      // Mesen's Windows UI forwards Avalonia's Key enum ordinal, not a VK code:
+      // 'KeyU' -> 64, 'KeyT' -> 63 (the same shared ordinals darwin produces).
       const mapping1 = settings.Nes.Port1.Mapping1;
-      expect(mapping1.A).toBe(85);
-      expect(mapping1.Start).toBe(84);
+      expect(mapping1.A).toBe(64);
+      expect(mapping1.Start).toBe(63);
     });
 
     it("3. MelonDS: should configure MelonDS for win32 with AppData path, TOML patch output, and joystick ID", async () => {
