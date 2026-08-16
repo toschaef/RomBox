@@ -49,7 +49,7 @@ describe("M3 Empirical Stress Test - WinHandler Edge Cases", () => {
     it("should fallback to homedir when USERPROFILE and HOME are completely missing", () => {
       const configPath = handler.getEmulatorConfigPath("dolphin");
       expect(configPath).toBe(
-        path.join("C:\\Users\\DefaultFallbackUser", "AppData", "Roaming", "Dolphin Emulator", "Config")
+        path.win32.join("C:\\Users\\DefaultFallbackUser", "AppData", "Roaming", "Dolphin Emulator", "Config")
       );
     });
 
@@ -59,7 +59,7 @@ describe("M3 Empirical Stress Test - WinHandler Edge Cases", () => {
 
       const configPath = handler.getEmulatorConfigPath("dolphin");
       expect(configPath).toBe(
-        path.join("D:\\Users\\CustomUserProfile", "AppData", "Roaming", "Dolphin Emulator", "Config")
+        path.win32.join("D:\\Users\\CustomUserProfile", "AppData", "Roaming", "Dolphin Emulator", "Config")
       );
     });
 
@@ -68,7 +68,7 @@ describe("M3 Empirical Stress Test - WinHandler Edge Cases", () => {
 
       const configPath = handler.getEmulatorConfigPath("dolphin");
       expect(configPath).toBe(
-        path.join("E:\\Users\\CustomHome", "AppData", "Roaming", "Dolphin Emulator", "Config")
+        path.win32.join("E:\\Users\\CustomHome", "AppData", "Roaming", "Dolphin Emulator", "Config")
       );
     });
 
@@ -77,10 +77,10 @@ describe("M3 Empirical Stress Test - WinHandler Edge Cases", () => {
       process.env.LOCALAPPDATA = "Y:\\CustomAppData\\Local";
 
       expect(handler.getEmulatorConfigPath("dolphin")).toBe(
-        path.join("X:\\CustomAppData\\Roaming", "Dolphin Emulator", "Config")
+        path.win32.join("X:\\CustomAppData\\Roaming", "Dolphin Emulator", "Config")
       );
       expect(handler.getEmulatorConfigPath("ares")).toBe(
-        path.join("Y:\\CustomAppData\\Local", "ares")
+        path.win32.join("Y:\\CustomAppData\\Local", "ares")
       );
     });
 
@@ -89,10 +89,10 @@ describe("M3 Empirical Stress Test - WinHandler Edge Cases", () => {
       process.env.LOCALAPPDATA = "C:\\Users\\José & María\\App Data (Local)";
 
       expect(handler.getEmulatorConfigPath("azahar")).toBe(
-        path.join("C:\\Users\\José & María\\App Data (Roaming)", "Azahar", "config")
+        path.win32.join("C:\\Users\\José & María\\App Data (Roaming)", "Azahar", "config")
       );
       expect(handler.getEmulatorConfigPath("melonds")).toBe(
-        path.join("C:\\Users\\José & María\\App Data (Local)", "melonDS")
+        path.win32.join("C:\\Users\\José & María\\App Data (Local)", "melonDS")
       );
     });
   });
@@ -203,13 +203,13 @@ describe("M3 Empirical Stress Test - WinHandler Edge Cases", () => {
       // (AppData/Mesen2 and Documents/Dolphin Emulator) that no emulator
       // actually uses, and would silently miss any emulator added later.
       const expected = [
-        path.join("C:\\Users\\Test", "Documents", "Mesen2"),
-        path.join("C:\\AppData\\Local", "melonDS"),
-        path.join("C:\\AppData\\Roaming", "Azahar"),
-        path.join("C:\\AppData\\Roaming", "Dolphin Emulator"),
-        path.join("C:\\AppData\\Local", "ares"),
-        path.join("C:\\Users\\Test", "Documents", "DuckStation"),
-        path.join("C:\\Users\\Test", "Documents", "PCSX2"),
+        path.win32.join("C:\\Users\\Test", "Documents", "Mesen2"),
+        path.win32.join("C:\\AppData\\Local", "melonDS"),
+        path.win32.join("C:\\AppData\\Roaming", "Azahar"),
+        path.win32.join("C:\\AppData\\Roaming", "Dolphin Emulator"),
+        path.win32.join("C:\\AppData\\Local", "ares"),
+        path.win32.join("C:\\Users\\Test", "Documents", "DuckStation"),
+        path.win32.join("C:\\Users\\Test", "Documents", "PCSX2"),
       ];
 
       expect(fs.promises.rm).toHaveBeenCalledTimes(expected.length);

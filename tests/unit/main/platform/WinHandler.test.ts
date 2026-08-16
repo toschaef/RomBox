@@ -61,43 +61,43 @@ describe("WinHandler", () => {
 
   describe("getEmulatorConfigPath", () => {
     it("should return correct path for dolphin", () => {
-      const expected = path.join("C:\\Users\\TestUser", "AppData", "Roaming", "Dolphin Emulator", "Config");
+      const expected = path.win32.join("C:\\Users\\TestUser", "AppData", "Roaming", "Dolphin Emulator", "Config");
       expect(handler.getEmulatorConfigPath("dolphin")).toBe(expected);
     });
 
     it("should return correct path for mesen", () => {
       expect(handler.getEmulatorConfigPath("mesen")).toBe(
-        path.join("C:\\Users\\TestUser", "Documents", "Mesen2")
+        path.win32.join("C:\\Users\\TestUser", "Documents", "Mesen2")
       );
     });
 
     it("should return correct path for ares", () => {
       expect(handler.getEmulatorConfigPath("ares")).toBe(
-        path.join("C:\\Users\\TestUser", "AppData", "Local", "ares")
+        path.win32.join("C:\\Users\\TestUser", "AppData", "Local", "ares")
       );
     });
 
     it("should return correct path for melonds", () => {
       expect(handler.getEmulatorConfigPath("melonds")).toBe(
-        path.join("C:\\Users\\TestUser", "AppData", "Local", "melonDS")
+        path.win32.join("C:\\Users\\TestUser", "AppData", "Local", "melonDS")
       );
     });
 
     it("should return correct path for azahar", () => {
       expect(handler.getEmulatorConfigPath("azahar")).toBe(
-        path.join("C:\\Users\\TestUser", "AppData", "Roaming", "Azahar", "config")
+        path.win32.join("C:\\Users\\TestUser", "AppData", "Roaming", "Azahar", "config")
       );
     });
 
     it("should return correct path for pcsx2", () => {
       expect(handler.getEmulatorConfigPath("pcsx2")).toBe(
-        path.join("C:\\Users\\TestUser", "Documents", "PCSX2", "inis")
+        path.win32.join("C:\\Users\\TestUser", "Documents", "PCSX2", "inis")
       );
     });
 
     it("should return correct path for duckstation", () => {
       expect(handler.getEmulatorConfigPath("duckstation")).toBe(
-        path.join("C:\\Users\\TestUser", "Documents", "DuckStation")
+        path.win32.join("C:\\Users\\TestUser", "Documents", "DuckStation")
       );
     });
 
@@ -111,43 +111,43 @@ describe("WinHandler", () => {
   describe("getEmulatorBasePath", () => {
     it("should return correct base path for dolphin", () => {
       expect(handler.getEmulatorBasePath("dolphin")).toBe(
-        path.join("C:\\Users\\TestUser", "AppData", "Roaming", "Dolphin Emulator")
+        path.win32.join("C:\\Users\\TestUser", "AppData", "Roaming", "Dolphin Emulator")
       );
     });
 
     it("should return correct base path for mesen", () => {
       expect(handler.getEmulatorBasePath("mesen")).toBe(
-        path.join("C:\\Users\\TestUser", "Documents", "Mesen2")
+        path.win32.join("C:\\Users\\TestUser", "Documents", "Mesen2")
       );
     });
 
     it("should return correct base path for ares", () => {
       expect(handler.getEmulatorBasePath("ares")).toBe(
-        path.join("C:\\Users\\TestUser", "AppData", "Local", "ares")
+        path.win32.join("C:\\Users\\TestUser", "AppData", "Local", "ares")
       );
     });
 
     it("should return correct base path for melonds", () => {
       expect(handler.getEmulatorBasePath("melonds")).toBe(
-        path.join("C:\\Users\\TestUser", "AppData", "Local", "melonDS")
+        path.win32.join("C:\\Users\\TestUser", "AppData", "Local", "melonDS")
       );
     });
 
     it("should return correct base path for azahar", () => {
       expect(handler.getEmulatorBasePath("azahar")).toBe(
-        path.join("C:\\Users\\TestUser", "AppData", "Roaming", "Azahar")
+        path.win32.join("C:\\Users\\TestUser", "AppData", "Roaming", "Azahar")
       );
     });
 
     it("should return correct base path for pcsx2", () => {
       expect(handler.getEmulatorBasePath("pcsx2")).toBe(
-        path.join("C:\\Users\\TestUser", "Documents", "PCSX2")
+        path.win32.join("C:\\Users\\TestUser", "Documents", "PCSX2")
       );
     });
 
     it("should return correct base path for duckstation", () => {
       expect(handler.getEmulatorBasePath("duckstation")).toBe(
-        path.join("C:\\Users\\TestUser", "Documents", "DuckStation")
+        path.win32.join("C:\\Users\\TestUser", "Documents", "DuckStation")
       );
     });
 
@@ -162,52 +162,52 @@ describe("WinHandler", () => {
     it("should return correct save path for mesen", () => {
       const game = { engineId: "mesen", filePath: "C:/roms/game.nes" } as Game;
       expect(handler.getSavePath(game)).toBe(
-        path.join("C:\\Users\\TestUser", "Documents", "Mesen2", "Saves")
+        path.win32.join("C:\\Users\\TestUser", "Documents", "Mesen2", "Saves")
       );
     });
 
     it("should return dirname for melonds", () => {
       const game = { engineId: "melonds", filePath: "/roms/ds/game.nds" } as Game;
-      expect(handler.getSavePath(game)).toBe(path.dirname("/roms/ds/game.nds"));
+      expect(handler.getSavePath(game)).toBe(path.win32.dirname("/roms/ds/game.nds"));
     });
 
     it("should return Wii path for dolphin when consoleId is wii", () => {
       const game = { engineId: "dolphin", consoleId: "wii" } as Game;
       expect(handler.getSavePath(game)).toBe(
-        path.join("C:\\Users\\TestUser", "AppData", "Roaming", "Dolphin Emulator", "Wii")
+        path.win32.join("C:\\Users\\TestUser", "AppData", "Roaming", "Dolphin Emulator", "Wii")
       );
     });
 
     it("should return GC path for dolphin when consoleId is gc", () => {
       const game = { engineId: "dolphin", consoleId: "gc" } as Game;
       expect(handler.getSavePath(game)).toBe(
-        path.join("C:\\Users\\TestUser", "AppData", "Roaming", "Dolphin Emulator", "GC")
+        path.win32.join("C:\\Users\\TestUser", "AppData", "Roaming", "Dolphin Emulator", "GC")
       );
     });
 
     it("should return correct path for azahar", () => {
       const game = { engineId: "azahar" } as Game;
       expect(handler.getSavePath(game)).toBe(
-        path.join("C:\\Users\\TestUser", "AppData", "Roaming", "Azahar", "sdmc")
+        path.win32.join("C:\\Users\\TestUser", "AppData", "Roaming", "Azahar", "sdmc")
       );
     });
 
     it("should return the ROM directory for ares, which saves next to the ROM", () => {
-      const game = { engineId: "ares", filePath: path.join("C:\\roms", "n64", "Mario Kart 64.z64") } as Game;
-      expect(handler.getSavePath(game)).toBe(path.join("C:\\roms", "n64"));
+      const game = { engineId: "ares", filePath: path.win32.join("C:\\roms", "n64", "Mario Kart 64.z64") } as Game;
+      expect(handler.getSavePath(game)).toBe(path.win32.join("C:\\roms", "n64"));
     });
 
     it("should return correct path for duckstation", () => {
       const game = { engineId: "duckstation" } as Game;
       expect(handler.getSavePath(game)).toBe(
-        path.join("C:\\Users\\TestUser", "Documents", "DuckStation", "memcards")
+        path.win32.join("C:\\Users\\TestUser", "Documents", "DuckStation", "memcards")
       );
     });
 
     it("should return correct path for pcsx2", () => {
       const game = { engineId: "pcsx2" } as Game;
       expect(handler.getSavePath(game)).toBe(
-        path.join("C:\\Users\\TestUser", "Documents", "PCSX2", "memcards")
+        path.win32.join("C:\\Users\\TestUser", "Documents", "PCSX2", "memcards")
       );
     });
 
@@ -224,28 +224,28 @@ describe("WinHandler", () => {
     // it was never called outside these tests.
     it("puts Mesen firmware under its Documents profile", () => {
       expect(handler.getBiosPath("mesen")).toBe(
-        path.join("C:\\Users\\TestUser", "Documents", "Mesen2", "Firmware")
+        path.win32.join("C:\\Users\\TestUser", "Documents", "Mesen2", "Firmware")
       );
     });
 
     it("puts melonDS firmware in its base directory", () => {
       expect(handler.getBiosPath("melonds")).toBe(
-        path.join("C:\\Users\\TestUser", "AppData", "Local", "melonDS")
+        path.win32.join("C:\\Users\\TestUser", "AppData", "Local", "melonDS")
       );
     });
 
     it("puts Azahar system data in its base directory", () => {
       expect(handler.getBiosPath("azahar")).toBe(
-        path.join("C:\\Users\\TestUser", "AppData", "Roaming", "Azahar")
+        path.win32.join("C:\\Users\\TestUser", "AppData", "Roaming", "Azahar")
       );
     });
 
     it("puts PlayStation BIOSes in a bios subdirectory", () => {
       expect(handler.getBiosPath("pcsx2")).toBe(
-        path.join("C:\\Users\\TestUser", "Documents", "PCSX2", "bios")
+        path.win32.join("C:\\Users\\TestUser", "Documents", "PCSX2", "bios")
       );
       expect(handler.getBiosPath("duckstation")).toBe(
-        path.join("C:\\Users\\TestUser", "Documents", "DuckStation", "bios")
+        path.win32.join("C:\\Users\\TestUser", "Documents", "DuckStation", "bios")
       );
     });
 
@@ -315,11 +315,11 @@ describe("WinHandler", () => {
       // getEmulatorBasePath returns. The previous hardcoded cleanup list named
       // appData/Roaming/Mesen2 and so never cleaned Mesen at all.
       expect(fs.promises.rm).toHaveBeenCalledWith(
-        path.join("C:\\Users\\TestUser", "Documents", "Mesen2"),
+        path.win32.join("C:\\Users\\TestUser", "Documents", "Mesen2"),
         { recursive: true, force: true }
       );
       expect(fs.promises.rm).toHaveBeenCalledWith(
-        path.join("C:\\Users\\TestUser", "AppData", "Local", "ares"),
+        path.win32.join("C:\\Users\\TestUser", "AppData", "Local", "ares"),
         { recursive: true, force: true }
       );
     });
@@ -337,7 +337,7 @@ describe("WinHandler", () => {
       await handler.installDependency("C:\\src\\dep.dll", "C:\\target", "dep", "target.dll");
       expect(fs.promises.copyFile).toHaveBeenCalledWith(
         "C:\\src\\dep.dll",
-        path.join("C:\\target", "target.dll")
+        path.win32.join("C:\\target", "target.dll")
       );
     });
   });

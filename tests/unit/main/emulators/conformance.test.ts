@@ -108,7 +108,9 @@ describe.each(ENGINE_IDS)("%s module", (engineId) => {
       const base = resolveBasePath(engineId, platform, roots);
       const config = resolveConfigPath(engineId, platform, roots);
 
-      expect(path.isAbsolute(base)).toBe(true);
+      // paths are resolved for the target platform, not the host, so absolute
+      // means absolute in that platform's own convention.
+      expect(path[platform === "win32" ? "win32" : "posix"].isAbsolute(base)).toBe(true);
       expect(base.startsWith(roots.home)).toBe(true);
       // config defaults to base, but must never sit above it
       expect(config.startsWith(base)).toBe(true);

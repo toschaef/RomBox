@@ -10,21 +10,14 @@ jest.mock("os", () => {
 import path from "path";
 import fs from "fs";
 import type { Game } from "../../src/shared/types";
+import { cleanTempDirCrossPlatform } from "../helpers/tempDirs";
 
 describe("Cross-Platform (win32 & darwin) Integration Tests for POC Emulators", () => {
   const tempDir = path.resolve(__dirname, "../temp-userdata-crossplatform");
   const originalPlatform = process.platform;
   const originalEnv = process.env;
 
-  const cleanTempDir = () => {
-    if (fs.existsSync(tempDir)) {
-      try {
-        fs.rmSync(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
-      } catch {
-        // Ignore cleanup error if directory locked temporarily
-      }
-    }
-  };
+  const cleanTempDir = () => cleanTempDirCrossPlatform(tempDir);
 
   beforeEach(() => {
     cleanTempDir();
