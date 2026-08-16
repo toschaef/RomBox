@@ -25,7 +25,7 @@ test.describe('RomBox Controls E2E Suite', () => {
     } else {
       electronApp = await electron.launch({
         args: [
-          path.join(__dirname, '../../'),
+          path.resolve(__dirname, '../../'),
           `--user-data-dir=${tempUserDataDir}`,
           '--hidden-test-window'
         ]

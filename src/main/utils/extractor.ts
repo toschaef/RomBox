@@ -10,7 +10,15 @@ import { Logger } from './logger';
 
 const log = Logger.create('Extractor');
 
-const pathTo7zip = sevenBin.path7za;
+function resolveUnpackedPath(p: string): string {
+  const asarSegment = `${path.sep}app.asar${path.sep}`;
+  if (p.includes(asarSegment)) {
+    return p.replace(asarSegment, `${path.sep}app.asar.unpacked${path.sep}`);
+  }
+  return p;
+}
+
+const pathTo7zip = resolveUnpackedPath(path.normalize(sevenBin.path7za));
 
 // fix permissions on load
 if (process.platform !== 'win32') {

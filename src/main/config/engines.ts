@@ -73,7 +73,7 @@ export const ENGINES: Record<EngineID, EngineDefinition> = {
       darwin: `https://github.com/azahar-emu/azahar/releases/download/${AZAHAR_VERSION}/azahar-${AZAHAR_VERSION}-macos-universal.zip`,
     },
     binaries: {
-      win32: "azahar-gui.exe",
+      win32: "azahar.exe",
       darwin: `azahar-${AZAHAR_VERSION}-macos-universal/Azahar.app/Contents/MacOS/azahar`,
     },
     getLaunchCommand: (game, binPath) => [binPath, game.filePath],
@@ -110,7 +110,7 @@ export const ENGINES: Record<EngineID, EngineDefinition> = {
     name: ENGINE_CATALOG["ares"].displayName,
     consoles: getConsoleIdsForEngine("ares"),
     downloads: {
-      win32: `https://github.com/ares-emulator/ares/releases/download/v${ARES_VERSION}/ares-windows-amd64.zip`,
+      win32: `https://github.com/ares-emulator/ares/releases/download/v${ARES_VERSION}/ares-windows-x64.zip`,
       darwin: `https://github.com/ares-emulator/ares/releases/download/v${ARES_VERSION}/ares-macos-universal.zip`,
     },
     binaries: {

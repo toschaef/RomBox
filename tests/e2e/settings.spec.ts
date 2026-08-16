@@ -16,6 +16,11 @@ function findExecutable(): string {
         if (fs.existsSync(appPath)) {
           return appPath;
         }
+      } else if (folder.startsWith('rombox-win32-')) {
+        const appPath = path.join(outDir, folder, 'rombox.exe');
+        if (fs.existsSync(appPath)) {
+          return appPath;
+        }
       }
     }
   }
@@ -43,7 +48,7 @@ test.describe('RomBox Settings E2E Suite', () => {
     } else {
       electronApp = await electron.launch({
         args: [
-          path.join(__dirname, '../../'),
+          path.resolve(__dirname, '../../'),
           `--user-data-dir=${tempUserDataDir}`,
           '--hidden-test-window'
         ]

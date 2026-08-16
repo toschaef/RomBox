@@ -34,7 +34,10 @@ const config: ForgeConfig = {
   },
   packagerConfig: {
     asar: {
-      unpack: "**/{mac,linux,win}/**/*"
+      // Leading `**/` in minimatch does not cross dot-directories (e.g. `.webpack`) by
+      // default, so relocated native binaries under `.webpack/**/native_modules/win/...`
+      // would silently stay inside the asar (and fail to spawn) without the `{.**,**}` segment.
+      unpack: "**/{.**,**}/**/{mac,linux,win}/**/*"
     },
     extraResource: ['./bin']
   },

@@ -35,7 +35,7 @@ test.describe('RomBox Game Relocation E2E Suite', () => {
         })
       : await electron.launch({
           args: [
-            path.join(__dirname, '../../'),
+            path.resolve(__dirname, '../../'),
             `--user-data-dir=${tempUserDataDir}`,
             '--hidden-test-window',
           ],

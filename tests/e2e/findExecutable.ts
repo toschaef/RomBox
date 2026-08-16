@@ -14,6 +14,11 @@ export default function findExecutable(): string {
         if (fs.existsSync(appPath)) {
           return appPath;
         }
+      } else if (folder.startsWith('rombox-win32-')) {
+        const appPath = path.join(outDir, folder, 'rombox.exe');
+        if (fs.existsSync(appPath)) {
+          return appPath;
+        }
       }
     }
   }
