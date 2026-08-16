@@ -1,4 +1,5 @@
 import type { Game, IpcResponse, LibraryResponse } from "../../shared/types";
+import { invoke, on } from "./invoke";
 
 interface CoverResponse extends IpcResponse {
   coverPath?: string;
@@ -8,31 +9,31 @@ const failedCoverIds = new Set<string>();
 
 export const gameClient = {
   getAll: () =>
-    window.electron.invoke("game:getAll") as Promise<LibraryResponse | (IpcResponse & { games?: Game[] })>,
+    invoke<LibraryResponse | (IpcResponse & { games?: Game[] })>("game:getAll"),
 
   get: (id: string) =>
-    window.electron.invoke("game:get", id) as Promise<IpcResponse & { game?: Game }>,
+    invoke<IpcResponse & { game?: Game }>("game:get", id),
 
   update: (game: Game) =>
-    window.electron.invoke("game:update", game) as Promise<IpcResponse & { game?: Game }>,
+    invoke<IpcResponse & { game?: Game }>("game:update", game),
 
   relocate: (gameId: string, newPath?: string) =>
-    window.electron.invoke("game:relocate", gameId, newPath) as Promise<IpcResponse & { game?: Game }>,
+    invoke<IpcResponse & { game?: Game }>("game:relocate", gameId, newPath),
 
   delete: (gameId: string) =>
-    window.electron.invoke("game:delete", gameId) as Promise<IpcResponse>,
+    invoke<IpcResponse>("game:delete", gameId),
 
   deleteAll: () =>
-    window.electron.invoke("game:deleteAll") as Promise<IpcResponse>,
+    invoke<IpcResponse>("game:deleteAll"),
 
   launch: (game: Game) =>
-    window.electron.invoke("game:launch", game) as Promise<IpcResponse>,
+    invoke<IpcResponse>("game:launch", game),
 
   fetchCover: async (game: Game): Promise<CoverResponse> => {
     if (failedCoverIds.has(game.id)) {
       return { success: false, message: 'Cover previously failed to fetch' };
     }
-    const result = await window.electron.invoke("cover:fetch", game) as CoverResponse;
+    const result = await invoke<CoverResponse>("cover:fetch", game);
     if (!result.success || !result.coverPath) {
       failedCoverIds.add(game.id);
     }
@@ -40,5 +41,9 @@ export const gameClient = {
   },
 
   getCover: (game: Game) =>
-    window.electron.invoke("cover:get", game) as Promise<CoverResponse>,
+    invoke<CoverResponse>("cover:get", game),
+
+  clearCoverCache: () => failedCoverIds.clear(),
+
+  onExited: (cb: () => void) => on('game-exited', (() => cb()) as never),
 };

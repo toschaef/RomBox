@@ -1,8 +1,8 @@
 import { ControlsService } from "../../../../src/main/services/ControlsService";
 import { initDB, getDB } from "../../../../src/main/data/db";
 import { createDefaultProfileShape } from "../../../../src/shared/controls/layoutDefaults";
-import { movePlayerSlot, reorderConsoleLayoutPlayers } from "../../../../src/renderer/controls/reorderPlayers";
-import { setConsoleDigital, clearConsoleDigital } from "../../../../src/renderer/controls/consolePath";
+import { movePlayerSlot, reorderConsoleLayoutPlayers } from "../../../../src/renderer/features/controls/model/reorderPlayers";
+import { setConsoleDigital, clearConsoleDigital } from "../../../../src/renderer/features/controls/model/consolePath";
 import type { PlayerBindings } from "../../../../src/shared/types/controls";
 
 describe("ControlsService", () => {

@@ -1,0 +1,45 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`Toast tone error is stable 1`] = `"flex items-center gap-2.5 px-3.5 py-3 min-w-70 max-w-100 rounded-none border bg-bg-secondary text-fg-primary text-[13px] font-semibold leading-snug pointer-events-auto relative overflow-hidden border-red-900 animate-in fade-in slide-in-from-right-20 duration-slow ease-out-expo"`;
+
+exports[`Toast tone loading is stable 1`] = `"flex items-center gap-2.5 px-3.5 py-3 min-w-70 max-w-100 rounded-none border bg-bg-secondary text-fg-primary text-[13px] font-semibold leading-snug pointer-events-auto relative overflow-hidden border-accent-primary animate-in fade-in slide-in-from-right-20 duration-slow ease-out-expo"`;
+
+exports[`Toast tone success is stable 1`] = `"flex items-center gap-2.5 px-3.5 py-3 min-w-70 max-w-100 rounded-none border bg-bg-secondary text-fg-primary text-[13px] font-semibold leading-snug pointer-events-auto relative overflow-hidden border-green-900 animate-in fade-in slide-in-from-right-20 duration-slow ease-out-expo"`;
+
+exports[`variant class strings button intent danger is stable 1`] = `"inline-flex items-center justify-center font-bold transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none bg-bg-muted text-fg-primary border border-border-muted hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 px-3 py-1.5 text-xs rounded-sm"`;
+
+exports[`variant class strings button intent ghost is stable 1`] = `"inline-flex items-center justify-center font-bold transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none bg-transparent text-fg-muted border border-transparent hover:text-fg-primary px-3 py-1.5 text-xs rounded-sm"`;
+
+exports[`variant class strings button intent primary is stable 1`] = `"inline-flex items-center justify-center font-bold transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none bg-accent-secondary text-white border border-accent-secondary hover:bg-accent-primary px-3 py-1.5 text-xs rounded-sm"`;
+
+exports[`variant class strings button intent secondary is stable 1`] = `"inline-flex items-center justify-center font-bold transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none bg-bg-secondary text-fg-primary border border-border-subtle hover:border-border-muted hover:bg-bg-muted px-3 py-1.5 text-xs rounded-sm"`;
+
+exports[`variant class strings button size md is stable 1`] = `"inline-flex items-center justify-center font-bold transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none bg-bg-secondary text-fg-primary border border-border-subtle hover:border-border-muted hover:bg-bg-muted px-4 py-2 text-sm rounded-sm"`;
+
+exports[`variant class strings button size sm is stable 1`] = `"inline-flex items-center justify-center font-bold transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none bg-bg-secondary text-fg-primary border border-border-subtle hover:border-border-muted hover:bg-bg-muted px-3 py-1.5 text-xs rounded-sm"`;
+
+exports[`variant class strings button size xs is stable 1`] = `"inline-flex items-center justify-center font-bold transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none bg-bg-secondary text-fg-primary border border-border-subtle hover:border-border-muted hover:bg-bg-muted px-2 py-1 text-[10px] rounded-xs"`;
+
+exports[`variant class strings card state active is stable 1`] = `"relative rounded-sm border transition-all ring-1 ring-accent-secondary border-accent-secondary/50 bg-accent-muted/20 shadow-glow z-raised scale-[1.02] duration-base"`;
+
+exports[`variant class strings card state default is stable 1`] = `"relative rounded-sm border transition-all border-border-subtle bg-bg-secondary duration-base"`;
+
+exports[`variant class strings card state listening is stable 1`] = `"relative rounded-sm border transition-all border-accent-secondary bg-accent-muted/30 duration-base"`;
+
+exports[`variant class strings icon button intent danger is stable 1`] = `"inline-flex items-center justify-center leading-none transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none bg-bg-secondary border border-border-subtle text-fg-secondary hover:text-red-400 hover:border-red-400/50 h-7 w-7 p-1.5 text-base font-bold rounded-sm"`;
+
+exports[`variant class strings icon button intent default is stable 1`] = `"inline-flex items-center justify-center leading-none transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none bg-bg-secondary border border-border-subtle text-fg-secondary hover:text-fg-primary hover:border-border-muted h-7 w-7 p-1.5 text-base font-bold rounded-sm"`;
+
+exports[`variant class strings icon button intent ghost is stable 1`] = `"inline-flex items-center justify-center leading-none transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none bg-transparent border-none text-white/70 hover:text-white hover:bg-white/10 h-7 w-7 p-1.5 text-base font-bold rounded-sm"`;
+
+exports[`variant class strings pill tone bad is stable 1`] = `"inline-flex items-center border text-[10px] uppercase font-bold tracking-wider rounded-xs border-fg-primary text-fg-secondary bg-bg-secondary px-2 py-1"`;
+
+exports[`variant class strings pill tone danger is stable 1`] = `"inline-flex items-center border text-[10px] uppercase font-bold tracking-wider rounded-xs border-transparent bg-red-500/90 text-white px-2 py-1"`;
+
+exports[`variant class strings pill tone info is stable 1`] = `"inline-flex items-center border text-[10px] uppercase font-bold tracking-wider rounded-xs border-border-subtle text-fg-secondary bg-bg-secondary px-2 py-1"`;
+
+exports[`variant class strings pill tone neutral is stable 1`] = `"inline-flex items-center border text-[10px] uppercase font-bold tracking-wider rounded-xs border-border-subtle text-fg-muted bg-bg-secondary px-2 py-1"`;
+
+exports[`variant class strings pill tone ok is stable 1`] = `"inline-flex items-center border text-[10px] uppercase font-bold tracking-wider rounded-xs border-border-highlight text-fg-primary bg-bg-muted px-2 py-1"`;
+
+exports[`variant class strings pill tone warn is stable 1`] = `"inline-flex items-center border text-[10px] uppercase font-bold tracking-wider rounded-xs border-border-muted text-fg-primary bg-bg-secondary px-2 py-1"`;

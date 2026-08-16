@@ -14,7 +14,7 @@ export class EnginesPage extends BasePage {
   }
 
   getEngineCard(engineName: string): Locator {
-    return this.page.locator('div.rounded-sm.border.border-border-subtle', { hasText: engineName });
+    return this.page.getByTestId('engine-row').filter({ hasText: engineName });
   }
 
   getInstallButton(engineName: string): Locator {

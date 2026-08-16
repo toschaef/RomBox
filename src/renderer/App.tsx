@@ -1,19 +1,19 @@
 import { HashRouter, Routes, Route } from 'react-router-dom';
-import Layout from './components/layout';
-import Library from './components/pages/Library';
-import Settings from './components/pages/Settings';
-import Controls from './components/pages/Controls';
-import Engines from './components/pages/Engines';
-import Bios from './components/pages/Bios';
-import { NotificationProvider } from './hooks/useNotifications';
-import NotificationContainer from './components/NotificationContainer';
+import AppShell from './app/AppShell';
+import Library from './features/library/Library';
+import Settings from './features/settings/Settings';
+import Controls from './features/controls/Controls';
+import Engines from './features/engines/Engines';
+import Bios from './features/bios/Bios';
+import { NotificationProvider } from './app/notifications/NotificationProvider';
+import NotificationContainer from './app/notifications/NotificationContainer';
 
 export default function App() {
   return (
     <NotificationProvider>
       <HashRouter>
         <Routes>
-          <Route path="/" element={<Layout />}>
+          <Route path="/" element={<AppShell />}>
             <Route index element={<Library />} />
             <Route path="controls" element={<Controls />} />
             <Route path="engines" element={<Engines />} />

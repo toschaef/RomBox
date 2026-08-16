@@ -10,6 +10,10 @@ export class BiosPage extends BasePage {
     return this.page.getByText(fileName).first();
   }
 
+  getBiosRow(consoleId: string): Locator {
+    return this.page.locator(`[data-testid="bios-row"][data-console-id="${consoleId}"]`);
+  }
+
   async dragAndDropBios(fullPath: string, fileName: string) {
     await this.dragAndDropFile({ fullPath, fileName });
   }

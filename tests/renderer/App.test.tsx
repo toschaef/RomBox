@@ -3,13 +3,13 @@ import { render, screen } from '@testing-library/react';
 import App from '../../src/renderer/App';
 
 // Mock child components that rely on heavy Electron IPCs or page logic
-jest.mock('../../src/renderer/components/layout', () => {
+jest.mock('../../src/renderer/app/AppShell', () => {
   return function MockLayout() {
     return <div data-testid="layout">Mocked Layout</div>;
   };
 });
 
-jest.mock('../../src/renderer/components/NotificationContainer', () => {
+jest.mock('../../src/renderer/app/notifications/NotificationContainer', () => {
   return function MockNotificationContainer() {
     return <div data-testid="notification-container">Mocked Notification Container</div>;
   };

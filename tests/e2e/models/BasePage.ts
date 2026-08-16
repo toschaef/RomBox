@@ -11,7 +11,7 @@ export class BasePage {
 
   constructor(page: Page) {
     this.page = page;
-    this.brand = page.locator('aside').getByText('RomBox');
+    this.brand = page.getByTestId('brand');
     this.libraryLink = page.getByRole('link', { name: 'Library', exact: true });
     this.biosLink = page.getByRole('link', { name: 'Bios', exact: true });
     this.controlsLink = page.getByRole('link', { name: 'Controls', exact: true });

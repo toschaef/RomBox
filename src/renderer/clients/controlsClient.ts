@@ -1,42 +1,41 @@
 import type { ControlsProfile, AnyConsoleLayout, ControllerProfileMeta, ConsoleLayoutMeta } from "../../shared/types/controls";
 import type { ConsoleID } from "../../shared/types";
+import { invoke } from "./invoke";
 
 export const controlsClient = {
   getProfiles: () =>
-    window.electron.invoke("controls:getProfiles") as Promise<ControllerProfileMeta[]>,
+    invoke<ControllerProfileMeta[]>("controls:getProfiles"),
 
   getDefaultProfile: () =>
-    window.electron.invoke("controls:getDefaultProfile") as Promise<ControlsProfile>,
+    invoke<ControlsProfile>("controls:getDefaultProfile"),
 
   getProfile: (id: string) =>
-    window.electron.invoke("controls:getProfile", id) as Promise<ControlsProfile>,
+    invoke<ControlsProfile>("controls:getProfile", id),
 
   createProfile: (payload: {
     name: string;
     copyFromId?: string;
     makeDefault?: boolean;
   }) =>
-    window.electron.invoke("controls:createProfile", payload) as Promise<ControlsProfile>,
+    invoke<ControlsProfile>("controls:createProfile", payload),
 
   renameProfile: (payload: { id: string; name: string }) =>
-    window.electron.invoke("controls:renameProfile", payload) as Promise<ControlsProfile>,
+    invoke<ControlsProfile>("controls:renameProfile", payload),
 
   deleteProfile: (id: string) =>
-    window.electron.invoke("controls:deleteProfile", id) as Promise<{ ok: true }>,
+    invoke<{ ok: true }>("controls:deleteProfile", id),
 
   setDefault: (id: string) =>
-    window.electron.invoke("controls:setDefault", id) as Promise<ControlsProfile>,
+    invoke<ControlsProfile>("controls:setDefault", id),
 
   saveProfile: (profile: ControlsProfile) =>
-    window.electron.invoke("controls:saveProfile", profile) as Promise<ControlsProfile>,
+    invoke<ControlsProfile>("controls:saveProfile", profile),
 
   getConsoleLayouts: (profileId: string) =>
-    window.electron.invoke("controls:getConsoleLayouts", profileId) as Promise<
-      ConsoleLayoutMeta[]
-    >,
+    invoke<ConsoleLayoutMeta[]>("controls:getConsoleLayouts", profileId),
 
   getConsoleLayout: (payload: { consoleId: ConsoleID; profileId: string }) =>
-    window.electron.invoke("controls:getConsoleLayout", payload) as Promise<AnyConsoleLayout>,
+    invoke<AnyConsoleLayout>("controls:getConsoleLayout", payload),
 
   saveConsoleLayout: (payload: {
     consoleId: ConsoleID;
@@ -47,8 +46,8 @@ export const controlsClient = {
     player3?: unknown;
     player4?: unknown;
   }) =>
-    window.electron.invoke("controls:saveConsoleLayout", payload) as Promise<AnyConsoleLayout>,
+    invoke<AnyConsoleLayout>("controls:saveConsoleLayout", payload),
 
   resetConsoleLayout: (payload: { consoleId: ConsoleID; profileId: string }) =>
-    window.electron.invoke("controls:resetConsoleLayout", payload) as Promise<AnyConsoleLayout>,
+    invoke<AnyConsoleLayout>("controls:resetConsoleLayout", payload),
 };
