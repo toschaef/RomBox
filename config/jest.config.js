@@ -18,6 +18,10 @@ const baseConfig = {
 /** @type {import('ts-jest').JestConfigWithTsJest} */
 module.exports = {
   rootDir: path.resolve(__dirname, '../'),
+  // ts-jest workers are memory-hungry (each holds its own TS program in
+  // memory); on constrained boxes the default worker count OOMs mid-run.
+  maxWorkers: '50%',
+  workerIdleMemoryLimit: '512MB',
   projects: [
     {
       ...baseConfig,
